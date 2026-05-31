@@ -20,7 +20,6 @@ async function seed() {
       lines: ["line1", "line2"],
       waiting: 0,
       status: "LOW",
-      isReal: true
     },
     {
       id: "station2",
@@ -30,7 +29,6 @@ async function seed() {
       lines: ["line1", "line2"],
       waiting: 5,
       status: "LOW",
-      isReal: false
     },
     {
       id: "station3",
@@ -39,8 +37,7 @@ async function seed() {
       lng: 99.8913375758622,
       lines: ["line1", "line2"],
       waiting: 7,
-      status: "MEDIUM",
-      isReal: false
+      status: "LOW",
     },
     {
       id: "station4",
@@ -50,7 +47,6 @@ async function seed() {
       lines: ["line1", "line2"],
       waiting: 3,
       status: "LOW",
-      isReal: false
     },
     {
       id: "station5",
@@ -59,8 +55,7 @@ async function seed() {
       lng: 99.89322591378016,
       lines: ["line1", "line2"],
       waiting: 10,
-      status: "HIGH",
-      isReal: false
+      status: "LOW",
     },
      {
       id: "station6",
@@ -70,7 +65,6 @@ async function seed() {
       lines: ["line1", "line2"],
       waiting: 0,
       status: "LOW",
-      isReal: true
     },
      {
       id: "station7",
@@ -79,8 +73,7 @@ async function seed() {
       lng: 99.89153621441135,
       lines: ["line1", "line2"],
       waiting: 10,
-      status: "HIGH",
-      isReal: false
+      status: "LOW",
     },
      {
       id: "station8",
@@ -89,8 +82,7 @@ async function seed() {
       lng: 99.893402801156,
       lines: ["line1", "line2"],
       waiting: 10,
-      status: "HIGH",
-      isReal: false
+      status: "LOW",
     },
      {
       id: "station9",
@@ -99,8 +91,7 @@ async function seed() {
       lng: 99.89521575716422,
       lines: ["line1"],
        waiting: 7,
-      status: "MEDIUM",
-      isReal: false
+      status: "LOW",
      },
      {
       id: "station10",
@@ -110,7 +101,6 @@ async function seed() {
       lines: ["line1"],
        waiting: 5,
       status: "LOW",
-      isReal: false
     },
      {
       id: "station11",
@@ -119,8 +109,7 @@ async function seed() {
       lng: 99.89135359185909,
       lines: ["line1", "line2"],
       waiting: 10,
-      status: "HIGH",
-      isReal: false
+      status: "LOW",
     },
      {
       id: "station12",
@@ -130,7 +119,6 @@ async function seed() {
       lines: ["line1", "line2"],
         waiting: 5,
       status: "LOW",
-      isReal: false
     },
      {
       id: "station13",
@@ -140,7 +128,6 @@ async function seed() {
       lines: ["line1", "line2"],
       waiting: 0,
       status: "LOW",
-      isReal: true
     },
      {
       id: "station14",
@@ -149,8 +136,7 @@ async function seed() {
       lng: 99.89454537873918,
       lines: ["line1", "line2"],
       waiting: 10,
-      status: "HIGH",
-      isReal: false
+      status: "LOW",
     },
      {
       id: "station15",
@@ -159,8 +145,7 @@ async function seed() {
       lng: 99.89712571588397,
       lines: ["line1", "line2"],
         waiting: 7,
-      status: "MEDIUM",
-      isReal: false
+      status: "LOW",
     },
      {
       id: "station16",
@@ -169,8 +154,7 @@ async function seed() {
       lng:99.89811278167763,
       lines: ["line1", "line2"],
       waiting: 10,
-      status: "HIGH",
-      isReal: false
+      status: "LOW",
     },
     // line 2 (โรงพยาบาลแม่ฟ้าหลวง)
     {
@@ -181,7 +165,6 @@ async function seed() {
       lines: ["line2"],
       waiting: 0,
       status: "LOW",
-      isReal: true
     },
   
 
