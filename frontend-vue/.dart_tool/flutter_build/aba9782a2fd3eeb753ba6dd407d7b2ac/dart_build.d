@@ -1,0 +1,1 @@
+ /Users/yada/MFU-Shuttle-Bus/frontend-vue/.dart_tool/flutter_build/aba9782a2fd3eeb753ba6dd407d7b2ac/dart_build_result.json: 
