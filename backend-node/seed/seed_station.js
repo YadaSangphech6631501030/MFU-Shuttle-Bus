@@ -27,7 +27,7 @@ async function seed() {
       lat: 20.057081156842653,
       lng: 99.89702395554524,
       lines: ["line1", "line2"],
-      waiting: 5,
+      waiting: 0,
       status: "LOW",
     },
     {
@@ -36,7 +36,7 @@ async function seed() {
       lat: 20.050870176213458,
       lng: 99.8913375758622,
       lines: ["line1", "line2"],
-      waiting: 7,
+      waiting: 0,
       status: "LOW",
     },
     {
@@ -45,7 +45,7 @@ async function seed() {
       lat: 20.048895164537097,
       lng: 99.89132709650245,
       lines: ["line1", "line2"],
-      waiting: 3,
+      waiting: 0,
       status: "LOW",
     },
     {
@@ -54,7 +54,7 @@ async function seed() {
       lat: 20.048215214947664,
       lng: 99.89322591378016,
       lines: ["line1", "line2"],
-      waiting: 10,
+      waiting: 0,
       status: "LOW",
     },
      {
@@ -72,7 +72,7 @@ async function seed() {
       lat: 20.045606104291842,
       lng: 99.89153621441135,
       lines: ["line1", "line2"],
-      waiting: 10,
+      waiting: 0,
       status: "LOW",
     },
      {
@@ -81,7 +81,7 @@ async function seed() {
       lat: 20.04399637202456,
       lng: 99.893402801156,
       lines: ["line1", "line2"],
-      waiting: 10,
+      waiting: 0,
       status: "LOW",
     },
      {
@@ -90,7 +90,7 @@ async function seed() {
       lat: 20.043895277649657,
       lng: 99.89521575716422,
       lines: ["line1"],
-       waiting: 7,
+       waiting: 0,
       status: "LOW",
      },
      {
@@ -99,7 +99,7 @@ async function seed() {
       lat: 20.043346224233225,
       lng: 99.89513551300819,
       lines: ["line1"],
-       waiting: 5,
+       waiting: 0,
       status: "LOW",
     },
      {
@@ -108,7 +108,7 @@ async function seed() {
       lat: 20.045780781087203,
       lng: 99.89135359185909,
       lines: ["line1", "line2"],
-      waiting: 10,
+      waiting: 0,
       status: "LOW",
     },
      {
@@ -117,7 +117,7 @@ async function seed() {
       lat: 20.048986374924546,
       lng: 99.89118215098704,
       lines: ["line1", "line2"],
-        waiting: 5,
+        waiting: 0,
       status: "LOW",
     },
      {
@@ -135,7 +135,7 @@ async function seed() {
       lat: 20.054763275437402,
       lng: 99.89454537873918,
       lines: ["line1", "line2"],
-      waiting: 10,
+      waiting: 0,
       status: "LOW",
     },
      {
@@ -144,7 +144,7 @@ async function seed() {
       lat: 20.056724686542545,
       lng: 99.89712571588397,
       lines: ["line1", "line2"],
-        waiting: 7,
+        waiting: 0,
       status: "LOW",
     },
      {
@@ -153,7 +153,7 @@ async function seed() {
       lat: 20.058276924103307,
       lng:99.89811278167763,
       lines: ["line1", "line2"],
-      waiting: 10,
+      waiting: 0,
       status: "LOW",
     },
     // line 2 (โรงพยาบาลแม่ฟ้าหลวง)
