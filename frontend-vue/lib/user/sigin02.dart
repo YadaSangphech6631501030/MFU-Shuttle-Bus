@@ -75,7 +75,7 @@ class _Signin02State extends State<Signin02> {
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       decoration: InputDecoration(
                         hintText: "Enter your username",
-                        prefixIcon: Icon(Icons.account_box),
+                        prefixIcon: Icon(Icons.person),
                         filled: true,
                         fillColor: Colors.white,
 
@@ -188,7 +188,7 @@ class _Signin02State extends State<Signin02> {
                       width: 200,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: Color(0xFFD2232A),
                           elevation: 5,
                           shadowColor: Colors.black.withOpacity(0.1),
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -208,36 +208,38 @@ class _Signin02State extends State<Signin02> {
                                   isLoading = true;
                                 });
 
-                               var result = await ApiService.login(
+                                var result = await ApiService.login(
                                   usernameController.text,
                                   passwordController.text,
-                                  );
+                                );
 
                                 setState(() => isLoading = false);
 
                                 if (result != null) {
-  String role = result["role"];
+                                  String role = result["role"];
 
-  if (role == "admin") {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const AdminHomepage(), // 👑 ไปหน้า admin
-      ),
-    );
-  } else {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const Homepages(), // 👤 user ปกติ
-      ),
-    );
-  }
-} else {
-  setState(() {
-    loginError = "Invalid username or password";
-  });
-}
+                                  if (role == "admin") {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const AdminHomepage(), // 👑 ไปหน้า admin
+                                      ),
+                                    );
+                                  } else {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const Homepages(), // 👤 user ปกติ
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  setState(() {
+                                    loginError = "Invalid username or password";
+                                  });
+                                }
                               },
                         child: isLoading
                             ? const CircularProgressIndicator(
@@ -270,7 +272,7 @@ class _Signin02State extends State<Signin02> {
                         child: const Text(
                           "Sign up",
                           style: TextStyle(
-                            color: Colors.blue,
+                            color: Color(0xFFBC9945),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
