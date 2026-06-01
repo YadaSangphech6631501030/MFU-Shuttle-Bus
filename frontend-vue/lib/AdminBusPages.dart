@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shuttle_bus_fronted/admin_bottom_bar.dart';
 
@@ -13,113 +11,27 @@ class Adminbuspages extends StatefulWidget {
 class _AdminbuspagesState extends State<Adminbuspages> {
   int currentIndex = 1;
 
-  final Random random = Random();
-  Timer? timer;
-List<Map<String, dynamic>> buses = [
-    {
-      "name": "Bus 01",
-      "line": "Line 1",
-      "station": "C3",
-      "minutes": 3,
-      "status": "running",
-    },
-    {
-      "name": "Bus 02",
-      "line": "Line 2",
-      "station": "E2",
-      "minutes": 5,
-      "status": "medium",
-    },
-    {
-      "name": "Bus 03",
-      "line": "Line 1",
-      "station": "M-Square",
-      "minutes": 10,
-      "status": "stop",
-    },
-    {
-      "name": "Bus 04",
-      "line": "Line 2",
-      "station": "Lamduan",
-      "minutes": 4,
-      "status": "running",
-    },
-    {
-      "name": "Bus 05",
-      "line": "Line 1",
-      "station": "C5",
-      "minutes": 6,
-      "status": "medium",
-    },
-    {
-      "name": "Bus 06",
-      "line": "Line 2",
-      "station": "D1",
-      "minutes": 8,
-      "status": "stop",
-    },
-  ];
+  final List<Map<String, String>> buses = List.generate(16, (index) {
+    final busNumber = (index + 1).toString().padLeft(2, '0');
 
-  @override
-  void initState() {
-    super.initState();
-
-    timer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!mounted) return;
-
-      setState(() {
-        for (var bus in buses) {
-          bus["minutes"] = random.nextInt(10) + 1;
-          bus["status"] = randomStatus();
-        }
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    timer?.cancel();
-    super.dispose();
-  }
-
-  String randomStatus() {
-    final r = random.nextInt(3);
-    switch (r) {
-      case 0:
-        return "running";
-      case 1:
-        return "medium";
-      default:
-        return "stop";
-    }
-  }
+    return {
+      "name": "Bus $busNumber",
+      "status": index % 4 == 0 ? "offline" : "online",
+      "latestLocation": "-",
+    };
+  });
 
   Color getStatusColor(String status) {
-    switch (status) {
-      case "running":
-        return Colors.green;
-      case "medium":
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
+    return status == "online" ? Colors.green : Colors.grey;
   }
 
   String getStatusText(String status) {
-    switch (status) {
-      case "running":
-        return "Running";
-      case "medium":
-        return "Arriving";
-      default:
-        return "Stopped";
-    }
+    return status == "online" ? "Online" : "Offline";
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ✅ Bottom bar (admin)
       bottomNavigationBar: AdminBottomBar(
         currentIndex: currentIndex,
         onTap: (index) {
@@ -128,67 +40,121 @@ List<Map<String, dynamic>> buses = [
           });
         },
       ),
-
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         title: const Text("Admin Bus Status"),
         backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
-        automaticallyImplyLeading: false, // 🔥 ปิด back auto ด้วย (สำคัญ)
+        automaticallyImplyLeading: false,
       ),
-
-      body: ListView.builder(
+      body: Padding(
         padding: const EdgeInsets.all(16),
-        itemCount: buses.length,
-        itemBuilder: (context, index) {
-          final bus = buses[index];
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                ),
-              ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "All Buses (${buses.length})",
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.directions_bus,
-                  size: 40,
-                  color: getStatusColor(bus["status"]),
+            const SizedBox(height: 12),
+            Expanded(
+              child: GridView.builder(
+                itemCount: buses.length,
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 220,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.15,
                 ),
-                const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final bus = buses[index];
+                  final status = bus["status"] ?? "offline";
+                  final statusColor = getStatusColor(status);
 
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "${bus["name"]}: ${getStatusText(bus["status"])}",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: getStatusColor(bus["status"]),
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.directions_bus,
+                                color: statusColor,
+                                size: 26,
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                getStatusText(status),
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text("Line : ${bus["line"]}"),
-                      Text("Next Station : ${bus["station"]}"),
-                      Text("Time Arrive : ${bus["minutes"]} min"),
-                    ],
-                  ),
-                ),
-              ],
+                        const Spacer(),
+                        Text(
+                          bus["name"] ?? "-",
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          "Latest location",
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          bus["latestLocation"] ?? "-",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
