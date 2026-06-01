@@ -34,7 +34,7 @@ class Signin01 extends StatelessWidget {
                 width: 200,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
+                    backgroundColor: Color(0xFFD2232A),
                     elevation: 5,
                     shadowColor: Colors.black.withOpacity(0.1),
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -72,7 +72,7 @@ class Signin01 extends StatelessWidget {
                     child: const Text(
                       "Sign up",
                       style: TextStyle(
-                        color: Colors.blue,
+                        color: Color(0xFFBC9945),
                         fontWeight: FontWeight.bold,
                       ),
                     ),

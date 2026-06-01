@@ -120,7 +120,7 @@ class _AccountUserState extends State<AccountUser> {
                           child: const Icon(
                             Icons.edit,
                             size: 20,
-                            color: Colors.black,
+                            color:  Color(0xFFD2232A),
                           ),
                         ),
                       ),
@@ -151,7 +151,7 @@ class _AccountUserState extends State<AccountUser> {
                   width: 200,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor:  Color(0xFFD2232A),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

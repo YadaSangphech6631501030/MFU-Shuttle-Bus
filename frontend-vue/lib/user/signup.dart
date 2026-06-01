@@ -86,7 +86,9 @@ class _SignupState extends State<Signup> {
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       decoration: InputDecoration(
                         hintText: "Enter your username",
-                        prefixIcon: Icon(Icons.account_box),
+                        prefixIcon: Icon(
+                          Icons.person,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
 
@@ -140,7 +142,9 @@ class _SignupState extends State<Signup> {
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       decoration: InputDecoration(
                         hintText: "Enter your email",
-                        prefixIcon: Icon(Icons.email),
+                        prefixIcon: Icon(
+                          Icons.email,
+                        ),
                         filled: true,
                         fillColor: Colors.white,
 
@@ -194,7 +198,9 @@ class _SignupState extends State<Signup> {
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       decoration: InputDecoration(
                         hintText: "Enter your password",
-                        prefixIcon: Icon(Icons.key),
+                        prefixIcon: Icon(
+                          Icons.key,
+                        ),
 
                         // show + hide password
                         suffixIcon: IconButton(
@@ -247,7 +253,7 @@ class _SignupState extends State<Signup> {
                       width: 200,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: Color(0xFFBC9945),
                           elevation: 5,
                           shadowColor: Colors.black.withOpacity(0.1),
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -348,7 +354,7 @@ class _SignupState extends State<Signup> {
                         child: const Text(
                           "Sign in",
                           style: TextStyle(
-                            color: Colors.blue,
+                            color: Color(0xFFD2232A),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
