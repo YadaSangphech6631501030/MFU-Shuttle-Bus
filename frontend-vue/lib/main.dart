@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shuttle_bus_fronted/signin01.dart';
-import 'bus_controller.dart';
+import 'user/pages/signin01.dart';
+import 'user/models/bus_controller.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
