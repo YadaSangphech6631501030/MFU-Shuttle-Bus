@@ -213,10 +213,14 @@ class _Signin02State extends State<Signin02> {
                                   passwordController.text,
                                 );
 
+                                if (!mounted) return;
+
                                 setState(() => isLoading = false);
 
-                                if (result != null) {
-                                  String role = result["role"];
+                                final role = result?["role"]?.toString();
+                                final token = result?["token"]?.toString();
+
+                                if (token != null && role != null) {
 
                                   if (role == "admin") {
                                     Navigator.push(
@@ -236,9 +240,14 @@ class _Signin02State extends State<Signin02> {
                                     );
                                   }
                                 } else {
+                                  final error =
+                                      result?["error"]?.toString() ??
+                                      "Invalid username or password";
+
                                   setState(() {
-                                    loginError = "Invalid username or password";
+                                    loginError = error;
                                   });
+                                  _showError(error);
                                 }
                               },
                         child: isLoading

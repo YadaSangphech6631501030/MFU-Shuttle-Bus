@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = "http://192.168.110.95:5001";
+  static const String baseUrl = "http://172.25.60.118:5001";
+  static const Duration _requestTimeout = Duration(seconds: 10);
 
   // ===== COMMON FUNCTION =====
   static dynamic _handleResponse(http.Response res) {
@@ -33,7 +34,7 @@ class ApiService {
           "password": password,
           "email": email,
         }),
-      );
+      ).timeout(_requestTimeout);
 
       final data = _handleResponse(res);
 
@@ -48,27 +49,36 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>?> login(
-      String username, String password) async {
+    String username,
+    String password,
+  ) async {
     try {
       final res = await http.post(
         Uri.parse("$baseUrl/auth/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"username": username, "password": password}),
-      );
+      ).timeout(_requestTimeout);
 
       final data = _handleResponse(res);
 
       if (res.statusCode == 200) {
+        if (data["token"] == null ||
+            data["role"] == null ||
+            data["userId"] == null) {
+          return {"error": "Login response missing data"};
+        }
+
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString("token", data["token"]);
-        await prefs.setString("role", data["role"]);
-        await prefs.setString("userId", data["userId"]);
+        await prefs.setString("token", data["token"].toString());
+        await prefs.setString("role", data["role"].toString());
+        await prefs.setString("userId", data["userId"].toString());
         return data;
       } else {
         return data;
       }
     } catch (e) {
-      return null;
+      print("LOGIN ERROR: $e");
+      return {"error": "Network error"};
     }
   }
 
@@ -94,7 +104,7 @@ class ApiService {
           "password": password,
           "new_password": newPassword,
         }),
-      );
+      ).timeout(_requestTimeout);
 
       final data = _handleResponse(res);
 
@@ -115,7 +125,7 @@ class ApiService {
     final res = await http.get(
       Uri.parse("$baseUrl/auth/user"),
       headers: {"Authorization": "Bearer $token"},
-    );
+    ).timeout(_requestTimeout);
 
     final data = _handleResponse(res);
 
@@ -130,7 +140,8 @@ class ApiService {
 
   static Future<List<dynamic>> getStations(String line) async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/station/$line"));
+      final res = await http.get(Uri.parse("$baseUrl/station/$line"))
+          .timeout(_requestTimeout);
 
       final data = _handleResponse(res);
 
@@ -148,7 +159,8 @@ class ApiService {
 
   static Future<List<dynamic>> getBuses() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl/api/buses"));
+      final res = await http.get(Uri.parse("$baseUrl/api/buses"))
+          .timeout(_requestTimeout);
 
       final data = _handleResponse(res);
 
@@ -163,42 +175,41 @@ class ApiService {
   }
 
   // ================= REPORT =================
-static Future<String?> sendReport(
-  String type,
-  String detail,
-  String location,
-) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString("userId");
+  static Future<String?> sendReport(
+    String type,
+    String detail,
+    String location,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString("userId");
 
-    final res = await http.post(
-      Uri.parse("$baseUrl/api/report"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "type": type,
-        "detail": detail,
-        "location": location,
-        "UserId": userId,
-      }),
-    );
+      final res = await http.post(
+        Uri.parse("$baseUrl/api/report"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "type": type,
+          "detail": detail,
+          "location": location,
+          "UserId": userId,
+        }),
+      ).timeout(_requestTimeout);
 
-    if (res.statusCode == 201 || res.statusCode == 200) {
-      return null;
+      if (res.statusCode == 201 || res.statusCode == 200) {
+        return null;
+      }
+
+      return "Send failed";
+    } catch (e) {
+      return "Network error";
     }
-
-    return "Send failed";
-  } catch (e) {
-    return "Network error";
   }
-}
 
   // get report
   static Future<List<dynamic>> getReports() async {
     try {
-      final res = await http.get(
-        Uri.parse("$baseUrl/api/report"),
-      );
+      final res = await http.get(Uri.parse("$baseUrl/api/report"))
+          .timeout(_requestTimeout);
 
       final data = _handleResponse(res);
 
@@ -212,19 +223,15 @@ static Future<String?> sendReport(
     }
   }
 
-  // confirm report 
+  // confirm report
   static Future<void> confirmReport(String id) async {
     final url = Uri.parse("$baseUrl/api/report/$id");
 
     final res = await http.put(
       url,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "status": "done",
-      }),
-    );
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"status": "done"}),
+    ).timeout(_requestTimeout);
 
     print("STATUS: ${res.statusCode}");
     print("BODY: ${res.body}");
@@ -233,5 +240,4 @@ static Future<String?> sendReport(
       throw Exception("Failed to update");
     }
   }
-
 }
