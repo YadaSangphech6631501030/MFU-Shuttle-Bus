@@ -17,21 +17,36 @@ class BusStationPage extends StatelessWidget {
               children: [
                 // Header
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      "MFU Transit",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios,
+                          color: Colors.black,
+                          size: 20,
+                        ),
+                      ),
                       onPressed: () {
                         Navigator.pop(context);
                       },
                     ),
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          "MFU TRANSIT",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 48),
                   ],
                 ),
 
