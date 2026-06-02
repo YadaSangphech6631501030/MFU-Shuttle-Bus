@@ -257,6 +257,23 @@ class _ReportPageState extends State<ReportPage>
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios,
+              color: Colors.black,
+              size: 20,
+            ),
+          ),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
         title: const Text("Report Problem"),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,

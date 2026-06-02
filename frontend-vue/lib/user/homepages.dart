@@ -9,6 +9,7 @@ import 'bus_station.dart';
 import 'custom_bottom_bar.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import 'bus_controller.dart';
+import 'user_setting.dart';
 
 class Homepages extends StatefulWidget {
   const Homepages({super.key});
@@ -1102,7 +1103,7 @@ class _HomepagesState extends State<Homepages> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const BusStationPage(),
+                          builder: (context) => const UserSetting(),
                         ),
                       );
                     },
