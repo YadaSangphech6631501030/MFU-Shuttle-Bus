@@ -155,6 +155,135 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, String>> _adminHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    if (token == null || token.isEmpty) {
+      throw Exception("Admin token missing");
+    }
+
+    return {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer $token",
+    };
+  }
+
+  static Future<void> _clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove("token");
+    await prefs.remove("role");
+    await prefs.remove("userId");
+  }
+
+  static Future<String?> _adminAuthError(http.Response res, dynamic data) async {
+    if (res.statusCode != 401) return null;
+
+    await _clearSession();
+    return data["error"] == "Invalid token"
+        ? "Session expired. Please sign in again."
+        : data["error"] ?? "Please sign in again.";
+  }
+
+  static Future<List<dynamic>> getAdminStations() async {
+    try {
+      final res = await http.get(
+        Uri.parse("$baseUrl/station/admin/all"),
+        headers: await _adminHeaders(),
+      ).timeout(_requestTimeout);
+
+      final data = _handleResponse(res);
+
+      if (res.statusCode == 200) {
+        return data;
+      } else {
+        final authError = await _adminAuthError(res, data);
+        if (authError != null) throw Exception(authError);
+
+        if (data["error"] == "Server error (not JSON)") {
+          throw Exception("Admin station API not found. Restart backend or check baseUrl.");
+        }
+
+        throw Exception(data["error"] ?? "Failed to load stations");
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst("Exception: ", ""));
+    }
+  }
+
+  static Future<String?> createAdminStation(
+    Map<String, dynamic> station,
+  ) async {
+    try {
+      final res = await http.post(
+        Uri.parse("$baseUrl/station/admin"),
+        headers: await _adminHeaders(),
+        body: jsonEncode(station),
+      ).timeout(_requestTimeout);
+
+      final data = _handleResponse(res);
+
+      if (res.statusCode == 201 || res.statusCode == 200) {
+        return null;
+      }
+
+      final authError = await _adminAuthError(res, data);
+      if (authError != null) return authError;
+
+      return data["error"] ?? "Create station failed";
+    } catch (e) {
+      return e.toString().replaceFirst("Exception: ", "");
+    }
+  }
+
+  static Future<String?> updateAdminStation(
+    String id,
+    Map<String, dynamic> station,
+  ) async {
+    try {
+      final res = await http.put(
+        Uri.parse("$baseUrl/station/admin/$id"),
+        headers: await _adminHeaders(),
+        body: jsonEncode(station),
+      ).timeout(_requestTimeout);
+
+      final data = _handleResponse(res);
+
+      if (res.statusCode == 200) {
+        return null;
+      }
+
+      final authError = await _adminAuthError(res, data);
+      if (authError != null) return authError;
+
+      return data["error"] ?? "Update station failed";
+    } catch (e) {
+      return e.toString().replaceFirst("Exception: ", "");
+    }
+  }
+
+  static Future<String?> deleteAdminStation(String id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse("$baseUrl/station/admin/$id"),
+        headers: await _adminHeaders(),
+      ).timeout(_requestTimeout);
+
+      final data = _handleResponse(res);
+
+      if (res.statusCode == 200) {
+        return null;
+      }
+
+      final authError = await _adminAuthError(res, data);
+      if (authError != null) return authError;
+
+      return data["error"] ?? "Delete station failed";
+    } catch (e) {
+      return e.toString().replaceFirst("Exception: ", "");
+    }
+  }
+
   // ================= BUS =================
 
   static Future<List<dynamic>> getBuses() async {

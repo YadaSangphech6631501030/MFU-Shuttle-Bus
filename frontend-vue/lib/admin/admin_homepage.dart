@@ -5,11 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../user/account_user.dart';
 import 'admin_bottom_bar.dart';
-import '../user/bus_station.dart';
-import '../user/custom_bottom_bar.dart';
-import 'report_pages.dart';
+import 'AdminBusPages.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import '../user/bus_controller.dart';
 
@@ -21,16 +18,7 @@ class AdminHomepage extends StatefulWidget {
 }
 
 class _AdminHomepageState extends State<AdminHomepage> {
-    int currentIndex = 0;
-
-    // Menu for bottom Bar
-    final List<Widget> pages = [
-    const SizedBox(),
-    BusStationPage(),
-    ReportPage(),
-    AccountUser()
-];
-
+  int currentIndex = 0;
 
   String selectedLine = "line1";
   final MapController mapController = MapController();
@@ -39,9 +27,12 @@ class _AdminHomepageState extends State<AdminHomepage> {
   Timer? stationTimer;
   Timer? busTimer;
   Timer? moveTimer;
+  final TextEditingController searchController = TextEditingController();
 
   List<dynamic> busData = [];
   List<dynamic> stationData = [];
+  List<Map<String, dynamic>> dbLine1Stations = [];
+  List<Map<String, dynamic>> dbLine2Stations = [];
   Map<String, LatLng> busPositions = {};
 
 // statuses for bus
@@ -54,6 +45,8 @@ class _AdminHomepageState extends State<AdminHomepage> {
 
   double speed = 1.2;
   List<LatLng> route = [];
+  List<LatLng> route1 = [];
+  List<LatLng> route2 = [];
 
 //BusTimeline
   Widget busTimeline(List<Map<String, dynamic>> stations, double progress) {
@@ -141,10 +134,28 @@ class _AdminHomepageState extends State<AdminHomepage> {
 // fetch station
   Future<void> fetchStations() async {
     try {
-      final data = await ApiService.getStations(selectedLine);
+      final line1Data = await ApiService.getStations("line1");
+      final line2Data = await ApiService.getStations("line2");
+      final stationById = <String, dynamic>{};
+
+      for (final station in [...line1Data, ...line2Data]) {
+        final id = station["id"]?.toString() ?? "";
+        if (id.isNotEmpty) {
+          stationById[id] = station;
+        }
+      }
+
       setState(() {
-        stationData = data;
+        dbLine1Stations = line1Data
+            .map((station) => Map<String, dynamic>.from(station))
+            .toList();
+        dbLine2Stations = line2Data
+            .map((station) => Map<String, dynamic>.from(station))
+            .toList();
+        stationData = stationById.values.toList();
       });
+
+      updateAllRoutes();
     } catch (e) {
       print("API ERROR: $e");
     }
@@ -164,205 +175,14 @@ class _AdminHomepageState extends State<AdminHomepage> {
     }
   }
 
-//line 1
-  final List<Map<String, dynamic>> line1 = [
-    {
-"id": "station1",
-"name": "Station 01 (จุดหอพักลำดวน 2)",
-"lat": 20.058823,
-"lng": 99.898419,
-},
-    {
-"id": "station2",
-"name": "Station 02(จุดพักลำดวน 7 ขาเข้า)",
-"lat": 20.057030,
-"lng": 99.896919,
-},
-    {
-"id": "station3",
-"name": "Station 03 (จุด หอพักจีน ขาเข้า)",
-"lat": 20.050870176213458,
-"lng": 99.8913375758622,
-},
-    {
-"id": "station4",
-"name": "Station 04 (จุด ศูนย์จีน ขาเข้า)",
-"lat": 20.048895164537097,
-"lng": 99.89132709650245,
-},
-    {
-"id": "station5",
-"name": "Station 05 (จุด ลานจอดหอพัก F)",
-"lat": 20.048215214947664,
-"lng": 99.89322591378016,
-},
-    {
-"id": "station6",
-"name": "Station 06 (จุด อาคารโรงอาหาร D1)",
-"lat": 20.04736,
-"lng": 99.893283,
-},
-    {
-"id": "station7",
-"name": "Station 07 (จุด สระน้ำวงรี ลานดาว)",
-"lat": 20.045606104291842,
-"lng": 99.89153621441135,
-},
-    {
-"id": "station8",
-"name": "Station 08 (จุด อาคารโรงอาหาร E2 ขาเข้า)",
-"lat": 20.04399637202456,
-"lng": 99.893402801156,
-},
-    {
-"id": "station9",
-"name": "Station 09 (จุด อาคารเรียนรวม C3 C2 และ หอประชุมสมเด็จย่า C4)",
-"lat": 20.043895277649657,
-"lng": 99.89521575716422,
-},
-    {
-"id": "station10",
-"name": "Station 10 (จุด อาคารเรียนรวม C5 )",
-"lat": 20.043346224233225,
-"lng": 99.89513551300819,
-},
-    {
-"id": "station11",
-"name": "Station 11 (จุด อาคาร m - square)",
-"lat": 20.045780781087203,
-"lng": 99.89135359185909,
-},
-    {
-"id": "station12",
-"name": "Station 12 (จุด ศูนย์จีน ขาออก)",
-"lat": 20.048830,
-"lng": 99.891330,
-},
-    {
-"id": "station13",
-"name": "Station 13 (จุด หอพักจีน ขาออก)",
-"lat": 20.050779,
-"lng": 99.891138,
-},
-    {
-"id": "station14",
-"name": "Station 14 (จุด สนามกีฬากลาง)",
-"lat": 20.054763275437402,
-"lng": 99.89454537873918,
-},
-    {
-"id": "station15",
-"name": "Station 15 (จุด หอพักลำดวน 7 ขาออก)",
-"lat": 20.056749,
-"lng": 99.897073,
-},
-    {
-"id": "station16",
-"name": "Station 16 (จุด ครัวลำดวน)",
-"lat": 20.058276924103307,
-"lng": 99.89811278167763,
-},
-  ];
-
-//line 2
-  final List<Map<String, dynamic>> line2 = [
-    {
-"id": "station1",
-"name": "Station 01 (จุดหอพักลำดวน 2)",
-"lat": 20.058823,
-"lng": 99.898419,
-},
-    {
-"id": "station2",
-"name": "Station 02(จุดพักลำดวน 7 ขาเข้า)",
-"lat": 20.057081156842653,
-"lng": 99.89702395554524,
-},
-    {
-"id": "station3",
-"name": "Station 03 (จุด หอพักจีน ขาเข้า)",
-"lat": 20.050870176213458,
-"lng": 99.8913375758622,
-},
-    {
-"id": "station4",
-"name": "Station 04 (จุด ศูนย์จีน ขาเข้า)",
-"lat": 20.048895164537097,
-"lng": 99.89132709650245,
-},
-    {
-"id": "station5",
-"name": "Station 05 (จุด ลานจอดหอพัก F)",
-"lat": 20.048215214947664,
-"lng": 99.89322591378016,
-},
-    {
-"id": "station6",
-"name": "Station 06 (จุด อาคารโรงอาหาร D1)",
-"lat": 20.04736,
-"lng": 99.893283,
-},
-    {
-"id": "station7",
-"name": "Station 07 (จุด สระน้ำวงรี ลานดาว)",
-"lat": 20.045606104291842,
-"lng": 99.89153621441135,
-},
-    {
-"id": "station8",
-"name": "Station 08 (จุด อาคารโรงอาหาร E2 ขาเข้า)",
-"lat": 20.04399637202456,
-"lng": 99.893402801156,
-},
-    {
-"id": "station17",
-"name": "Station 09 (จุด โรงพยาบาลแม่ฟ้าหลวง)",
-"lat": 20.041278409327774,
-"lng": 99.89430864493072,
-},
-    {
-"id": "station10",
-"name": "Station 10 (จุด อาคาร m - square)",
-"lat": 20.045780781087203,
-"lng": 99.89135359185909,
-},
-    {
-"id": "station11",
-"name": "Station 11 (จุด ศูนย์จีน ขาออก)",
-"lat": 20.048830,
-"lng": 99.891330,
-},
-    {
-"id": "station12",
-"name": "Station 12 (จุด หอพักจีน ขาออก)",
-"lat": 20.050779,
-"lng": 99.891138,
-},
-    {
-"id": "station13",
-"name": "Station 13 (จุด สนามกีฬากลาง)",
-"lat": 20.054763275437402,
-"lng": 99.89454537873918,
-},
-    {
-"id": "station14",
-"name": "Station 14 (จุด หอพักลำดวน 7 ขาออก)",
-"lat": 20.056749,
-"lng": 99.897073,
-},
-    {
-"id": "station15",
-"name": "Station 15 (จุด ครัวลำดวน)",
-"lat": 20.058276924103307,
-"lng": 99.89811278167763,
-},
-  ];
-
   List<Map<String, dynamic>> getSelectedLine() {
-    return selectedLine == "line1" ? line1 : line2;
-}
-Future<List<LatLng>> fetchRealRoute() async {
+    return selectedLine == "line1" ? dbLine1Stations : dbLine2Stations;
+  }
+
+  Future<List<LatLng>> fetchRealRoute() async {
   final points = getSelectedLine();
+
+  if (points.isEmpty) return [];
 
   String coords = points.map((p) => "${p["lng"]},${p["lat"]}").join(";");
 
@@ -390,18 +210,66 @@ Future<List<LatLng>> fetchRealRoute() async {
   }
 }
 
+  List<Map<String, dynamic>> getAllLines() {
+    final stationById = <String, Map<String, dynamic>>{};
+
+    for (final station in [...dbLine1Stations, ...dbLine2Stations]) {
+      final id = station["id"]?.toString() ?? "";
+      if (id.isNotEmpty) {
+        stationById[id] = station;
+      }
+    }
+
+    return stationById.values.toList();
+  }
+
+  List<LatLng> getLineLatLngs(List<Map<String, dynamic>> points) {
+    return points.map((p) => LatLng(p["lat"], p["lng"])).toList();
+  }
+
+  Future<List<LatLng>> fetchRouteForPoints(
+    List<Map<String, dynamic>> points,
+  ) async {
+    if (points.isEmpty) return [];
+
+    String coords = points.map((p) => "${p["lng"]},${p["lat"]}").join(";");
+
+    final url =
+        "https://router.project-osrm.org/route/v1/driving/$coords?overview=full&geometries=geojson";
+
+    try {
+      final res = await http.get(Uri.parse(url));
+      final data = jsonDecode(res.body);
+
+      if (data["routes"] == null || data["routes"].isEmpty) {
+        print("route fallback");
+        return getLineLatLngs(points);
+      }
+
+      final routeCoords = data["routes"][0]["geometry"]["coordinates"];
+
+      return routeCoords.map<LatLng>((c) {
+        return LatLng(c[1], c[0]);
+      }).toList();
+    } catch (e) {
+      print("ROUTE ERROR: $e");
+      return getLineLatLngs(points);
+    }
+  }
+
   @override
   void dispose() {
     stationTimer?.cancel();
     busTimer?.cancel();
     moveTimer?.cancel();
+    searchController.dispose();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
-    updateRoute();
+    updateAllRoutes();
     fetchStations();
     fetchBuses();
 
@@ -434,6 +302,105 @@ Future<List<LatLng>> fetchRealRoute() async {
             style: GoogleFonts.kanit(fontSize: 15, fontWeight: FontWeight.bold),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _cctvPreview(Map<String, dynamic> station) {
+    final stationTitle = station["name"].toString().split("(")[0].trim();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 18),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade800),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.24),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(13),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.grey.shade900,
+                      Colors.black,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFD2232A),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "CCTV",
+                    style: GoogleFonts.kanit(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              right: 12,
+              top: 10,
+              child: Text(
+                stationTitle,
+                style: GoogleFonts.kanit(
+                  color: Colors.grey.shade400,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.videocam_outlined,
+                    color: Colors.grey.shade500,
+                    size: 42,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Camera feed pending",
+                    style: GoogleFonts.kanit(
+                      color: Colors.grey.shade400,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -608,14 +575,31 @@ Future<List<LatLng>> fetchRealRoute() async {
     }
   });
 }
+
+  Future<void> updateAllRoutes() async {
+    final newRoute1 = await fetchRouteForPoints(dbLine1Stations);
+    final newRoute2 = await fetchRouteForPoints(dbLine2Stations);
+
+    setState(() {
+      route1 = newRoute1.isNotEmpty
+          ? catmullRomSpline(newRoute1, segments: 10)
+          : getLineLatLngs(dbLine1Stations);
+      route2 = newRoute2.isNotEmpty
+          ? catmullRomSpline(newRoute2, segments: 10)
+          : getLineLatLngs(dbLine2Stations);
+    });
+
+    updateRoute();
+  }
+
 void updateRoute() async {
   final newRoute = await fetchRealRoute();
 
-  if (newRoute.isNotEmpty) {
-    setState(() {
-      route = catmullRomSpline(newRoute, segments: 10);
-    });
-  }
+  setState(() {
+    route = newRoute.isNotEmpty
+        ? catmullRomSpline(newRoute, segments: 10)
+        : [];
+  });
 }
 
   void updateBusETA() {
@@ -726,23 +710,29 @@ void updateRoute() async {
                 subdomains: ['a', 'b', 'c', 'd'],
               ),
             
-              // Route Line
+              // Route Lines for both line1 and line2
               PolylineLayer(
                 polylines: [
                   Polyline(
-                    points: route,
-                    color: selectedLine == "line1"
-                        ? Colors
-                              .grey // line1
-                        : Colors.lightGreen, // line 2
-                    strokeWidth: 4,
+                    points: route2.isNotEmpty
+                        ? route2
+                        : getLineLatLngs(dbLine2Stations),
+                    color: Colors.grey.shade700,
+                    strokeWidth: 2,
+                  ),
+                  Polyline(
+                    points: route1.isNotEmpty
+                        ? route1
+                        : getLineLatLngs(dbLine1Stations),
+                    color: Color(0xFFBC9945),
+                    strokeWidth: 2,
                   ),
                 ],
               ),
 
               // Stations Markers
               MarkerLayer(
-                markers: getSelectedLine().map((station) {
+                markers: getAllLines().map((station) {
                   Map<String, dynamic>? stationMatch;
 
                   try {
@@ -755,10 +745,6 @@ void updateRoute() async {
 
                   int waiting = stationMatch?["waiting"] ?? 0;
                   String status = stationMatch?["status"] ?? "LOW";
-
-                  double eta = calculateETA(
-                    LatLng(station["lat"], station["lng"]),
-                  );
 
                   return Marker(
                     point: LatLng(station["lat"], station["lng"]),
@@ -775,12 +761,13 @@ void updateRoute() async {
 
                         showModalBottomSheet(
                           context: context,
-                          isScrollControlled: false,
+                          isScrollControlled: true,
                           enableDrag: false,
                           showDragHandle: false,
                           backgroundColor: Colors.white,
                           builder: (context) {
-                            return Container(
+                            return SingleChildScrollView(
+                              child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.fromLTRB(
                                 16,
@@ -850,11 +837,13 @@ void updateRoute() async {
                                       _infoRow("📢 สถานะ", "ปกติ"),
                                     ],
                                   ),
-                                  const SizedBox(height: 50),
+                                  _cctvPreview(station),
+                                  const SizedBox(height: 24),
                                   
                                   
                                 ],
                               ),
+                            ),
                             );
                           },
                         );
@@ -868,20 +857,14 @@ void updateRoute() async {
                           children: [
                             Icon(
                               Icons.circle,
-                              size: 40,
-                              color: getColor(status),
-                              shadows: [
-                                Shadow(
-                                  color: getColor(status).withOpacity(0.6),
-                                  blurRadius: 15,
-                                ),
-                              ],
+                              size: 42,
+                              color: getColor(status).withOpacity(0.40),
                             ),
                             ClipOval(
                               child: Image.asset(
                                 'assets/dindin.png',
-                                width: 30,
-                                height: 30,
+                                width: 25,
+                                height: 25,
                               ),
                             ),
                           ],
@@ -1003,54 +986,40 @@ void updateRoute() async {
             ),
           ),
 
-          //Selected Line Button
+          // Search station tab below app bar
           Positioned(
-            top: 150,
-            left: 20,
-            child: Column(
-              children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedLine == "line1"
-                        ? Colors.black
-                        : Colors.white,
-                    foregroundColor: selectedLine == "line1"
-                        ? Colors.white
-                        : Colors.black,
-                    side: const BorderSide(color: Colors.white),
+            top: 130,
+            left: 40,
+            right: 40,
+            child: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                  onPressed: () {
-                    setState(() {
-                      selectedLine = "line1";
-                    });
-                    updateRoute();
-                    fetchStations();
-                  },
-                  child: const Text("Line 1"),
-                ),
-
-                const SizedBox(width: 10),
-
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedLine == "line2"
-                        ? Colors.green
-                        : Colors.white,
-                    foregroundColor: selectedLine == "line2"
-                        ? Colors.white
-                        : Colors.black,
-                    side: const BorderSide(color: Colors.white),
+                ],
+              ),
+              child: TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  hintText: 'Where to ?',
+                  hintStyle: GoogleFonts.kanit(fontSize: 18),
+                  prefixIcon: const Icon(Icons.search, color: Colors.black54),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 18,
+                    horizontal: 16,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      selectedLine = "line2";
-                    });
-                    updateRoute();
-                    fetchStations();
-                  },
-                  child: const Text("Line 2"),
                 ),
-              ],
+                style: GoogleFonts.kanit(fontSize: 14),
+                textInputAction: TextInputAction.search,
+                onSubmitted: (value) {},
+              ),
             ),
           ),
 
@@ -1080,26 +1049,48 @@ void updateRoute() async {
                 children: [
                   
                   // ร้องเรียน menu
-                  IconButton(
-                    icon: const Icon(Icons.warning_amber_rounded),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ReportPage(),
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'MFU ',
+                          style: GoogleFonts.kanit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFD2232A),
+                          ),
                         ),
-                      );
-                    },
+                        TextSpan(
+                          text: 'SHUTTLE BUS',
+                          style: GoogleFonts.kanit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFBC9945),
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' Admin',
+                          style: GoogleFonts.kanit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   // Menu button
                   IconButton(
-                    icon: const Icon(Icons.menu),
+                    icon: const Icon(
+                      Icons.menu,
+                      color: Color(0xFFD2232A),
+                    ),
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const BusStationPage(),
+                          builder: (context) => const Adminbuspages(),
                         ),
                       );
                     },

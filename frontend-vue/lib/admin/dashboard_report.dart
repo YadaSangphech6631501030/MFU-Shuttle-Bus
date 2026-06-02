@@ -14,7 +14,7 @@ class _DashboardReportState extends State<DashboardReport> {
   List reports = [];
   bool isLoading = true;
 
-  int currentIndex = 2; // 🔥 ตั้ง index ให้ตรงกับ tab Report
+  int currentIndex = 3; // 🔥 ตั้ง index ให้ตรงกับ tab Report
 
   @override
   void initState() {

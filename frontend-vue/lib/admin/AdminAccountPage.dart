@@ -12,7 +12,7 @@ class Adminaccountpage extends StatefulWidget {
 }
 
 class _AdminaccountpageState extends State<Adminaccountpage> {
-  int currentIndex = 3;
+  int currentIndex = 4;
 
   String username = "";
   String email = "";

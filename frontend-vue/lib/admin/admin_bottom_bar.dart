@@ -3,6 +3,7 @@ import 'AdminAccountPage.dart';
 import 'AdminBusPages.dart';
 import 'dashboard_report.dart';
 import 'admin_homepage.dart';
+import 'admin_station_page.dart';
 
 class AdminBottomBar extends StatelessWidget {
   final int currentIndex;
@@ -25,9 +26,12 @@ class AdminBottomBar extends StatelessWidget {
         page = const Adminbuspages();
         break;
       case 2:
-        page = const DashboardReport();
+        page = const AdminStationPage();
         break;
       case 3:
+        page = const DashboardReport();
+        break;
+      case 4:
         page = const Adminaccountpage();
         break;
       default:
@@ -43,9 +47,10 @@ class AdminBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 100,
+      width: double.infinity,
+      height: 105,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFD2232A),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.15),
@@ -68,8 +73,9 @@ class AdminBottomBar extends StatelessWidget {
     1,
   ),
 
-  _item(context, const Icon(Icons.warning_amber_rounded), "Reports", 2),
-  _item(context, const Icon(Icons.person), "Account", 3),
+  _item(context, const Icon(Icons.location_on_outlined), "Station", 2),
+  _item(context, const Icon(Icons.warning_amber_rounded), "Reports", 3),
+  _item(context, const Icon(Icons.person), "Account", 4),
 ],
       ),
     );
@@ -91,13 +97,16 @@ class AdminBottomBar extends StatelessWidget {
           height: 40,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isActive ? Colors.grey.shade200 : Colors.transparent,
+            color: isActive ? Colors.white.withOpacity(0.16) : Colors.transparent,
             shape: BoxShape.circle,
           ),
-          child: icon,
+          child: IconTheme(
+            data: const IconThemeData(color: Colors.white),
+            child: icon,
+          ),
         ),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 12)),
+        Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
       ],
     ),
   );
