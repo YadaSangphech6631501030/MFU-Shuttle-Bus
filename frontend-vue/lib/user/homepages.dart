@@ -7,7 +7,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'bus_station.dart';
 import 'custom_bottom_bar.dart';
-import '../admin/report_pages.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import 'bus_controller.dart';
 
@@ -28,6 +27,7 @@ class _HomepagesState extends State<Homepages> {
   Timer? stationTimer;
   Timer? busTimer;
   Timer? moveTimer;
+  final TextEditingController searchController = TextEditingController();
 
   List<dynamic> busData = [];
   List<dynamic> stationData = [];
@@ -43,6 +43,8 @@ class _HomepagesState extends State<Homepages> {
 
   double speed = 1.2;
   List<LatLng> route = [];
+  List<LatLng> route1 = [];
+  List<LatLng> route2 = [];
 
 //BusTimeline
   Widget busTimeline(List<Map<String, dynamic>> stations, double progress) {
@@ -349,48 +351,52 @@ class _HomepagesState extends State<Homepages> {
 
   List<Map<String, dynamic>> getSelectedLine() {
     return selectedLine == "line1" ? line1 : line2;
-}
-Future<List<LatLng>> fetchRealRoute() async {
-  final points = getSelectedLine();
+  }
 
-  String coords = points.map((p) => "${p["lng"]},${p["lat"]}").join(";");
+  List<Map<String, dynamic>> getAllLines() {
+    return [...line1, ...line2];
+  }
 
-  final url =
-      "https://router.project-osrm.org/route/v1/driving/$coords?overview=full&geometries=geojson";
-
-  try {
-    final res = await http.get(Uri.parse(url));
-    final data = jsonDecode(res.body);
-
-    if (data["routes"] == null || data["routes"].isEmpty) {
-      print("❌ fallback route");
-      return points.map((p) => LatLng(p["lat"], p["lng"])).toList();
-    }
-
-    final routeCoords = data["routes"][0]["geometry"]["coordinates"];
-
-    return routeCoords.map<LatLng>((c) {
-      return LatLng(c[1], c[0]);
-    }).toList();
-
-  } catch (e) {
-    print("❌ ROUTE ERROR: $e");
+  List<LatLng> getLineLatLngs(List<Map<String, dynamic>> points) {
     return points.map((p) => LatLng(p["lat"], p["lng"])).toList();
   }
-}
 
-  @override
-  void dispose() {
-    stationTimer?.cancel();
-    busTimer?.cancel();
-    moveTimer?.cancel();
-    super.dispose();
+  Future<List<LatLng>> fetchRouteForPoints(List<Map<String, dynamic>> points) async {
+    if (points.isEmpty) return [];
+
+    String coords = points.map((p) => "${p["lng"]},${p["lat"]}").join(";");
+
+    final url =
+        "https://router.project-osrm.org/route/v1/driving/$coords?overview=full&geometries=geojson";
+
+    try {
+      final res = await http.get(Uri.parse(url));
+      final data = jsonDecode(res.body);
+
+      if (data["routes"] == null || data["routes"].isEmpty) {
+        print("❌ fallback route");
+        return getLineLatLngs(points);
+      }
+
+      final routeCoords = data["routes"][0]["geometry"]["coordinates"];
+
+      return routeCoords.map<LatLng>((c) {
+        return LatLng(c[1], c[0]);
+      }).toList();
+    } catch (e) {
+      print("❌ ROUTE ERROR: $e");
+      return getLineLatLngs(points);
+    }
+  }
+
+  Future<List<LatLng>> fetchRealRoute() async {
+    return fetchRouteForPoints(getSelectedLine());
   }
 
   @override
   void initState() {
     super.initState();
-    updateRoute();
+    updateAllRoutes();
     fetchStations();
     fetchBuses();
 
@@ -407,6 +413,15 @@ Future<List<LatLng>> fetchRealRoute() async {
       updateAllStationETA();
       updateBusETA();
     });
+  }
+
+  @override
+  void dispose() {
+    stationTimer?.cancel();
+    busTimer?.cancel();
+    moveTimer?.cancel();
+    searchController.dispose();
+    super.dispose();
   }
 
   Widget _infoRow(String title, String value) {
@@ -504,7 +519,7 @@ Future<List<LatLng>> fetchRealRoute() async {
 
   // Bus movement logic
   void moveSmooth() {
-  final buses = BusController.instance.busData;
+    final buses = BusController.instance.busData;
 
   if (route.isEmpty || buses.isEmpty) return;
 
@@ -595,15 +610,31 @@ Future<List<LatLng>> fetchRealRoute() async {
     }
   });
 }
-void updateRoute() async {
-  final newRoute = await fetchRealRoute();
+  Future<void> updateAllRoutes() async {
+    final newRoute1 = await fetchRouteForPoints(line1);
+    final newRoute2 = await fetchRouteForPoints(line2);
 
-  if (newRoute.isNotEmpty) {
     setState(() {
-      route = catmullRomSpline(newRoute, segments: 10);
+      route1 = newRoute1.isNotEmpty
+          ? catmullRomSpline(newRoute1, segments: 10)
+          : getLineLatLngs(line1);
+      route2 = newRoute2.isNotEmpty
+          ? catmullRomSpline(newRoute2, segments: 10)
+          : getLineLatLngs(line2);
     });
+
+    updateRoute();
   }
-}
+
+  Future<void> updateRoute() async {
+    final newRoute = await fetchRealRoute();
+
+    if (newRoute.isNotEmpty) {
+      setState(() {
+        route = catmullRomSpline(newRoute, segments: 10);
+      });
+    }
+  }
 
   void updateBusETA() {
     for (var bus in BusController.instance.busData) {
@@ -705,23 +736,25 @@ void updateRoute() async {
                 subdomains: ['a', 'b', 'c', 'd'],
               ),
             
-              // Route Line
+              // Route Lines for both line1 and line2
               PolylineLayer(
                 polylines: [
                   Polyline(
-                    points: route,
-                    color: selectedLine == "line1"
-                        ? Colors
-                              .grey // line1
-                        : Colors.lightGreen, // line 2
-                    strokeWidth: 4,
+                    points: route2.isNotEmpty ? route2 : getLineLatLngs(line2),
+                    color: Colors.grey.shade700,
+                    strokeWidth: 2,
+                  ),
+                  Polyline(
+                    points: route1.isNotEmpty ? route1 : getLineLatLngs(line1),
+                    color: Color(0xFFBC9945),
+                    strokeWidth: 2,
                   ),
                 ],
               ),
 
               // Stations Markers
               MarkerLayer(
-                markers: getSelectedLine().map((station) {
+                markers: getAllLines().map((station) {
                   Map<String, dynamic>? stationMatch;
 
                   try {
@@ -734,10 +767,6 @@ void updateRoute() async {
 
                   int waiting = stationMatch?["waiting"] ?? 0;
                   String status = stationMatch?["status"] ?? "LOW";
-
-                  double eta = calculateETA(
-                    LatLng(station["lat"], station["lng"]),
-                  );
 
                   return Marker(
                     point: LatLng(station["lat"], station["lng"]),
@@ -818,15 +847,15 @@ void updateRoute() async {
                                   Column(
                                     children: [
                                       _infoRow(
-                                        "👥 จำนวนผู้โดยสาร",
-                                        "$waiting คน",
+                                        "👥 Amount waiting ",
+                                        "$waiting people",
                                       ),
                                       _infoRow(
-                                        "⏱ รถจะมาถึง",
-                                        "$displayETA นาที",
+                                        "⏱ The car will arrive in",
+                                        "$displayETA minutes",
                                       ),
-                                      _infoRow("🚦 ความแออัด", status),
-                                      _infoRow("📢 สถานะ", "ปกติ"),
+                                      _infoRow("🚦 Crowding", status),
+                                      _infoRow("📢 Status", "Normal"),
                                     ],
                                   ),
                                   const SizedBox(height: 50),
@@ -847,20 +876,14 @@ void updateRoute() async {
                           children: [
                             Icon(
                               Icons.circle,
-                              size: 40,
-                              color: getColor(status),
-                              shadows: [
-                                Shadow(
-                                  color: getColor(status).withOpacity(0.6),
-                                  blurRadius: 15,
-                                ),
-                              ],
+                              size: 42,
+                              color: getColor(status).withOpacity(0.40),
                             ),
                             ClipOval(
                               child: Image.asset(
                                 'assets/dindin.png',
-                                width: 30,
-                                height: 30,
+                                width: 25,
+                                height: 25,
                               ),
                             ),
                           ],
@@ -982,54 +1005,41 @@ void updateRoute() async {
             ),
           ),
 
-          //Selected Line Button
+          // Search station tab below app bar
           Positioned(
-            top: 150,
-            left: 20,
-            child: Column(
-              children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedLine == "line1"
-                        ? Colors.black
-                        : Colors.white,
-                    foregroundColor: selectedLine == "line1"
-                        ? Colors.white
-                        : Colors.black,
-                    side: const BorderSide(color: Colors.white),
+            top: 130,
+            left: 40,
+            right: 40,
+            child: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                  onPressed: () {
-                    setState(() {
-                      selectedLine = "line1";
-                    });
-                    updateRoute();
-                    fetchStations();
-                  },
-                  child: const Text("Line 1"),
-                ),
-
-                const SizedBox(width: 10),
-
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedLine == "line2"
-                        ? Colors.green
-                        : Colors.white,
-                    foregroundColor: selectedLine == "line2"
-                        ? Colors.white
-                        : Colors.black,
-                    side: const BorderSide(color: Colors.white),
+                ],
+              ),
+              child: TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  hintText: 'Where to ?',
+                  hintStyle: GoogleFonts.kanit(fontSize: 18),
+                  prefixIcon: const Icon(Icons.search, color: Colors.black54),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 18,
+                    horizontal: 16,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      selectedLine = "line2";
-                    });
-                    updateRoute();
-                    fetchStations();
-                  },
-                  child: const Text("Line 2"),
                 ),
-              ],
+                style: GoogleFonts.kanit(fontSize: 14),
+                textInputAction: TextInputAction.search,
+                onSubmitted: (value) {
+                },
+              ),
             ),
           ),
 
@@ -1058,22 +1068,36 @@ void updateRoute() async {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   
-                  // ร้องเรียน menu
-                  IconButton(
-                    icon: const Icon(Icons.warning_amber_rounded),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ReportPage(),
+                  // Title text
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'MFU ',
+                          style: GoogleFonts.kanit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFD2232A),
+                          ),
                         ),
-                      );
-                    },
+                        TextSpan(
+                          text: 'SHUTTLE BUS',
+                          style: GoogleFonts.kanit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFBC9945),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   // Menu button
                   IconButton(
-                    icon: const Icon(Icons.menu),
+                    icon: const Icon(
+                      Icons.menu,
+                      color: Color(0xFFD2232A),
+                    ),
                     onPressed: () {
                       Navigator.push(
                         context,
