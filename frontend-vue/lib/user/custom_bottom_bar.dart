@@ -38,9 +38,9 @@ class CustomBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 120,
+      height: 105,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFD2232A),
         boxShadow: [
           BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 5),
         ],
@@ -48,9 +48,9 @@ class CustomBottomBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _item(context, Icons.home, "Home", 0),
+          _item(context, Icons.home_outlined, "Home", 0),
           _busItem(context),
-          _item(context, Icons.person, "Account", 2),
+          _item(context, Icons.person_outline, "Account", 2),
         ],
       ),
     );
@@ -68,14 +68,11 @@ class CustomBottomBar extends StatelessWidget {
             width: 40,
             height: 40,
             alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isActive ? Colors.grey.shade200 : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: isActive ? Colors.black : Colors.black),
+           
+            child: Icon(icon, color: Colors.white),
           ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: Colors.black, fontSize: 12)),
+          Text(label, style: TextStyle(color: Colors.white, fontSize: 12)),
         ],
       ),
     );
@@ -94,14 +91,10 @@ class CustomBottomBar extends StatelessWidget {
             width: 40,
             height: 40,
             alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isActive ? Colors.grey.shade200 : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
             child: Image.asset('assets/bus.png', height: 24),
           ),
           const SizedBox(height: 4),
-          Text("Bus", style: TextStyle(color: Colors.black, fontSize: 12)),
+          Text("Bus", style: TextStyle(color: Colors.white, fontSize: 12)),
         ],
       ),
     );
