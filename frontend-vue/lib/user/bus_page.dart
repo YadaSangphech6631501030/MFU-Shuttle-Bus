@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'custom_bottom_bar.dart';
-
 class BusPage extends StatefulWidget {
   const BusPage({super.key});
 
@@ -11,171 +10,551 @@ class BusPage extends StatefulWidget {
 }
 
 class _BusPageState extends State<BusPage> {
-  int currentIndex = 1;
+  final TextEditingController fromController =
+      TextEditingController();
 
-  final Random random = Random();
-  Timer? timer;
+  final TextEditingController toController =
+      TextEditingController();
 
-  List<Map<String, dynamic>> buses = [
-    {
-      "name": "Bus 01",
-      "line": "Line 1",
-      "station": "C3",
-      "minutes": 3,
-      "status": "running",
-    },
-    {
-      "name": "Bus 02",
-      "line": "Line 2",
-      "station": "E2",
-      "minutes": 5,
-      "status": "medium",
-    },
-    {
-      "name": "Bus 03",
-      "line": "Line 1",
-      "station": "M-Square",
-      "minutes": 10,
-      "status": "stop",
-    },
-    {
-      "name": "Bus 04",
-      "line": "Line 2",
-      "station": "Lamduan",
-      "minutes": 4,
-      "status": "running",
-    },
-    {
-      "name": "Bus 05",
-      "line": "Line 1",
-      "station": "C5",
-      "minutes": 6,
-      "status": "medium",
-    },
-    {
-      "name": "Bus 06",
-      "line": "Line 2",
-      "station": "D1",
-      "minutes": 8,
-      "status": "stop",
-    },
+  bool showSuggestions = false;
+
+  //
+  String activeField = '';
+
+  
+  final List<String> busStations = [
+    'จุดหอพักลำดวน 2',
+    'จุดหอพักลำดวน 7 ขาเข้า',
+    'จุดหอพักอิน ขาเข้า',
+    'จุดศูนย์จีน ขาเข้า',
+    'จุดลานจอดหอพัก F',
+    'จุดอาคารโรงอาหาร D1',
+    'จุดสระน้ำวงรี ลานดาว',
+    'จุดอาคารโรงอาหาร E2 ขาเข้า',
+    'จุดอาคารเรียนรวม C3 C2',
+    'ห้องประชุมสมเด็จย่า C4',
+    'จุดอาคารเรียนรวม C5',
+    'จุดอาคาร m-square ขาเข้า',
+    'จุดอาคาร m-square ขาออก',
+    'จุดสนามกีฬากลาง',
+    'จุดหอพักลำดวน 7 ขาออก',
+    'จุดหอพักอิน ขาออก',
+    'จุดครัวลำดวน',
   ];
 
-  @override
-  void initState() {
-    super.initState();
+  List<String> filteredStations = [];
+  bool showResult = false;
 
-    timer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!mounted) return;
-      setState(() {
-        for (var bus in buses) {
-          bus["minutes"] = random.nextInt(10) + 1;
-          bus["status"] = randomStatus();
-        }
-      });
+final List<Map<String, dynamic>> buses = [
+  {"bus": "Bus 04", "time": 1},
+  {"bus": "Bus 07", "time": 2},
+  {"bus": "Bus 09", "time": 3},
+];
+
+void searchStation(
+  String value,
+  String field,
+) {
+  activeField = field;
+
+  setState(() {
+    showResult = false;
+  });
+
+  if (value.trim().isEmpty) {
+    setState(() {
+      showSuggestions = false;
+      filteredStations.clear();
+      showResult = false;
     });
+    return;
   }
 
-  @override
-  void dispose() {
-    timer?.cancel();
-    super.dispose();
+  List<String> results;
+
+  if (value.trim() == 'จุด') {
+    results = busStations;
+  } else {
+    results = busStations.where((station) {
+      return station
+          .toLowerCase()
+          .contains(
+            value.toLowerCase(),
+          );
+    }).toList();
   }
 
-  String randomStatus() {
-    final r = random.nextInt(3);
-    switch (r) {
-      case 0:
-        return "running";
-      case 1:
-        return "medium";
-      default:
-        return "stop";
+  setState(() {
+    filteredStations = results;
+    showSuggestions =
+        results.isNotEmpty;
+  });
+}
+  void selectStation(String item) {
+  if (activeField == 'from') {
+    fromController.text = item;
+  } else {
+    toController.text = item;
+  }
+
+  setState(() {
+    showSuggestions = false;
+
+    if (fromController.text.isNotEmpty &&
+        toController.text.isNotEmpty) {
+      showResult = true;
     }
-  }
-
-  Color getStatusColor(String status) {
-    switch (status) {
-      case "running":
-        return Colors.green;
-      case "medium":
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String getStatusText(String status) {
-    switch (status) {
-      case "running":
-        return "Running";
-      case "medium":
-        return "Arriving";
-      default:
-        return "Stopped";
-    }
-  }
-
+  });
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: CustomBottomBar(currentIndex: 1),
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text("Bus Status"),
-        backgroundColor: Colors.white,
-      ),
-      body: Stack(
-        children: [
-          ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: buses.length,
-            itemBuilder: (context, index) {
-              final bus = buses[index];
+      backgroundColor:
+          const Color(0xFFF2F2F2),
+      body: SafeArea(
+        child: Padding(
+          padding:
+              const EdgeInsets.all(12),
+          child: Container(
+            width: double.infinity,
+            padding:
+                const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 20,
+            ),
+            decoration:
+                BoxDecoration(
+              color: Colors.white,
+              borderRadius:
+                  BorderRadius.circular(
+                8,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment
+                      .start,
+              children: [
+                // HEADER
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(
+                          context,
+                        );
+                      },
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration:
+                            BoxDecoration(
+                          border:
+                              Border.all(
+                            color:
+                                Colors
+                                    .green,
+                            width:
+                                1.5,
+                          ),
+                        ),
+                        child:
+                            const Icon(
+                          Icons
+                              .chevron_left,
+                          color:
+                              Colors
+                                  .green,
+                          size: 22,
+                        ),
+                      ),
+                    ),
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Find Station',
+                          style:
+                              TextStyle(
+                            fontSize:
+                                18,
+                            fontWeight:
+                                FontWeight
+                                    .bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(
+                      width: 28,
                     ),
                   ],
                 ),
-                child: Row(
+
+                const SizedBox(
+                  height: 18,
+                ),
+
+                Divider(
+                  color: Colors
+                      .grey.shade300,
+                  thickness: 1,
+                ),
+
+                const SizedBox(
+                  height: 22,
+                ),
+
+                Row(
+                  crossAxisAlignment:
+                      CrossAxisAlignment
+                          .start,
                   children: [
-                    Icon(
-                      Icons.directions_bus,
-                      size: 40,
-                      color: getStatusColor(bus["status"]),
+                    // จุดแดง เส้น จุดเหลือง
+                    Column(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration:
+                              const BoxDecoration(
+                            color:
+                                Colors.red,
+                            shape:
+                                BoxShape
+                                    .circle,
+                          ),
+                        ),//
+                        Container(
+                          width: 2,
+                          height: 38,
+                          color:
+                              Colors.grey,
+                        ),
+                        Container(
+                          width: 12,
+                          height: 12,
+                          color:
+                              const Color(
+                            0xFFC5A437,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
+
+                    const SizedBox(
+                      width: 10,
+                    ),
+
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment:
+                            CrossAxisAlignment
+                                .start,
                         children: [
-                          Text(
-                            "${bus["name"]}: ${getStatusText(bus["status"])}",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: getStatusColor(bus["status"]),
-                            ),
+                          // FROM
+                          _buildInput(
+                            title:
+                                'From',
+                            hint:
+                                'Where ?',
+                            controller:
+                                fromController,
+                            field:
+                                'from',
                           ),
-                          Text("Line : ${bus["line"]}"),
-                          Text("Next Station : ${bus["station"]}"),
-                          Text("Time Arrive : ${bus["minutes"]} min"),
+
+                          const SizedBox(
+                            height: 10,
+                          ),
+
+                          // TO
+                          _buildInput(
+                            title: 'To',
+                            hint:
+                                'Where to ?',
+                            controller:
+                                toController,
+                            field:
+                                'to',
+                          ),
+                          const SizedBox(height: 24),
+
+if (showResult) ...[
+  Text(
+    'เร็วที่สุด',
+    style: TextStyle(
+      color: Colors.grey.shade600,
+      fontSize: 14,
+    ),
+  ),
+
+  const SizedBox(height: 16),
+
+  _busCard("Bus 04", 1),
+  _busCard("Bus 07", 2),
+  _busCard("Bus 09", 3),
+],
+                          // Dropdown
+                          if (showSuggestions)
+                            Container(
+                              margin:
+                                  const EdgeInsets.only(
+                                top: 8,
+                                left: 4,
+                              ),
+                              constraints:
+                                  const BoxConstraints(
+                                maxHeight:
+                                    220,
+                              ),
+                              decoration:
+                                  BoxDecoration(
+                                color:
+                                    Colors
+                                        .white,
+                                borderRadius:
+                                    BorderRadius.circular(
+                                  12,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors
+                                        .black
+                                        .withOpacity(
+                                      0.12,
+                                    ),
+                                    blurRadius:
+                                        12,
+                                    offset:
+                                        const Offset(
+                                      0,
+                                      4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              child:
+                                  Scrollbar(
+                                child:
+                                    ListView.separated(
+                                  shrinkWrap:
+                                      true,
+                                  itemCount:
+                                      filteredStations
+                                          .length,
+                                  separatorBuilder:
+                                      (_, __) =>
+                                          Divider(
+                                    height:
+                                        1,
+                                    color: Colors
+                                        .grey
+                                        .shade200,
+                                  ),
+                                  itemBuilder:
+                                      (
+                                    context,
+                                    index,
+                                  ) {
+                                    final item =
+                                        filteredStations[
+                                            index];
+
+                                    return InkWell(
+                                      onTap:
+                                          () =>
+                                              selectStation(
+                                        item,
+                                      ),
+                                      child:
+                                          Padding(
+                                        padding:
+                                            const EdgeInsets.symmetric(
+                                          horizontal:
+                                              14,
+                                          vertical:
+                                              14,
+                                        ),
+                                        child:
+                                            Row(
+                                          children: [
+                                            const Icon(
+                                              Icons
+                                                  .directions_bus,
+                                              size:
+                                                  18,
+                                              color:
+                                                  Colors.grey,
+                                            ),
+                                            const SizedBox(
+                                              width:
+                                                  10,
+                                            ),
+                                            Expanded(
+                                              child:
+                                                  Text(
+                                                item,
+                                                style:
+                                                    const TextStyle(
+                                                  fontSize:
+                                                      13,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
                   ],
                 ),
-              );
-            },
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+Widget _busCard(
+  String busName,
+  int minute,
+) {
+  return Container(
+    margin: const EdgeInsets.only(
+      bottom: 16,
+    ),
+    padding: const EdgeInsets.all(
+      18,
+    ),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius:
+          BorderRadius.circular(12),
+      border: Border.all(
+        color:
+            busName == "Bus 04"
+                ? Colors.green
+                : Colors.grey.shade300,
+        width: 2,
+      ),
+      boxShadow: const [
+        BoxShadow(
+          color: Color.fromARGB(31, 255, 204, 204),
+          blurRadius: 4,
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        const Icon(
+          Icons.directions_bus,
+          size: 28,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            busName,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight:
+                  FontWeight.bold,
+            ),
+          ),
+        ),
+        Text(
+          '$minute min',
+          style: const TextStyle(
+            fontSize: 14,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+  Widget _buildInput({
+    required String title,
+    required String hint,
+    required TextEditingController
+        controller,
+    required String field,
+  }) {
+    return Container(
+      height: 42,
+      padding:
+          const EdgeInsets.symmetric(
+        horizontal: 12,
+      ),
+      decoration: BoxDecoration(
+        color:
+            const Color(0xFFE6E6E6),
+        borderRadius:
+            BorderRadius.circular(
+          8,
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color:
+                  Colors.grey.shade700,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(
+            width: 14,
+          ),
+          Expanded(
+            child: TextField(
+              controller:
+                  controller,
+              onChanged: (value) {
+  setState(() {});
+
+  searchStation(
+    value,
+    field,
+  );
+},
+              decoration: InputDecoration(
+  hintText: hint,
+  border: InputBorder.none,
+
+  suffixIcon: controller.text.isNotEmpty
+      ? IconButton(
+          icon: const Icon(
+            Icons.close,
+            size: 18,
+          ),
+          onPressed: () {
+  controller.clear();
+
+  searchStation('', field);
+
+  setState(() {
+    showSuggestions = false;
+    filteredStations.clear();
+    showResult = false;
+  });
+},
+        )
+      : null,
+
+  hintStyle: TextStyle(
+    color: Colors.grey.shade600,
+    fontSize: 13,
+                ),
+              ),
+            ),
           ),
         ],
       ),
