@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:shuttle_bus_fronted/services/api_service.dart';
 import 'custom_bottom_bar.dart';
 import 'homepages.dart';
 
@@ -24,28 +25,74 @@ class _BusPageState extends State<BusPage> {
   String activeField = '';
 
   
-  final List<String> busStations = [
-    'จุดหอพักลำดวน 2',
-    'จุดหอพักลำดวน 7 ขาเข้า',
-    'จุดหอพักอิน ขาเข้า',
-    'จุดศูนย์จีน ขาเข้า',
-    'จุดลานจอดหอพัก F',
-    'จุดอาคารโรงอาหาร D1',
-    'จุดสระน้ำวงรี ลานดาว',
-    'จุดอาคารโรงอาหาร E2 ขาเข้า',
-    'จุดอาคารเรียนรวม C3 C2',
-    'ห้องประชุมสมเด็จย่า C4',
-    'จุดอาคารเรียนรวม C5',
-    'จุดอาคาร m-square ขาเข้า',
-    'จุดอาคาร m-square ขาออก',
-    'จุดสนามกีฬากลาง',
-    'จุดหอพักลำดวน 7 ขาออก',
-    'จุดหอพักอิน ขาออก',
-    'จุดครัวลำดวน',
-  ];
+  List<String> busStations = [];
 
   List<String> filteredStations = [];
   bool showResult = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStations();
+  }
+
+  Future<void> _loadStations() async {
+    try {
+      final lines = await Future.wait([
+        ApiService.getStations("line1"),
+        ApiService.getStations("line2"),
+      ]);
+      final stationsById = <String, dynamic>{};
+
+      for (final station in [...lines[0], ...lines[1]]) {
+        final id = station["id"]?.toString() ?? "";
+        if (id.isNotEmpty) {
+          stationsById[id] = station;
+        }
+      }
+
+      final stations = stationsById.values.toList();
+      stations.sort(
+        (a, b) => _stationNumber(a["id"]).compareTo(_stationNumber(b["id"])),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        busStations = stations
+            .map<String>(
+              (station) => station["name"]?.toString().trim() ?? "",
+            )
+            .where((name) => name.isNotEmpty)
+            .toList();
+
+        final query = activeField == "from"
+            ? fromController.text
+            : toController.text;
+        if (query.trim().isNotEmpty) {
+          filteredStations = busStations
+              .where(
+                (station) => station
+                    .toLowerCase()
+                    .contains(query.toLowerCase()),
+              )
+              .toList();
+          showSuggestions = filteredStations.isNotEmpty;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to load stations")),
+      );
+    }
+  }
+
+  int _stationNumber(dynamic id) {
+    final number = RegExp(r'\d+').firstMatch(id?.toString() ?? "")?.group(0);
+    return int.tryParse(number ?? "") ?? 9999;
+  }
 
 final List<Map<String, dynamic>> buses = [
   {"bus": "Bus 04", "time": 1},

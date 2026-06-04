@@ -1,7 +1,61 @@
 import 'package:flutter/material.dart';
+import 'package:shuttle_bus_fronted/services/api_service.dart';
 
-class BusStationPage extends StatelessWidget {
+class BusStationPage extends StatefulWidget {
   const BusStationPage({super.key});
+
+  @override
+  State<BusStationPage> createState() => _BusStationPageState();
+}
+
+class _BusStationPageState extends State<BusStationPage> {
+  List<String> line1Stations = [];
+  List<String> line2Stations = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStations();
+  }
+
+  Future<void> _loadStations() async {
+    try {
+      final results = await Future.wait([
+        ApiService.getStations("line1"),
+        ApiService.getStations("line2"),
+      ]);
+
+      if (!mounted) return;
+
+      setState(() {
+        line1Stations = _stationNames(results[0]);
+        line2Stations = _stationNames(results[1]);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to load stations")),
+      );
+    }
+  }
+
+  List<String> _stationNames(List<dynamic> stations) {
+    final sortedStations = List<dynamic>.from(stations);
+    sortedStations.sort(
+      (a, b) => _stationNumber(a["id"]).compareTo(_stationNumber(b["id"])),
+    );
+
+    return sortedStations
+        .map<String>((station) => station["name"]?.toString().trim() ?? "")
+        .where((name) => name.isNotEmpty)
+        .toList();
+  }
+
+  int _stationNumber(dynamic id) {
+    final number = RegExp(r'\d+').firstMatch(id?.toString() ?? "")?.group(0);
+    return int.tryParse(number ?? "") ?? 9999;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +68,6 @@ class BusStationPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   children: [
                     IconButton(
@@ -48,67 +101,15 @@ class BusStationPage extends StatelessWidget {
                     const SizedBox(width: 48),
                   ],
                 ),
-
                 const SizedBox(height: 20),
-
-                // สาย 1
-                const LineSection(
+                LineSection(
                   title: "สาย 1",
-                  stations: [
-                    "01 จุดหอพักลำดวน 2",
-                    "02 จุดพักลำดวน 7 ขาเข้า",
-                    "03 แยกบ้านพักบุคลากร",
-                    "04 อาคารพิพิธภัณฑ์ D2",
-                    "05 หอพักจีน ขาเข้า",
-                    "06 ศูนย์จีน ขาเข้า",
-                    "07 ลานจอด F",
-                    "08 อาคาร D1",
-                    "09 สระน้ำวงรี",
-                    "10 อาคาร E2 ขาเข้า",
-                    "11 หอประชุม C4",
-                    "12 อาคาร C5",
-                    "13 อาคาร E2 ขาออก",
-                    "14 อาคาร M-Square",
-                    "15 ศูนย์จีน ขาออก",
-                    "16 หอพักจีน ขาออก",
-                    "17 ศุนย์ลำดวน",
-                    "18 ทางเข้า สระว่ายน้ำ",
-                    "19 หอพักลำดวน 7 ขาเข้า",
-                    "20 ศูนย์อาหารลำดวน",
-                    "21 มินิมาร์ทลำดวน",
-                    "22 โรงพยาบาล มใแม่ฟ้าหลวง",
-                  ],
+                  stations: line1Stations,
                 ),
-
                 const SizedBox(height: 16),
-
-                // สาย 2
-                const LineSection(
+                LineSection(
                   title: "สาย 2 (โรงพยาบาลแม่ฟ้าหลวง)",
-                  stations: [
-                    "01 จุดหอพักลำดวน 2",
-                    "02 จุดพักลำดวน 7 ขาเข้า",
-                    "03 แยกบ้านพักบุคลากร",
-                    "04 อาคารพิพิธภัณฑ์ D2",
-                    "05 หอพักจีน ขาเข้า",
-                    "06 ศูนย์จีน ขาเข้า",
-                    "07 ลานจอด F",
-                    "08 อาคาร D1",
-                    "09 สระน้ำวงรี",
-                    "10 อาคาร E2 ขาเข้า",
-                    "11 หอประชุม C4",
-                    "12 อาคาร C5",
-                    "13 อาคาร E2 ขาออก",
-                    "14 อาคาร M-Square",
-                    "15 ศูนย์จีน ขาออก",
-                    "16 หอพักจีน ขาออก",
-                    "17 ศุนย์ลำดวน",
-                    "18 ทางเข้า สระว่ายน้ำ",
-                    "19 หอพักลำดวน 7 ขาเข้า",
-                    "20 ศูนย์อาหารลำดวน",
-                    "21 มินิมาร์ทลำดวน",
-                    "22 โรงพยาบาล มใแม่ฟ้าหลวง",
-                  ],
+                  stations: line2Stations,
                 ),
               ],
             ),
@@ -116,7 +117,7 @@ class BusStationPage extends StatelessWidget {
         ),
       ),
     );
-  } //
+  }
 }
 
 class LineSection extends StatefulWidget {
@@ -135,9 +136,9 @@ class _LineSectionState extends State<LineSection> {
 
   Color _getLineColor() {
     if (widget.title.contains("สาย 1")) {
-      return const Color(0xFFD4AF37); // Gold color for Line 1
+      return const Color(0xFFD4AF37);
     } else if (widget.title.contains("สาย 2")) {
-      return const Color(0xFFE53935); // Red color for Line 2
+      return const Color(0xFFE53935);
     }
     return Colors.grey;
   }
@@ -153,7 +154,6 @@ class _LineSectionState extends State<LineSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // popup open/close
         GestureDetector(
           onTap: () {
             setState(() {
@@ -211,18 +211,14 @@ class _LineSectionState extends State<LineSection> {
             ),
           ),
         ),
-
         const SizedBox(height: 10),
-
         AnimatedCrossFade(
           duration: const Duration(milliseconds: 200),
           crossFadeState: isOpen
               ? CrossFadeState.showFirst
               : CrossFadeState.showSecond,
-
           firstChild: Column(
             children: [
-              // Search
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -245,10 +241,7 @@ class _LineSectionState extends State<LineSection> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 10),
-
-              // Station List
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(

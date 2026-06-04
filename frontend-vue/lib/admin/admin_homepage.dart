@@ -6,7 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'admin_bottom_bar.dart';
-import 'AdminBusPages.dart';
+import 'admin_setting.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import '../user/bus_controller.dart';
 
@@ -1090,7 +1090,7 @@ void updateRoute() async {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const Adminbuspages(),
+                          builder: (context) => const AdminSetting(),
                         ),
                       );
                     },
