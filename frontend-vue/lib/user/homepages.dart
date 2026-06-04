@@ -133,10 +133,36 @@ class _HomepagesState extends State<Homepages> {
 // fetch station
   Future<void> fetchStations() async {
     try {
-      final data = await ApiService.getStations(selectedLine);
+      final lines = await Future.wait([
+        ApiService.getStations("line1"),
+        ApiService.getStations("line2"),
+      ]);
+      final stationById = <String, dynamic>{};
+
+      for (final station in [...lines[0], ...lines[1]]) {
+        final id = station["id"]?.toString() ?? "";
+        if (id.isNotEmpty) {
+          stationById[id] = station;
+        }
+      }
+
+      if (!mounted) return;
+
       setState(() {
-        stationData = data;
+        line1
+          ..clear()
+          ..addAll(
+            lines[0].map((station) => Map<String, dynamic>.from(station)),
+          );
+        line2
+          ..clear()
+          ..addAll(
+            lines[1].map((station) => Map<String, dynamic>.from(station)),
+          );
+        stationData = stationById.values.toList();
       });
+
+      updateAllRoutes();
     } catch (e) {
       print("API ERROR: $e");
     }
@@ -156,206 +182,24 @@ class _HomepagesState extends State<Homepages> {
     }
   }
 
-//line 1
-  final List<Map<String, dynamic>> line1 = [
-    {
-"id": "station1",
-"name": "Station 01 (จุดหอพักลำดวน 2)",
-"lat": 20.058823,
-"lng": 99.898419,
-},
-    {
-"id": "station2",
-"name": "Station 02(จุดพักลำดวน 7 ขาเข้า)",
-"lat": 20.057030,
-"lng": 99.896919,
-},
-    {
-"id": "station3",
-"name": "Station 03 (จุด หอพักจีน ขาเข้า)",
-"lat": 20.050870176213458,
-"lng": 99.8913375758622,
-},
-    {
-"id": "station4",
-"name": "Station 04 (จุด ศูนย์จีน ขาเข้า)",
-"lat": 20.048895164537097,
-"lng": 99.89132709650245,
-},
-    {
-"id": "station5",
-"name": "Station 05 (จุด ลานจอดหอพัก F)",
-"lat": 20.048215214947664,
-"lng": 99.89322591378016,
-},
-    {
-"id": "station6",
-"name": "Station 06 (จุด อาคารโรงอาหาร D1)",
-"lat": 20.04736,
-"lng": 99.893283,
-},
-    {
-"id": "station7",
-"name": "Station 07 (จุด สระน้ำวงรี ลานดาว)",
-"lat": 20.045606104291842,
-"lng": 99.89153621441135,
-},
-    {
-"id": "station8",
-"name": "Station 08 (จุด อาคารโรงอาหาร E2 ขาเข้า)",
-"lat": 20.04399637202456,
-"lng": 99.893402801156,
-},
-    {
-"id": "station9",
-"name": "Station 09 (จุด อาคารเรียนรวม C3 C2 และ หอประชุมสมเด็จย่า C4)",
-"lat": 20.043895277649657,
-"lng": 99.89521575716422,
-},
-    {
-"id": "station10",
-"name": "Station 10 (จุด อาคารเรียนรวม C5 )",
-"lat": 20.043346224233225,
-"lng": 99.89513551300819,
-},
-    {
-"id": "station11",
-"name": "Station 11 (จุด อาคาร m - square)",
-"lat": 20.045780781087203,
-"lng": 99.89135359185909,
-},
-    {
-"id": "station12",
-"name": "Station 12 (จุด ศูนย์จีน ขาออก)",
-"lat": 20.048830,
-"lng": 99.891330,
-},
-    {
-"id": "station13",
-"name": "Station 13 (จุด หอพักจีน ขาออก)",
-"lat": 20.050779,
-"lng": 99.891138,
-},
-    {
-"id": "station14",
-"name": "Station 14 (จุด สนามกีฬากลาง)",
-"lat": 20.054763275437402,
-"lng": 99.89454537873918,
-},
-    {
-"id": "station15",
-"name": "Station 15 (จุด หอพักลำดวน 7 ขาออก)",
-"lat": 20.056749,
-"lng": 99.897073,
-},
-    {
-"id": "station16",
-"name": "Station 16 (จุด ครัวลำดวน)",
-"lat": 20.058276924103307,
-"lng": 99.89811278167763,
-},
-  ];
-
-//line 2
-  final List<Map<String, dynamic>> line2 = [
-    {
-"id": "station1",
-"name": "Station 01 (จุดหอพักลำดวน 2)",
-"lat": 20.058823,
-"lng": 99.898419,
-},
-    {
-"id": "station2",
-"name": "Station 02(จุดพักลำดวน 7 ขาเข้า)",
-"lat": 20.057081156842653,
-"lng": 99.89702395554524,
-},
-    {
-"id": "station3",
-"name": "Station 03 (จุด หอพักจีน ขาเข้า)",
-"lat": 20.050870176213458,
-"lng": 99.8913375758622,
-},
-    {
-"id": "station4",
-"name": "Station 04 (จุด ศูนย์จีน ขาเข้า)",
-"lat": 20.048895164537097,
-"lng": 99.89132709650245,
-},
-    {
-"id": "station5",
-"name": "Station 05 (จุด ลานจอดหอพัก F)",
-"lat": 20.048215214947664,
-"lng": 99.89322591378016,
-},
-    {
-"id": "station6",
-"name": "Station 06 (จุด อาคารโรงอาหาร D1)",
-"lat": 20.04736,
-"lng": 99.893283,
-},
-    {
-"id": "station7",
-"name": "Station 07 (จุด สระน้ำวงรี ลานดาว)",
-"lat": 20.045606104291842,
-"lng": 99.89153621441135,
-},
-    {
-"id": "station8",
-"name": "Station 08 (จุด อาคารโรงอาหาร E2 ขาเข้า)",
-"lat": 20.04399637202456,
-"lng": 99.893402801156,
-},
-    {
-"id": "station17",
-"name": "Station 09 (จุด โรงพยาบาลแม่ฟ้าหลวง)",
-"lat": 20.041278409327774,
-"lng": 99.89430864493072,
-},
-    {
-"id": "station10",
-"name": "Station 10 (จุด อาคาร m - square)",
-"lat": 20.045780781087203,
-"lng": 99.89135359185909,
-},
-    {
-"id": "station11",
-"name": "Station 11 (จุด ศูนย์จีน ขาออก)",
-"lat": 20.048830,
-"lng": 99.891330,
-},
-    {
-"id": "station12",
-"name": "Station 12 (จุด หอพักจีน ขาออก)",
-"lat": 20.050779,
-"lng": 99.891138,
-},
-    {
-"id": "station13",
-"name": "Station 13 (จุด สนามกีฬากลาง)",
-"lat": 20.054763275437402,
-"lng": 99.89454537873918,
-},
-    {
-"id": "station14",
-"name": "Station 14 (จุด หอพักลำดวน 7 ขาออก)",
-"lat": 20.056749,
-"lng": 99.897073,
-},
-    {
-"id": "station15",
-"name": "Station 15 (จุด ครัวลำดวน)",
-"lat": 20.058276924103307,
-"lng": 99.89811278167763,
-},
-  ];
+  final List<Map<String, dynamic>> line1 = [];
+  final List<Map<String, dynamic>> line2 = [];
 
   List<Map<String, dynamic>> getSelectedLine() {
     return selectedLine == "line1" ? line1 : line2;
   }
 
   List<Map<String, dynamic>> getAllLines() {
-    return [...line1, ...line2];
+    final stationById = <String, Map<String, dynamic>>{};
+
+    for (final station in [...line1, ...line2]) {
+      final id = station["id"]?.toString() ?? "";
+      if (id.isNotEmpty) {
+        stationById[id] = station;
+      }
+    }
+
+    return stationById.values.toList();
   }
 
   List<LatLng> getLineLatLngs(List<Map<String, dynamic>> points) {
@@ -397,7 +241,6 @@ class _HomepagesState extends State<Homepages> {
   @override
   void initState() {
     super.initState();
-    updateAllRoutes();
     fetchStations();
     fetchBuses();
 
@@ -615,6 +458,8 @@ class _HomepagesState extends State<Homepages> {
     final newRoute1 = await fetchRouteForPoints(line1);
     final newRoute2 = await fetchRouteForPoints(line2);
 
+    if (!mounted) return;
+
     setState(() {
       route1 = newRoute1.isNotEmpty
           ? catmullRomSpline(newRoute1, segments: 10)
@@ -630,11 +475,13 @@ class _HomepagesState extends State<Homepages> {
   Future<void> updateRoute() async {
     final newRoute = await fetchRealRoute();
 
-    if (newRoute.isNotEmpty) {
-      setState(() {
-        route = catmullRomSpline(newRoute, segments: 10);
-      });
-    }
+    if (!mounted) return;
+
+    setState(() {
+      route = newRoute.isNotEmpty
+          ? catmullRomSpline(newRoute, segments: 10)
+          : [];
+    });
   }
 
   void updateBusETA() {
