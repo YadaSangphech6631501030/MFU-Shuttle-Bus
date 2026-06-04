@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'bus_time.dart';
 
 class BusStationPage extends StatelessWidget {
   const BusStationPage({super.key});
@@ -58,20 +57,26 @@ class BusStationPage extends StatelessWidget {
                   stations: [
                     "01 จุดหอพักลำดวน 2",
                     "02 จุดพักลำดวน 7 ขาเข้า",
-                    "03 จุด หอพักจีน ขาเข้า",
-                    "04 จุด ศูนย์จีน ขาเข้า",
-                    "05 จุด ลานจอดหอพัก F",
-                    "06 จุด อาคารโรงอาหาร D1",
-                    "07 จุด สระน้ำวงรี ลานดาว",
-                    "08 จุด อาคารโรงอาหาร E2 ขาเข้า",
-                    "09 จุด อาคารเรียนรวม C3 C2 และ หอประชุมสมเด็จย่า C4",
-                    "10 จุด อาคารเรียนรวม C5",
-                    "11 จุด อาคาร m - square",
-                    "12 จุด ศูนย์จีน ขาออก",
-                    "13 จุด หอพักจีน ขาออก",
-                    "14 จุด สนามกีฬากลาง",
-                    "15 จุด หอพักลำดวน 7 ขาออก",
-                    "16 จุด ครัวลำดวน",
+                    "03 แยกบ้านพักบุคลากร",
+                    "04 อาคารพิพิธภัณฑ์ D2",
+                    "05 หอพักจีน ขาเข้า",
+                    "06 ศูนย์จีน ขาเข้า",
+                    "07 ลานจอด F",
+                    "08 อาคาร D1",
+                    "09 สระน้ำวงรี",
+                    "10 อาคาร E2 ขาเข้า",
+                    "11 หอประชุม C4",
+                    "12 อาคาร C5",
+                    "13 อาคาร E2 ขาออก",
+                    "14 อาคาร M-Square",
+                    "15 ศูนย์จีน ขาออก",
+                    "16 หอพักจีน ขาออก",
+                    "17 ศุนย์ลำดวน",
+                    "18 ทางเข้า สระว่ายน้ำ",
+                    "19 หอพักลำดวน 7 ขาเข้า",
+                    "20 ศูนย์อาหารลำดวน",
+                    "21 มินิมาร์ทลำดวน",
+                    "22 โรงพยาบาล มใแม่ฟ้าหลวง",
                   ],
                 ),
 
@@ -83,19 +88,26 @@ class BusStationPage extends StatelessWidget {
                   stations: [
                     "01 จุดหอพักลำดวน 2",
                     "02 จุดพักลำดวน 7 ขาเข้า",
-                    "03 จุด หอพักจีน ขาเข้า",
-                    "04 จุด ศูนย์จีน ขาเข้า",
-                    "05 จุด ลานจอดหอพัก F",
-                    "06 จุด อาคารโรงอาหาร D1",
-                    "07 จุด สระน้ำวงรี ลานดาว",
-                    "08 จุด อาคารโรงอาหาร E2 ขาเข้า",
-                    "09 จุด โรงพยาบาลแม่ฟ้าหลวง",
-                    "10 จุด อาคาร m - square",
-                    "11 จุด ศูนย์จีน ขาออก",
-                    "12 จุด หอพักจีน ขาออก",
-                    "13 จุด สนามกีฬากลาง",
-                    "14 จุด หอพักลำดวน 7 ขาออก",
-                    "15 จุด ครัวลำดวน",
+                    "03 แยกบ้านพักบุคลากร",
+                    "04 อาคารพิพิธภัณฑ์ D2",
+                    "05 หอพักจีน ขาเข้า",
+                    "06 ศูนย์จีน ขาเข้า",
+                    "07 ลานจอด F",
+                    "08 อาคาร D1",
+                    "09 สระน้ำวงรี",
+                    "10 อาคาร E2 ขาเข้า",
+                    "11 หอประชุม C4",
+                    "12 อาคาร C5",
+                    "13 อาคาร E2 ขาออก",
+                    "14 อาคาร M-Square",
+                    "15 ศูนย์จีน ขาออก",
+                    "16 หอพักจีน ขาออก",
+                    "17 ศุนย์ลำดวน",
+                    "18 ทางเข้า สระว่ายน้ำ",
+                    "19 หอพักลำดวน 7 ขาเข้า",
+                    "20 ศูนย์อาหารลำดวน",
+                    "21 มินิมาร์ทลำดวน",
+                    "22 โรงพยาบาล มใแม่ฟ้าหลวง",
                   ],
                 ),
               ],
@@ -121,11 +133,22 @@ class _LineSectionState extends State<LineSection> {
   String search = "";
   bool isOpen = false;
 
+  Color _getLineColor() {
+    if (widget.title.contains("สาย 1")) {
+      return const Color(0xFFD4AF37); // Gold color for Line 1
+    } else if (widget.title.contains("สาย 2")) {
+      return const Color(0xFFE53935); // Red color for Line 2
+    }
+    return Colors.grey;
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = widget.stations
         .where((s) => s.toLowerCase().contains(search.toLowerCase()))
         .toList();
+
+    final lineColor = _getLineColor();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,8 +165,8 @@ class _LineSectionState extends State<LineSection> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
             decoration: BoxDecoration(
-              color: isOpen ? Colors.black87 : Colors.black,
-              borderRadius: BorderRadius.circular(18),
+              color: lineColor,
+              borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 if (isOpen)
                   const BoxShadow(
@@ -156,16 +179,33 @@ class _LineSectionState extends State<LineSection> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Icon(
-                  isOpen
-                      ? Icons.remove_circle_outline
-                      : Icons.add_circle_outline,
-                  color: Colors.white,
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: isOpen
+                      ? const Icon(
+                          Icons.remove,
+                          color: Colors.white,
+                          size: 16,
+                        )
+                      : const Icon(
+                          Icons.add,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Text(
                   widget.title,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -231,19 +271,6 @@ class _LineSectionState extends State<LineSection> {
                             children: [
                               ListTile(
                                 title: Text(station),
-                                trailing: const Icon(
-                                  Icons.arrow_forward_ios,
-                                  size: 14,
-                                ),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          BusTimePage(stationName: station),
-                                    ),
-                                  );
-                                },
                               ),
                               const Divider(height: 1),
                             ],

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'custom_bottom_bar.dart';
+import 'homepages.dart';
+
 class BusPage extends StatefulWidget {
   const BusPage({super.key});
 
@@ -140,9 +142,16 @@ void searchStation(
                   children: [
                     GestureDetector(
                       onTap: () {
-                        Navigator.pop(
-                          context,
-                        );
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        } else {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const Homepages(),
+                            ),
+                          );
+                        }
                       },
                       child: Container(
                         width: 28,
