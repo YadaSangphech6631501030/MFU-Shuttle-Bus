@@ -48,15 +48,27 @@ class CustomBottomBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _item(context, Icons.home_outlined, "Home", 0),
+          _item(context, Icons.home_outlined, Icons.home, "Home", 0),
           _busItem(context),
-          _item(context, Icons.person_outline, "Account", 2),
+          _item(
+            context,
+            Icons.person_outline,
+            Icons.person,
+            "Account",
+            2,
+          ),
         ],
       ),
     );
   }
 
-  Widget _item(BuildContext context, IconData icon, String label, int index) {
+  Widget _item(
+    BuildContext context,
+    IconData outlineIcon,
+    IconData filledIcon,
+    String label,
+    int index,
+  ) {
     final isActive = currentIndex == index;
 
     return GestureDetector(
@@ -68,8 +80,10 @@ class CustomBottomBar extends StatelessWidget {
             width: 40,
             height: 40,
             alignment: Alignment.center,
-           
-            child: Icon(icon, color: Colors.white),
+            child: Icon(
+              isActive ? filledIcon : outlineIcon,
+              color: Colors.white,
+            ),
           ),
           const SizedBox(height: 4),
           Text(label, style: TextStyle(color: Colors.white, fontSize: 12)),

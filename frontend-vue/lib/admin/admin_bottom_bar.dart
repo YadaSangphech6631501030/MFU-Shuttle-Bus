@@ -60,55 +60,108 @@ class AdminBottomBar extends StatelessWidget {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-  _item(context, const Icon(Icons.home), "Home", 0),
-
-  _item(
-    context,
-    Image.asset(
-      'assets/bus.png',
-      height: 24,
-    ),
-    "Bus",
-    1,
-  ),
-
-  _item(context, const Icon(Icons.location_on_outlined), "Station", 2),
-  _item(context, const Icon(Icons.warning_amber_rounded), "Reports", 3),
-  _item(context, const Icon(Icons.person), "Account", 4),
-],
+        children: [
+          _item(
+            context,
+            outlineIcon: Icons.home_outlined,
+            filledIcon: Icons.home,
+            label: "Home",
+            index: 0,
+          ),
+          _busItem(context),
+          _item(
+            context,
+            outlineIcon: Icons.location_on_outlined,
+            filledIcon: Icons.location_on,
+            label: "Station",
+            index: 2,
+          ),
+          _item(
+            context,
+            outlineIcon: Icons.warning_amber_outlined,
+            filledIcon: Icons.warning_amber_rounded,
+            label: "Reports",
+            index: 3,
+          ),
+          _item(
+            context,
+            outlineIcon: Icons.person_outline,
+            filledIcon: Icons.person,
+            label: "Account",
+            index: 4,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _item(BuildContext context, Widget icon, String label, int index) {
-  final isActive = currentIndex == index;
+  Widget _item(
+    BuildContext context, {
+    required IconData outlineIcon,
+    required IconData filledIcon,
+    required String label,
+    required int index,
+  }) {
+    final isActive = currentIndex == index;
 
-  return GestureDetector(
-    onTap: () {
-      onTap(index);
-      _navigate(context, index);
-    },
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isActive ? Colors.white.withOpacity(0.16) : Colors.transparent,
-            shape: BoxShape.circle,
+    return GestureDetector(
+      onTap: () {
+        onTap(index);
+        _navigate(context, index);
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            
+            child: Icon(
+              isActive ? filledIcon : outlineIcon,
+              color: Colors.white,
+            ),
           ),
-          child: IconTheme(
-            data: const IconThemeData(color: Colors.white),
-            child: icon,
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
+
+  Widget _busItem(BuildContext context) {
+    final isActive = currentIndex == 1;
+
+    return GestureDetector(
+      onTap: () {
+        onTap(1);
+        _navigate(context, 1);
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isActive
+                  ? Colors.white.withOpacity(0.16)
+                  : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            child: Image.asset('assets/bus.png', height: 24),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            "Bus",
+            style: TextStyle(color: Colors.white, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
 }
