@@ -9,6 +9,7 @@ import 'admin_bottom_bar.dart';
 import 'admin_setting.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import '../user/bus_controller.dart';
+import '../user/bus_page.dart';
 
 class AdminHomepage extends StatefulWidget {
   const AdminHomepage({super.key});
@@ -1006,6 +1007,13 @@ void updateRoute() async {
               ),
               child: TextField(
                 controller: searchController,
+                readOnly: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const BusPage()),
+                  );
+                },
                 decoration: InputDecoration(
                   hintText: 'Where to ?',
                   hintStyle: GoogleFonts.kanit(fontSize: 18),

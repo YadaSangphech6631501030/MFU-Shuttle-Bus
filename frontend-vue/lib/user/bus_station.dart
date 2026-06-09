@@ -138,7 +138,7 @@ class _LineSectionState extends State<LineSection> {
     if (widget.title.contains("สาย 1")) {
       return const Color(0xFFD4AF37);
     } else if (widget.title.contains("สาย 2")) {
-      return const Color(0xFFE53935);
+      return Colors.grey.shade700;
     }
     return Colors.grey;
   }

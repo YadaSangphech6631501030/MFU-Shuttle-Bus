@@ -159,7 +159,7 @@ void searchStation(
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor:
-          const Color(0xFFF2F2F2),
+          Colors.white,
       body: SafeArea(
         child: Padding(
           padding:
@@ -201,27 +201,21 @@ void searchStation(
                         }
                       },
                       child: Container(
-                        width: 28,
-                        height: 28,
+                        padding: const EdgeInsets.all(6),
                         decoration:
                             BoxDecoration(
-                          border:
-                              Border.all(
-                            color:
-                                Colors
-                                    .green,
-                            width:
-                                1.5,
-                          ),
+                          color: Colors.grey.shade200,
+                          borderRadius:
+                              BorderRadius.circular(4),
                         ),
                         child:
                             const Icon(
                           Icons
-                              .chevron_left,
+                              .arrow_back_ios,
                           color:
                               Colors
-                                  .green,
-                          size: 22,
+                                  .black,
+                          size: 20,
                         ),
                       ),
                     ),
@@ -243,7 +237,7 @@ void searchStation(
                     ),
 
                     const SizedBox(
-                      width: 28,
+                      width: 32,
                     ),
                   ],
                 ),
@@ -339,7 +333,7 @@ void searchStation(
 
 if (showResult) ...[
   Text(
-    'เร็วที่สุด',
+    'Fastest buses',
     style: TextStyle(
       color: Colors.grey.shade600,
       fontSize: 14,

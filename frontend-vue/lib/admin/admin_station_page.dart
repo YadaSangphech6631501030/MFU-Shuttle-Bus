@@ -15,6 +15,7 @@ class _AdminStationPageState extends State<AdminStationPage> {
   bool isLoading = true;
   List<dynamic> stations = [];
   String loadNote = "";
+  String selectedStatusFilter = "ALL";
 
   @override
   void initState() {
@@ -136,6 +137,112 @@ class _AdminStationPageState extends State<AdminStationPage> {
     if (lat == null || lng == null) return "-";
 
     return "${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}";
+  }
+
+  List<dynamic> get filteredStations {
+    if (selectedStatusFilter == "ALL") return stations;
+
+    return stations
+        .where(
+          (station) => station["status"]?.toString() == selectedStatusFilter,
+        )
+        .toList();
+  }
+
+  Color _statusColor(String status) {
+    if (status == "HIGH") return Colors.red;
+    if (status == "MEDIUM") return Colors.orange;
+    return Colors.green;
+  }
+
+  Widget _statusFilterButton() {
+    final filterColor = selectedStatusFilter == "ALL"
+        ? Colors.black
+        : _statusColor(selectedStatusFilter);
+
+    return PopupMenuButton<String>(
+      initialValue: selectedStatusFilter,
+      onSelected: (value) {
+        setState(() {
+          selectedStatusFilter = value;
+        });
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem(value: "ALL", child: Text("All")),
+        PopupMenuItem(value: "LOW", child: Text("LOW")),
+        PopupMenuItem(value: "MEDIUM", child: Text("MEDIUM")),
+        PopupMenuItem(value: "HIGH", child: Text("HIGH")),
+      ],
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: filterColor.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: filterColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              selectedStatusFilter == "ALL" ? "All" : selectedStatusFilter,
+              style: TextStyle(
+                color: filterColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.keyboard_arrow_down, color: filterColor, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusOption(
+    String option,
+    String selectedStatus,
+    ValueChanged<String> onSelected,
+  ) {
+    final color = _statusColor(option);
+    final isSelected = selectedStatus == option;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () => onSelected(option),
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.14) : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? color : Colors.grey.shade300,
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isSelected) ...[
+                Icon(Icons.check_circle, color: color, size: 16),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                option,
+                style: TextStyle(
+                  color: isSelected ? color : Colors.grey.shade700,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _deleteStation(Map<String, dynamic> station) async {
@@ -324,6 +431,8 @@ class _AdminStationPageState extends State<AdminStationPage> {
                       children: [
                         Checkbox(
                           value: line1,
+                          activeColor: const Color(0xFFBC9945),
+                          checkColor: Colors.white,
                           onChanged: (value) {
                             setSheetState(() {
                               line1 = value ?? false;
@@ -334,6 +443,8 @@ class _AdminStationPageState extends State<AdminStationPage> {
                         const SizedBox(width: 16),
                         Checkbox(
                           value: line2,
+                          activeColor: Colors.grey.shade700,
+                          checkColor: Colors.white,
                           onChanged: (value) {
                             setSheetState(() {
                               line2 = value ?? false;
@@ -349,29 +460,26 @@ class _AdminStationPageState extends State<AdminStationPage> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      value: status,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: "LOW", child: Text("LOW")),
-                        DropdownMenuItem(
-                          value: "MEDIUM",
-                          child: Text("MEDIUM"),
-                        ),
-                        DropdownMenuItem(value: "HIGH", child: Text("HIGH")),
+                    Row(
+                      children: [
+                        _statusOption("LOW", status, (value) {
+                          setSheetState(() {
+                            status = value;
+                          });
+                        }),
+                        const SizedBox(width: 8),
+                        _statusOption("MEDIUM", status, (value) {
+                          setSheetState(() {
+                            status = value;
+                          });
+                        }),
+                        const SizedBox(width: 8),
+                        _statusOption("HIGH", status, (value) {
+                          setSheetState(() {
+                            status = value;
+                          });
+                        }),
                       ],
-                      onChanged: (value) {
-                        setSheetState(() {
-                          status = value ?? "LOW";
-                        });
-                      },
                     ),
                     const SizedBox(height: 12),
                     _field("CCTV IP / URL", cameraController, "rtsp://..."),
@@ -443,55 +551,76 @@ class _AdminStationPageState extends State<AdminStationPage> {
       ),
       appBar: AppBar(
         title: const Text("Station Management"),
+        centerTitle: true,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
         automaticallyImplyLeading: false,
-        actions: [
-          IconButton(onPressed: fetchStations, icon: const Icon(Icons.refresh)),
-          IconButton(
-            onPressed: () => _showStationForm(null),
-            icon: const Icon(Icons.add_location_alt_outlined),
-          ),
-        ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : stations.isEmpty
-          ? _emptyState()
-          : Column(
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
               children: [
-                if (loadNote.isNotEmpty)
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
+                _statusFilterButton(),
+                const Spacer(),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: fetchStations,
+                      icon: const Icon(Icons.refresh),
                     ),
-                    child: Text(
-                      loadNote,
-                      style: TextStyle(
-                        color: Colors.orange.shade900,
-                        fontSize: 12,
-                      ),
+                    IconButton(
+                      onPressed: () => _showStationForm(null),
+                      icon: const Icon(Icons.add_location_alt_outlined),
                     ),
-                  ),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    itemCount: stations.length,
-                    itemBuilder: (context, index) {
-                      final station = Map<String, dynamic>.from(
-                        stations[index],
-                      );
-                      return _stationCard(station);
-                    },
-                  ),
+                  ],
                 ),
               ],
             ),
+          ),
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : filteredStations.isEmpty
+                ? _emptyState()
+                : Column(
+                    children: [
+                      if (loadNote.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            loadNote,
+                            style: TextStyle(
+                              color: Colors.orange.shade900,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          itemCount: filteredStations.length,
+                          itemBuilder: (context, index) {
+                            final station = Map<String, dynamic>.from(
+                              filteredStations[index],
+                            );
+                            return _stationCard(station);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFFD2232A),
         foregroundColor: Colors.white,

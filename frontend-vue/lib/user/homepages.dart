@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'bus_station.dart';
+import 'bus_page.dart';
 import 'custom_bottom_bar.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import 'bus_controller.dart';
@@ -873,6 +874,13 @@ class _HomepagesState extends State<Homepages> {
               ),
               child: TextField(
                 controller: searchController,
+                readOnly: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const BusPage()),
+                  );
+                },
                 decoration: InputDecoration(
                   hintText: 'Where to ?',
                   hintStyle: GoogleFonts.kanit(fontSize: 18),

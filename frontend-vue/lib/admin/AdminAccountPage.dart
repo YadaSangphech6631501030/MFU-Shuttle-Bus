@@ -107,7 +107,7 @@ class _AdminaccountpageState extends State<Adminaccountpage> {
               width: 200,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
+                  backgroundColor: Color(0xFFD2232A),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 onPressed: _logout,
