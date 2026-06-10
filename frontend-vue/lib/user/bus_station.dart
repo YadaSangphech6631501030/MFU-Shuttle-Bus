@@ -56,68 +56,71 @@ class _BusStationPageState extends State<BusStationPage> {
     final number = RegExp(r'\d+').firstMatch(id?.toString() ?? "")?.group(0);
     return int.tryParse(number ?? "") ?? 9999;
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Colors.white,
+    appBar: AppBar(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios,
-                          color: Colors.black,
-                          size: 20,
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Expanded(
-                      child: Center(
-                        child: Text(
-                          "MFU TRANSIT",
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 48),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                LineSection(
-                  title: "สาย 1",
-                  stations: line1Stations,
-                ),
-                const SizedBox(height: 16),
-                LineSection(
-                  title: "สาย 2 (โรงพยาบาลแม่ฟ้าหลวง)",
-                  stations: line2Stations,
-                ),
-              ],
-            ),
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leadingWidth: 70,
+      leading: IconButton(
+        icon: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios,
+            color: Colors.black,
+            size: 20,
           ),
         ),
+        onPressed: () {
+          Navigator.pop(context);
+        },
       ),
-    );
-  }
+      title: const Text(
+        'MFU TRANSIT',
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      centerTitle: true,
+      bottom: const PreferredSize(
+        preferredSize: Size.fromHeight(1),
+        child: Divider(height: 1),
+      ),
+    ),
+    body: SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+
+            LineSection(
+              title: "สาย 1",
+              stations: line1Stations,
+            ),
+
+            const SizedBox(height: 16),
+
+            LineSection(
+              title: "สาย 2 (โรงพยาบาลแม่ฟ้าหลวง)",
+              stations: line2Stations,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 }
 
 class LineSection extends StatefulWidget {

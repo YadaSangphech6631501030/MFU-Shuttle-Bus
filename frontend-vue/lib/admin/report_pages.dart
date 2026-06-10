@@ -16,7 +16,6 @@ class _ReportPageState extends State<ReportPage>
   @override
   bool get wantKeepAlive => true;
 
-
   String? selectedType;
 
   final TextEditingController detailController = TextEditingController();
@@ -278,7 +277,13 @@ class _ReportPageState extends State<ReportPage>
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1),
+        ),
       ),
+
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: GridView.count(
