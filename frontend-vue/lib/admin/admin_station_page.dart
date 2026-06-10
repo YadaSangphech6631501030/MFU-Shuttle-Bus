@@ -556,9 +556,16 @@ class _AdminStationPageState extends State<AdminStationPage> {
         foregroundColor: Colors.black,
         elevation: 0,
         automaticallyImplyLeading: false,
+
+         bottom: const PreferredSize(
+         preferredSize: Size.fromHeight(1),
+         child: Divider(height: 1),
+        
+     ),
       ),
       body: Column(
         children: [
+           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Row(

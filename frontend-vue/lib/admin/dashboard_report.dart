@@ -70,6 +70,11 @@ class _DashboardReportState extends State<DashboardReport> {
         foregroundColor: Colors.black,
         elevation: 0,
         automaticallyImplyLeading: false, // 🔥 สำคัญ
+
+         bottom: const PreferredSize(
+         preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1),
+    ),
       ),
 
       body: isLoading

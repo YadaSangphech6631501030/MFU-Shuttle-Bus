@@ -127,6 +127,11 @@ class _AdminbuspagesState extends State<Adminbuspages> {
         foregroundColor: Colors.black,
         elevation: 0,
         automaticallyImplyLeading: false,
+        
+         bottom: const PreferredSize(
+         preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1),
+    ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
