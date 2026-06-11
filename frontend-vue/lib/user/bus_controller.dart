@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class BusController {
   BusController._private();
