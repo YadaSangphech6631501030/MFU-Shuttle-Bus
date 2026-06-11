@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart' as ll;
 import 'package:google_fonts/google_fonts.dart';
 import 'admin_bottom_bar.dart';
 import 'admin_setting.dart';
@@ -22,7 +22,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
   int currentIndex = 0;
 
   String selectedLine = "line1";
-  final MapController mapController = MapController();
+  GoogleMapController? mapController;
   double currentZoom = 16;
 
   Timer? stationTimer;
@@ -36,20 +36,20 @@ class _AdminHomepageState extends State<AdminHomepage> {
   List<Map<String, dynamic>> dbLine2Stations = [];
   Map<String, LatLng> busPositions = {};
 
-// statuses for bus
+  // statuses for bus
   Map<String, double> busProgress =
-{}; // เก็บ index ปัจจุบันใน route ของรถแต่ละคัน
+      {}; // เก็บ index ปัจจุบันใน route ของรถแต่ละคัน
   Map<String, DateTime?> busWaitUntil =
-{}; // เวลาที่รถจะเริ่มวิ่งต่อได้ (ใช้หยุดสถานี)
+      {}; // เวลาที่รถจะเริ่มวิ่งต่อได้ (ใช้หยุดสถานี)
   Map<String, String?> lastStationId =
-{}; // จำว่าสถานีล่าสุดที่จอดคือที่ไหน (กันจอดซ้ำ)
+      {}; // จำว่าสถานีล่าสุดที่จอดคือที่ไหน (กันจอดซ้ำ)
 
   double speed = 1.2;
   List<LatLng> route = [];
   List<LatLng> route1 = [];
   List<LatLng> route2 = [];
 
-//BusTimeline
+  //BusTimeline
   Widget busTimeline(List<Map<String, dynamic>> stations, double progress) {
     int currentIndex = progress.floor();
     double t = progress - currentIndex;
@@ -58,7 +58,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
       children: [
         Row(
           children: List.generate(stations.length * 2 - 1, (i) {
-// DOT
+            // DOT
             if (i % 2 == 0) {
               int index = i ~/ 2;
 
@@ -75,8 +75,8 @@ class _AdminHomepageState extends State<AdminHomepage> {
                       color: current
                           ? Colors.amber
                           : passed
-                              ? Colors.grey
-                              : Colors.white,
+                          ? Colors.grey
+                          : Colors.white,
                       border: Border.all(color: Colors.amber),
                     ),
                   ),
@@ -84,12 +84,12 @@ class _AdminHomepageState extends State<AdminHomepage> {
                   Text(
                     stations[index]["name"].toString().split("(")[0],
                     style: const TextStyle(fontSize: 10),
-                  )
+                  ),
                 ],
               );
             }
 
-// LINE
+            // LINE
             return Expanded(
               child: Container(
                 height: 3,
@@ -132,7 +132,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
     );
   }
 
-// fetch station
+  // fetch station
   Future<void> fetchStations() async {
     try {
       final line1Data = await ApiService.getStations("line1");
@@ -162,18 +162,26 @@ class _AdminHomepageState extends State<AdminHomepage> {
     }
   }
 
-//Markers color by status
-  Color getColor(String status) {
+  //Markers color by status
+  double getMarkerHue(String status) {
     switch (status) {
       case "LOW":
-        return Colors.green;
+        return BitmapDescriptor.hueGreen;
       case "MEDIUM":
-        return Colors.orange;
+        return BitmapDescriptor.hueOrange;
       case "HIGH":
-        return Colors.red;
+        return BitmapDescriptor.hueRed;
       default:
-        return Colors.grey;
+        return BitmapDescriptor.hueAzure;
     }
+  }
+
+  double distanceBetween(LatLng from, LatLng to) {
+    return const ll.Distance().as(
+      ll.LengthUnit.Meter,
+      ll.LatLng(from.latitude, from.longitude),
+      ll.LatLng(to.latitude, to.longitude),
+    );
   }
 
   List<Map<String, dynamic>> getSelectedLine() {
@@ -181,35 +189,34 @@ class _AdminHomepageState extends State<AdminHomepage> {
   }
 
   Future<List<LatLng>> fetchRealRoute() async {
-  final points = getSelectedLine();
+    final points = getSelectedLine();
 
-  if (points.isEmpty) return [];
+    if (points.isEmpty) return [];
 
-  String coords = points.map((p) => "${p["lng"]},${p["lat"]}").join(";");
+    String coords = points.map((p) => "${p["lng"]},${p["lat"]}").join(";");
 
-  final url =
-      "https://router.project-osrm.org/route/v1/driving/$coords?overview=full&geometries=geojson";
+    final url =
+        "https://router.project-osrm.org/route/v1/driving/$coords?overview=full&geometries=geojson";
 
-  try {
-    final res = await http.get(Uri.parse(url));
-    final data = jsonDecode(res.body);
+    try {
+      final res = await http.get(Uri.parse(url));
+      final data = jsonDecode(res.body);
 
-    if (data["routes"] == null || data["routes"].isEmpty) {
-      print("❌ fallback route");
+      if (data["routes"] == null || data["routes"].isEmpty) {
+        print("❌ fallback route");
+        return points.map((p) => LatLng(p["lat"], p["lng"])).toList();
+      }
+
+      final routeCoords = data["routes"][0]["geometry"]["coordinates"];
+
+      return routeCoords.map<LatLng>((c) {
+        return LatLng(c[1], c[0]);
+      }).toList();
+    } catch (e) {
+      print("❌ ROUTE ERROR: $e");
       return points.map((p) => LatLng(p["lat"], p["lng"])).toList();
     }
-
-    final routeCoords = data["routes"][0]["geometry"]["coordinates"];
-
-    return routeCoords.map<LatLng>((c) {
-      return LatLng(c[1], c[0]);
-    }).toList();
-
-  } catch (e) {
-    print("❌ ROUTE ERROR: $e");
-    return points.map((p) => LatLng(p["lat"], p["lng"])).toList();
   }
-}
 
   List<Map<String, dynamic>> getAllLines() {
     final stationById = <String, Map<String, dynamic>>{};
@@ -263,6 +270,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
     stationTimer?.cancel();
     busTimer?.cancel();
     moveTimer?.cancel();
+    mapController?.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -273,8 +281,6 @@ class _AdminHomepageState extends State<AdminHomepage> {
     updateAllRoutes();
     fetchStations();
     fetchBuses();
-
-
 
     BusController.instance.start();
 
@@ -336,10 +342,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.grey.shade900,
-                      Colors.black,
-                    ],
+                    colors: [Colors.grey.shade900, Colors.black],
                   ),
                 ),
               ),
@@ -431,11 +434,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
       final pos = BusController.instance.busPositions[id];
       if (pos == null) continue;
 
-      double distMeters = const Distance().as(
-        LengthUnit.Meter,
-        pos,
-        stationLatLng,
-      );
+      double distMeters = distanceBetween(pos, stationLatLng);
 
       double speedMeterPerSec = 10;
 
@@ -464,8 +463,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
 
         if (pos == null) continue;
 
-        double dist = const Distance().as(
-          LengthUnit.Meter,
+        double dist = distanceBetween(
           pos,
           LatLng(station["lat"], station["lng"]),
         );
@@ -485,97 +483,94 @@ class _AdminHomepageState extends State<AdminHomepage> {
 
   // Bus movement logic
   void moveSmooth() {
-  final buses = BusController.instance.busData;
+    final buses = BusController.instance.busData;
 
-  if (route.isEmpty || buses.isEmpty) return;
+    if (route.isEmpty || buses.isEmpty) return;
 
-  setState(() {
-    double spacing = route.length / buses.length;
-    double safeGap = route.length / 50;
+    setState(() {
+      double spacing = route.length / buses.length;
+      double safeGap = route.length / 50;
 
-    for (int i = 0; i < buses.length; i++) {
-      final id = buses[i]["busNumber"].toString();
-      final now = DateTime.now();
+      for (int i = 0; i < buses.length; i++) {
+        final id = buses[i]["busNumber"].toString();
+        final now = DateTime.now();
 
-      // ✅ WAIT
-      if (BusController.instance.busWaitUntil[id] != null &&
-          now.isBefore(BusController.instance.busWaitUntil[id]!)) {
-        continue;
-      }
-
-      // ✅ initial spacing
-      double currentProgress =
-          BusController.instance.busProgress[id] ?? (i * spacing);
-
-      double nextProgress = currentProgress + speed;
-
-      // ✅ COLLISION (soft)
-      bool blocked = false;
-      for (var otherBus in buses) {
-        final otherId = otherBus["busNumber"].toString();
-        if (id == otherId) continue;
-
-        double otherProgress =
-            BusController.instance.busProgress[otherId] ?? 0;
-
-        double gap = otherProgress - currentProgress;
-
-        if (gap > 0 && gap < safeGap) {
-          blocked = true;
-          break;
+        // ✅ WAIT
+        if (BusController.instance.busWaitUntil[id] != null &&
+            now.isBefore(BusController.instance.busWaitUntil[id]!)) {
+          continue;
         }
-      }
 
-      if (blocked) continue;
+        // ✅ initial spacing
+        double currentProgress =
+            BusController.instance.busProgress[id] ?? (i * spacing);
 
-      // ✅ LOOP (วน)
-      int idx = nextProgress.floor();
+        double nextProgress = currentProgress + speed;
 
-      if (idx >= route.length - 1) {
-        BusController.instance.busProgress[id] = 0;
-        BusController.instance.busPositions[id] = route[0];
-        continue;
-      }
+        // ✅ COLLISION (soft)
+        bool blocked = false;
+        for (var otherBus in buses) {
+          final otherId = otherBus["busNumber"].toString();
+          if (id == otherId) continue;
 
-      BusController.instance.busProgress[id] = nextProgress;
+          double otherProgress =
+              BusController.instance.busProgress[otherId] ?? 0;
 
-      double t = nextProgress - idx;
+          double gap = otherProgress - currentProgress;
 
-      LatLng p1 = route[idx];
-      LatLng p2 = route[idx + 1];
+          if (gap > 0 && gap < safeGap) {
+            blocked = true;
+            break;
+          }
+        }
 
-      LatLng newPos = LatLng(
-        p1.latitude + (p2.latitude - p1.latitude) * t,
-        p1.longitude + (p2.longitude - p1.longitude) * t,
-      );
+        if (blocked) continue;
 
-      BusController.instance.busPositions[id] = newPos;
+        // ✅ LOOP (วน)
+        int idx = nextProgress.floor();
 
-      // ✅ STOP AT STATION
-      for (var station in getSelectedLine()) {
-        LatLng stationLatLng = LatLng(station["lat"], station["lng"]);
+        if (idx >= route.length - 1) {
+          BusController.instance.busProgress[id] = 0;
+          BusController.instance.busPositions[id] = route[0];
+          continue;
+        }
 
-        double dist = const Distance().as(
-          LengthUnit.Meter,
-          newPos,
-          stationLatLng,
+        BusController.instance.busProgress[id] = nextProgress;
+
+        double t = nextProgress - idx;
+
+        LatLng p1 = route[idx];
+        LatLng p2 = route[idx + 1];
+
+        LatLng newPos = LatLng(
+          p1.latitude + (p2.latitude - p1.latitude) * t,
+          p1.longitude + (p2.longitude - p1.longitude) * t,
         );
 
-        if (dist < 15 &&
-            BusController.instance.lastStationId[id] != station["id"]) {
-          BusController.instance.busWaitUntil[id] =
-              now.add(const Duration(seconds: 2));
+        BusController.instance.busPositions[id] = newPos;
 
-          BusController.instance.lastStationId[id] = station["id"];
-          break;
-        } else if (dist > 50 &&
-            BusController.instance.lastStationId[id] == station["id"]) {
-          BusController.instance.lastStationId[id] = null;
+        // ✅ STOP AT STATION
+        for (var station in getSelectedLine()) {
+          LatLng stationLatLng = LatLng(station["lat"], station["lng"]);
+
+          double dist = distanceBetween(newPos, stationLatLng);
+
+          if (dist < 15 &&
+              BusController.instance.lastStationId[id] != station["id"]) {
+            BusController.instance.busWaitUntil[id] = now.add(
+              const Duration(seconds: 2),
+            );
+
+            BusController.instance.lastStationId[id] = station["id"];
+            break;
+          } else if (dist > 50 &&
+              BusController.instance.lastStationId[id] == station["id"]) {
+            BusController.instance.lastStationId[id] = null;
+          }
         }
       }
-    }
-  });
-}
+    });
+  }
 
   Future<void> updateAllRoutes() async {
     final newRoute1 = await fetchRouteForPoints(dbLine1Stations);
@@ -593,15 +588,15 @@ class _AdminHomepageState extends State<AdminHomepage> {
     updateRoute();
   }
 
-void updateRoute() async {
-  final newRoute = await fetchRealRoute();
+  void updateRoute() async {
+    final newRoute = await fetchRealRoute();
 
-  setState(() {
-    route = newRoute.isNotEmpty
-        ? catmullRomSpline(newRoute, segments: 10)
-        : [];
-  });
-}
+    setState(() {
+      route = newRoute.isNotEmpty
+          ? catmullRomSpline(newRoute, segments: 10)
+          : [];
+    });
+  }
 
   void updateBusETA() {
     for (var bus in BusController.instance.busData) {
@@ -613,8 +608,7 @@ void updateRoute() async {
       double minMinutes = double.infinity;
 
       for (var station in getSelectedLine()) {
-        double dist = const Distance().as(
-          LengthUnit.Meter,
+        double dist = distanceBetween(
           pos,
           LatLng(station["lat"], station["lng"]),
         );
@@ -685,243 +679,177 @@ void updateRoute() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       // bottom bar
       bottomNavigationBar: AdminBottomBar(
-      currentIndex: currentIndex,
-      onTap: (index) {
-      setState(() {
-      currentIndex = index;
-    });
-  },
-),
+        currentIndex: currentIndex,
+        onTap: (index) {
+          setState(() {
+            currentIndex = index;
+          });
+        },
+      ),
 
       body: Stack(
         children: [
-          FlutterMap(
-            mapController: mapController,
-            options: MapOptions(
-              initialCenter: const LatLng(20.045, 99.894),
-              initialZoom: currentZoom,
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: const LatLng(20.045, 99.894),
+              zoom: currentZoom,
             ),
-            children: [
-              TileLayer(
-                urlTemplate:
-                    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-                subdomains: ['a', 'b', 'c', 'd'],
+            onMapCreated: (controller) => mapController = controller,
+            onCameraMove: (position) => currentZoom = position.zoom,
+            zoomControlsEnabled: false,
+            mapToolbarEnabled: false,
+            polylines: {
+              Polyline(
+                polylineId: const PolylineId("line2"),
+                points: route2.isNotEmpty
+                    ? route2
+                    : getLineLatLngs(dbLine2Stations),
+                color: Colors.grey.shade700,
+                width: 2,
               ),
-            
-              // Route Lines for both line1 and line2
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: route2.isNotEmpty
-                        ? route2
-                        : getLineLatLngs(dbLine2Stations),
-                    color: Colors.grey.shade700,
-                    strokeWidth: 2,
-                  ),
-                  Polyline(
-                    points: route1.isNotEmpty
-                        ? route1
-                        : getLineLatLngs(dbLine1Stations),
-                    color: Color(0xFFBC9945),
-                    strokeWidth: 2,
-                  ),
-                ],
+              Polyline(
+                polylineId: const PolylineId("line1"),
+                points: route1.isNotEmpty
+                    ? route1
+                    : getLineLatLngs(dbLine1Stations),
+                color: const Color(0xFFBC9945),
+                width: 2,
               ),
+            },
+            markers: {
+              ...getAllLines().map((station) {
+                Map<String, dynamic>? stationMatch;
 
-              // Stations Markers
-              MarkerLayer(
-                markers: getAllLines().map((station) {
-                  Map<String, dynamic>? stationMatch;
-
-                  try {
-                    stationMatch = stationData.firstWhere(
-                      (s) => s["id"] == station["id"],
-                    );
-                  } catch (e) {
-                    stationMatch = null;
-                  }
-
-                  int waiting = stationMatch?["waiting"] ?? 0;
-                  String status = stationMatch?["status"] ?? "LOW";
-
-                  return Marker(
-                    point: LatLng(station["lat"], station["lng"]),
-                    width: 60,
-                    height: 60,
-                    alignment: Alignment.center,
-                    child: GestureDetector(
-                      onTap: () {
-                        double eta = calculateETA(
-                          LatLng(station["lat"], station["lng"]),
-                        );
-
-                        int displayETA = eta.ceil();
-
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          enableDrag: false,
-                          showDragHandle: false,
-                          backgroundColor: Colors.white,
-                          builder: (context) {
-                            return SingleChildScrollView(
-                              child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.fromLTRB(
-                                16,
-                                16,
-                                16,
-                                24,
-                              ),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(24),
-                                ),
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 70,
-                                    height: 5,
-                                    margin: const EdgeInsets.only(bottom: 12),
-                                  ),
-
-                                  // Header + close button
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Station Name
-                                      Expanded(
-                                        child: Text(
-                                          station["name"],
-                                          style: GoogleFonts.kanit(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-
-                                      // close button
-                                      GestureDetector(
-                                        onTap: () => Navigator.pop(context),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(6),
-
-                                          child: const Icon(
-                                            Icons.close,
-                                            size: 20,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 20),
-
-                                  Column(
-                                    children: [
-                                      _infoRow(
-                                        "👥 จำนวนผู้โดยสาร",
-                                        "$waiting คน",
-                                      ),
-                                      _infoRow(
-                                        "⏱ รถจะมาถึง",
-                                        "$displayETA นาที",
-                                      ),
-                                      _infoRow("🚦 ความแออัด", status),
-                                      _infoRow("📢 สถานะ", "ปกติ"),
-                                    ],
-                                  ),
-                                  _cctvPreview(station),
-                                  const SizedBox(height: 24),
-                                  
-                                  
-                                ],
-                              ),
-                            ),
-                            );
-                          },
-                        );
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        alignment: Alignment.center,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Icon(
-                              Icons.circle,
-                              size: 42,
-                              color: getColor(status).withOpacity(0.40),
-                            ),
-                            ClipOval(
-                              child: Image.asset(
-                                'assets/dindin.png',
-                                width: 25,
-                                height: 25,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                try {
+                  stationMatch = stationData.firstWhere(
+                    (s) => s["id"] == station["id"],
                   );
-                }).toList(),
-              ),
+                } catch (e) {
+                  stationMatch = null;
+                }
 
-              // BUS
-              MarkerLayer(
-                markers: BusController.instance.busData.map((bus) {
-                  final id = bus["busNumber"].toString();
-                  final pos = BusController.instance.busPositions[id];
+                int waiting = stationMatch?["waiting"] ?? 0;
+                String status = stationMatch?["status"] ?? "LOW";
 
-                  if (pos == null) {
-                    return const Marker(point: LatLng(0, 0), child: SizedBox());
-                  }
+                return Marker(
+                  markerId: MarkerId("station-${station["id"]}"),
+                  position: LatLng(station["lat"], station["lng"]),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                    getMarkerHue(status),
+                  ),
+                  infoWindow: InfoWindow(
+                    title: station["name"]?.toString(),
+                    snippet: "$waiting passengers - $status",
+                  ),
+                  onTap: () {
+                    double eta = calculateETA(
+                      LatLng(station["lat"], station["lng"]),
+                    );
 
-                  return Marker(
-                    point: pos,
-                    width: 50,
-                    height: 50,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Image.asset('assets/bus.png', width: 45, height: 45),
+                    int displayETA = eta.ceil();
 
-                        Positioned(
-                          top: 0,
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      enableDrag: false,
+                      showDragHandle: false,
+                      backgroundColor: Colors.white,
+                      builder: (context) {
+                        return SingleChildScrollView(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.7),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              id,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                            width: double.infinity,
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(24),
                               ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 70,
+                                  height: 5,
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                ),
+
+                                // Header + close button
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Station Name
+                                    Expanded(
+                                      child: Text(
+                                        station["name"],
+                                        style: GoogleFonts.kanit(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+
+                                    // close button
+                                    GestureDetector(
+                                      onTap: () => Navigator.pop(context),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                Column(
+                                  children: [
+                                    _infoRow(
+                                      "👥 จำนวนผู้โดยสาร",
+                                      "$waiting คน",
+                                    ),
+                                    _infoRow("⏱ รถจะมาถึง", "$displayETA นาที"),
+                                    _infoRow("🚦 ความแออัด", status),
+                                    _infoRow("📢 สถานะ", "ปกติ"),
+                                  ],
+                                ),
+                                _cctvPreview(station),
+                                const SizedBox(height: 24),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
+                        );
+                      },
+                    );
+                  },
+                );
+              }),
+              ...BusController.instance.busData
+                  .where((bus) {
+                    final id = bus["busNumber"].toString();
+                    return BusController.instance.busPositions[id] != null;
+                  })
+                  .map((bus) {
+                    final id = bus["busNumber"].toString();
+                    final pos = BusController.instance.busPositions[id]!;
+
+                    return Marker(
+                      markerId: MarkerId("bus-$id"),
+                      position: pos,
+                      zIndexInt: 10,
+                      icon: BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueBlue,
+                      ),
+                      infoWindow: InfoWindow(title: "Bus $id"),
+                    );
+                  }),
+            },
           ),
 
           // Zoom Map Button
@@ -944,15 +872,8 @@ void updateRoute() async {
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.add),
-                    onPressed: () {
-                      setState(() {
-                        currentZoom += 0.5;
-                      });
-                      mapController.move(
-                        mapController.camera.center,
-                        currentZoom,
-                      );
-                    },
+                    onPressed: () =>
+                        mapController?.animateCamera(CameraUpdate.zoomIn()),
                   ),
                 ),
 
@@ -972,15 +893,8 @@ void updateRoute() async {
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.remove),
-                    onPressed: () {
-                      setState(() {
-                        currentZoom -= 0.5;
-                      });
-                      mapController.move(
-                        mapController.camera.center,
-                        currentZoom,
-                      );
-                    },
+                    onPressed: () =>
+                        mapController?.animateCamera(CameraUpdate.zoomOut()),
                   ),
                 ),
               ],
@@ -1055,7 +969,6 @@ void updateRoute() async {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  
                   // ร้องเรียน menu
                   RichText(
                     text: TextSpan(
@@ -1090,10 +1003,7 @@ void updateRoute() async {
 
                   // Menu button
                   IconButton(
-                    icon: const Icon(
-                      Icons.menu,
-                      color: Color(0xFFD2232A),
-                    ),
+                    icon: const Icon(Icons.menu, color: Color(0xFFD2232A)),
                     onPressed: () {
                       Navigator.push(
                         context,
