@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:google_fonts/google_fonts.dart';
-import 'bus_page.dart';
-import 'custom_bottom_bar.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import 'bus_controller.dart';
 import 'user_setting.dart';
@@ -28,10 +26,16 @@ class _HomepagesState extends State<Homepages> {
   Timer? stationTimer;
   Timer? busTimer;
   Timer? moveTimer;
+  final TextEditingController fromSearchController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
 
   List<dynamic> busData = [];
   List<dynamic> stationData = [];
+  List<Map<String, dynamic>> filteredStations = [];
+  Map<String, dynamic>? selectedFromStation;
+  Map<String, dynamic>? selectedStation;
+  String activeSearchField = "to";
+  bool showStationSuggestions = false;
   Map<String, LatLng> busPositions = {};
 
   // statuses for bus
@@ -80,7 +84,7 @@ class _HomepagesState extends State<Homepages> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    stations[index]["name"].toString().split("(")[0],
+                    cleanStationName(stations[index]),
                     style: const TextStyle(fontSize: 10),
                   ),
                 ],
@@ -207,7 +211,382 @@ class _HomepagesState extends State<Homepages> {
       }
     }
 
-    return stationById.values.toList();
+    final stations = stationById.values.toList();
+    stations.sort(
+      (a, b) => _stationNumber(a["id"]).compareTo(_stationNumber(b["id"])),
+    );
+    return stations;
+  }
+
+  int _stationNumber(dynamic id) {
+    final number = RegExp(r'\d+').firstMatch(id?.toString() ?? "")?.group(0);
+    return int.tryParse(number ?? "") ?? 9999;
+  }
+
+  String stationDisplayName(dynamic station) {
+    final raw = station is Map
+        ? station["name"]?.toString().trim() ?? ""
+        : station?.toString().trim() ?? "";
+
+    var name = raw
+        .replaceFirst(
+          RegExp(r'^station\s*0*\d+\s*[:\-–—.]?\s*', caseSensitive: false),
+          '',
+        )
+        .replaceFirst(RegExp(r'^0*\d+\s*[:\-–—.]?\s*'), '')
+        .replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '')
+        .trim();
+
+    return name.isEmpty ? raw : name;
+  }
+
+  String cleanStationName(dynamic station) {
+    final raw = station is Map
+        ? station["name"]?.toString().trim() ?? ""
+        : station?.toString().trim() ?? "";
+
+    final stationWithName = RegExp(
+      r'^station\s*0*\d+\s*\((.*)\)\s*$',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    if (stationWithName != null) {
+      return stationWithName.group(1)?.trim() ?? raw;
+    }
+
+    var name = raw.replaceFirst(
+      RegExp(r'^station\s*0*\d+\s*[:\-.]?\s*', caseSensitive: false),
+      '',
+    );
+    name = name.replaceFirst(RegExp(r'^0*\d+\s*[:\-.]?\s*'), '').trim();
+    if (name.startsWith("(") && name.endsWith(")") && name.length > 2) {
+      name = name.substring(1, name.length - 1).trim();
+    }
+
+    return name.isEmpty ? raw : name;
+  }
+
+  void searchStations(String value, String field) {
+    final query = value.trim().toLowerCase();
+    final stations = getAllLines();
+
+    setState(() {
+      activeSearchField = field;
+      filteredStations = query.isEmpty
+          ? stations
+          : stations.where((station) {
+              final name = cleanStationName(station).toLowerCase();
+              final id = station["id"]?.toString().toLowerCase() ?? "";
+              return name.contains(query) || id.contains(query);
+            }).toList();
+      showStationSuggestions = filteredStations.isNotEmpty;
+    });
+  }
+
+  void selectStation(Map<String, dynamic> station) {
+    final stationName = cleanStationName(station);
+
+    setState(() {
+      if (activeSearchField == "from") {
+        selectedFromStation = station;
+        fromSearchController.text = stationName;
+      } else {
+        selectedStation = station;
+        searchController.text = stationName;
+      }
+      showStationSuggestions = false;
+      filteredStations.clear();
+    });
+
+    mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(LatLng(station["lat"], station["lng"]), 17),
+    );
+  }
+
+  Map<String, dynamic>? getNearestBusInfo(Map<String, dynamic>? station) {
+    if (station == null) return null;
+
+    final stationPosition = LatLng(station["lat"], station["lng"]);
+    Map<String, dynamic>? nearestBus;
+    LatLng? nearestPosition;
+    double nearestDistance = double.infinity;
+
+    for (final bus in BusController.instance.busData) {
+      final id = bus["busNumber"].toString();
+      final position = BusController.instance.busPositions[id];
+
+      if (position == null) continue;
+      if (position.latitude == 0 && position.longitude == 0) continue;
+
+      final distance = distanceBetween(position, stationPosition);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestBus = Map<String, dynamic>.from(bus);
+        nearestPosition = position;
+      }
+    }
+
+    if (nearestBus == null || nearestPosition == null) return null;
+
+    final etaMinutes = (nearestDistance / 5 / 60).ceil();
+
+    return {
+      "bus": nearestBus,
+      "position": nearestPosition,
+      "distance": nearestDistance,
+      "eta": etaMinutes < 1 ? 1 : etaMinutes,
+    };
+  }
+
+  List<Map<String, dynamic>>? getTripLineStations() {
+    final fromId = selectedFromStation?["id"]?.toString();
+    final toId = selectedStation?["id"]?.toString();
+    if (fromId == null || toId == null) return null;
+
+    final lineOptions = [line1, line2];
+    for (final line in lineOptions) {
+      final hasFrom = line.any((station) => station["id"]?.toString() == fromId);
+      final hasTo = line.any((station) => station["id"]?.toString() == toId);
+      if (hasFrom && hasTo) return line;
+    }
+
+    return null;
+  }
+
+  double calculateRideDistanceMeters() {
+    if (selectedFromStation == null || selectedStation == null) return 0;
+
+    final tripLine = getTripLineStations();
+    if (tripLine == null || tripLine.length < 2) {
+      return distanceBetween(
+        LatLng(selectedFromStation!["lat"], selectedFromStation!["lng"]),
+        LatLng(selectedStation!["lat"], selectedStation!["lng"]),
+      );
+    }
+
+    final fromId = selectedFromStation!["id"]?.toString();
+    final toId = selectedStation!["id"]?.toString();
+    final fromIndex = tripLine.indexWhere(
+      (station) => station["id"]?.toString() == fromId,
+    );
+    final toIndex = tripLine.indexWhere(
+      (station) => station["id"]?.toString() == toId,
+    );
+
+    if (fromIndex < 0 || toIndex < 0 || fromIndex == toIndex) return 0;
+
+    double distance = 0;
+    int currentIndex = fromIndex;
+
+    while (currentIndex != toIndex) {
+      final nextIndex = (currentIndex + 1) % tripLine.length;
+      final currentStation = tripLine[currentIndex];
+      final nextStation = tripLine[nextIndex];
+
+      distance += distanceBetween(
+        LatLng(currentStation["lat"], currentStation["lng"]),
+        LatLng(nextStation["lat"], nextStation["lng"]),
+      );
+
+      currentIndex = nextIndex;
+    }
+
+    return distance;
+  }
+
+  List<LatLng> getSelectedTripPoints() {
+    if (selectedFromStation == null || selectedStation == null) return [];
+
+    final tripLine = getTripLineStations();
+    if (tripLine == null || tripLine.isEmpty) {
+      return [
+        LatLng(selectedFromStation!["lat"], selectedFromStation!["lng"]),
+        LatLng(selectedStation!["lat"], selectedStation!["lng"]),
+      ];
+    }
+
+    final fromId = selectedFromStation!["id"]?.toString();
+    final toId = selectedStation!["id"]?.toString();
+    final fromIndex = tripLine.indexWhere(
+      (station) => station["id"]?.toString() == fromId,
+    );
+    final toIndex = tripLine.indexWhere(
+      (station) => station["id"]?.toString() == toId,
+    );
+
+    if (fromIndex < 0 || toIndex < 0) return [];
+
+    final points = <LatLng>[];
+    int currentIndex = fromIndex;
+
+    while (true) {
+      final station = tripLine[currentIndex];
+      points.add(LatLng(station["lat"], station["lng"]));
+
+      if (currentIndex == toIndex) break;
+      currentIndex = (currentIndex + 1) % tripLine.length;
+    }
+
+    return points;
+  }
+
+  int calculateRideMinutes() {
+    final distance = calculateRideDistanceMeters();
+    if (distance <= 0) return 0;
+    final minutes = (distance / 5 / 60).ceil();
+    return minutes < 1 ? 1 : minutes;
+  }
+
+  Widget buildTrackingPanel() {
+    final fromStation = selectedFromStation;
+    final toStation = selectedStation;
+    final nearestInfo = getNearestBusInfo(fromStation);
+    final fromName = fromStation == null
+        ? "Choose start station"
+        : cleanStationName(fromStation);
+    final toName = toStation == null
+        ? "Choose destination"
+        : cleanStationName(toStation);
+    final bus = nearestInfo?["bus"] as Map<String, dynamic>?;
+    final busNumber = bus?["busNumber"]?.toString() ?? "-";
+    final eta = nearestInfo?["eta"]?.toString() ?? "-";
+    final rideMinutes = fromStation != null && toStation != null
+        ? calculateRideMinutes().toString()
+        : "-";
+    final totalMinutes = fromStation != null && toStation != null && nearestInfo != null
+        ? ((nearestInfo["eta"] as int) + calculateRideMinutes()).toString()
+        : "-";
+    final distance = nearestInfo == null
+        ? "-"
+        : "${((nearestInfo["distance"] as double) / 1000).toStringAsFixed(1)} km";
+
+    return Positioned(
+      left: 16,
+      right: 16,
+      bottom: 16,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 16,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFD2232A),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.directions_bus,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "$fromName -> $toName",
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.kanit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        fromStation == null || toStation == null
+                            ? "Select From and To to calculate your trip"
+                            : nearestInfo == null
+                            ? "Waiting for bus location at your start station..."
+                            : "Bus $busNumber reaches your start station in about $eta min",
+                        style: GoogleFonts.kanit(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () {
+                    setState(() {
+                      selectedStation = null;
+                      searchController.clear();
+                      showStationSuggestions = false;
+                      filteredStations.clear();
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _trackingMetric("Wait", "$eta min"),
+                ),
+                Container(width: 1, height: 34, color: Colors.grey.shade200),
+                Expanded(
+                  child: _trackingMetric("On bus", "$rideMinutes min"),
+                ),
+                Container(width: 1, height: 34, color: Colors.grey.shade200),
+                Expanded(
+                  child: _trackingMetric("Total", "$totalMinutes min"),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              nearestInfo == null
+                  ? "Distance to start station: -"
+                  : "Nearest bus: Bus $busNumber, $distance from your start station",
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.kanit(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _trackingMetric(String title, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.kanit(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.kanit(fontSize: 11, color: Colors.grey.shade600),
+        ),
+      ],
+    );
   }
 
   List<LatLng> getLineLatLngs(List<Map<String, dynamic>> points) {
@@ -275,6 +654,7 @@ class _HomepagesState extends State<Homepages> {
     busTimer?.cancel();
     moveTimer?.cancel();
     mapController?.dispose();
+    fromSearchController.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -568,10 +948,9 @@ class _HomepagesState extends State<Homepages> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      //bottom bar => custom_bottom_bar.dart
-      bottomNavigationBar: CustomBottomBar(currentIndex: 0),
+    final selectedTripPoints = getSelectedTripPoints();
 
+    return Scaffold(
       body: Stack(
         children: [
           GoogleMap(
@@ -596,6 +975,13 @@ class _HomepagesState extends State<Homepages> {
                 color: const Color(0xFFBC9945),
                 width: 2,
               ),
+              if (selectedTripPoints.length > 1)
+                Polyline(
+                  polylineId: const PolylineId("selected-station-route"),
+                  points: selectedTripPoints,
+                  color: const Color(0xFF1A73E8),
+                  width: 5,
+                ),
             },
             markers: {
               ...getAllLines().map((station) {
@@ -611,15 +997,20 @@ class _HomepagesState extends State<Homepages> {
 
                 int waiting = stationMatch?["waiting"] ?? 0;
                 String status = stationMatch?["status"] ?? "LOW";
+                final isSelected =
+                    selectedStation?["id"]?.toString() ==
+                        station["id"]?.toString() ||
+                    selectedFromStation?["id"]?.toString() ==
+                    station["id"]?.toString();
 
                 return Marker(
                   markerId: MarkerId("station-${station["id"]}"),
                   position: LatLng(station["lat"], station["lng"]),
                   icon: BitmapDescriptor.defaultMarkerWithHue(
-                    getMarkerHue(status),
+                    isSelected ? BitmapDescriptor.hueRose : getMarkerHue(status),
                   ),
                   infoWindow: InfoWindow(
-                    title: station["name"]?.toString(),
+                    title: cleanStationName(station),
                     snippet: "$waiting people - $status",
                   ),
                   onTap: () {
@@ -661,7 +1052,7 @@ class _HomepagesState extends State<Homepages> {
                                   // Station Name
                                   Expanded(
                                     child: Text(
-                                      station["name"],
+                                      cleanStationName(station),
                                       style: GoogleFonts.kanit(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -728,96 +1119,174 @@ class _HomepagesState extends State<Homepages> {
             },
           ),
 
-          // Zoom Map Button
-          Positioned(
-            bottom: 50,
-            right: 20,
-            child: Column(
-              children: [
-                // Zoom In
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 6,
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () =>
-                        mapController?.animateCamera(CameraUpdate.zoomIn()),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // Zoom Out
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 6,
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.remove),
-                    onPressed: () =>
-                        mapController?.animateCamera(CameraUpdate.zoomOut()),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          if (selectedFromStation != null || selectedStation != null)
+            buildTrackingPanel(),
 
           // Search station tab below app bar
           Positioned(
-            top: 130,
-            left: 40,
-            right: 40,
-            child: Container(
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.18),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+            top: 92,
+            left: 16,
+            right: 16,
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
                   ),
-                ],
-              ),
-              child: TextField(
-                controller: searchController,
-                readOnly: true,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const BusPage()),
-                  );
-                },
-                decoration: InputDecoration(
-                  hintText: 'Where to ?',
-                  hintStyle: GoogleFonts.kanit(fontSize: 18),
-                  prefixIcon: const Icon(Icons.search, color: Colors.black54),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 18,
-                    horizontal: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.16),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: fromSearchController,
+                        onTap: () =>
+                            searchStations(fromSearchController.text, "from"),
+                        onChanged: (value) => searchStations(value, "from"),
+                        decoration: InputDecoration(
+                          hintText: 'From station',
+                          hintStyle: GoogleFonts.kanit(fontSize: 14),
+                          prefixIcon: const Icon(
+                            Icons.my_location,
+                            color: Colors.black54,
+                            size: 18,
+                          ),
+                          prefixIconConstraints: const BoxConstraints(
+                            minWidth: 34,
+                            minHeight: 34,
+                          ),
+                          suffixIcon: fromSearchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  onPressed: () {
+                                    fromSearchController.clear();
+                                    setState(() {
+                                      selectedFromStation = null;
+                                      showStationSuggestions = false;
+                                      filteredStations.clear();
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 4,
+                          ),
+                        ),
+                        style: GoogleFonts.kanit(fontSize: 13),
+                        textInputAction: TextInputAction.next,
+                      ),
+                      Divider(height: 1, color: Colors.grey.shade200),
+                      TextField(
+                        controller: searchController,
+                        onTap: () => searchStations(searchController.text, "to"),
+                        onChanged: (value) => searchStations(value, "to"),
+                        decoration: InputDecoration(
+                          hintText: 'To station',
+                          hintStyle: GoogleFonts.kanit(fontSize: 14),
+                          prefixIcon: const Icon(
+                            Icons.location_on_outlined,
+                            color: Colors.black54,
+                            size: 18,
+                          ),
+                          prefixIconConstraints: const BoxConstraints(
+                            minWidth: 34,
+                            minHeight: 34,
+                          ),
+                          suffixIcon: searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    setState(() {
+                                      selectedStation = null;
+                                      showStationSuggestions = false;
+                                      filteredStations.clear();
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 4,
+                          ),
+                        ),
+                        style: GoogleFonts.kanit(fontSize: 13),
+                        textInputAction: TextInputAction.search,
+                      ),
+                    ],
                   ),
                 ),
-                style: GoogleFonts.kanit(fontSize: 14),
-                textInputAction: TextInputAction.search,
-                onSubmitted: (value) {},
-              ),
+                if (showStationSuggestions)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    constraints: const BoxConstraints(maxHeight: 260),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.14),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Scrollbar(
+                      child: ListView.separated(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        itemCount: filteredStations.length,
+                        separatorBuilder: (_, __) =>
+                            Divider(height: 1, color: Colors.grey.shade200),
+                        itemBuilder: (context, index) {
+                          final station = filteredStations[index];
+                          final name = cleanStationName(station);
+
+                          return InkWell(
+                            onTap: () => selectStation(station),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 13,
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.directions_bus,
+                                    size: 18,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      name,
+                                      style: GoogleFonts.kanit(fontSize: 13),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
 
@@ -827,7 +1296,7 @@ class _HomepagesState extends State<Homepages> {
             left: 0,
             right: 0,
             child: Container(
-              height: 120,
+              height: 88,
               padding: EdgeInsets.only(
                 top: MediaQuery.of(context).padding.top,
                 left: 16,
