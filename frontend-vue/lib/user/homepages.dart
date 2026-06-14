@@ -712,12 +712,12 @@ class _HomepagesState extends State<Homepages> {
     );
 
     final sourceRect = ui.Rect.fromLTWH(
-      0,
-      0,
-      source.width.toDouble(),
-      source.height.toDouble(),
+      source.width * 0.125,
+      source.height * 0.117,
+      source.width * 0.75,
+      source.height * 0.75,
     );
-    const destinationRect = ui.Rect.fromLTWH(13, 13, 118, 118);
+    const destinationRect = ui.Rect.fromLTWH(9, 9, 126, 126);
     canvas.drawImageRect(
       source,
       sourceRect,
@@ -745,7 +745,7 @@ class _HomepagesState extends State<Homepages> {
   }
 
   Future<void> loadStationMarkerIcons() async {
-    final assetData = await rootBundle.load("assets/dindin.png");
+    final assetData = await rootBundle.load("assets/bus_stop_2.png");
     final codec = await ui.instantiateImageCodec(
       assetData.buffer.asUint8List(
         assetData.offsetInBytes,
@@ -768,12 +768,12 @@ class _HomepagesState extends State<Homepages> {
       normalIcons[entry.key] = await createStationDensityIcon(
         source,
         entry.value,
-        38,
+        46,
       );
       selectedIcons[entry.key] = await createStationDensityIcon(
         source,
         entry.value,
-        46,
+        56,
       );
     }
 

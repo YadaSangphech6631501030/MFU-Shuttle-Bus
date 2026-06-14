@@ -294,9 +294,9 @@ class _AdminHomepageState extends State<AdminHomepage> {
   Future<void> loadStationMarkerIcon() async {
     final icon = await BitmapDescriptor.asset(
       const ImageConfiguration(),
-      "assets/dindin.png",
-      width: 48,
-      height: 48,
+      "assets/bus_stop_2.png",
+      width: 60,
+      height: 60,
     );
 
     if (!mounted) return;
