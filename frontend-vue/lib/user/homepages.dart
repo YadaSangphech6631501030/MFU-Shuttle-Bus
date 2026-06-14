@@ -1,10 +1,12 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import 'bus_controller.dart';
 import 'user_setting.dart';
@@ -37,6 +39,10 @@ class _HomepagesState extends State<Homepages> {
   String activeSearchField = "to";
   bool showStationSuggestions = false;
   Map<String, LatLng> busPositions = {};
+  BitmapDescriptor stationMarkerIcon = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor selectedStationMarkerIcon = BitmapDescriptor.defaultMarker;
+  final Map<String, BitmapDescriptor> stationDensityIcons = {};
+  final Map<String, BitmapDescriptor> selectedStationDensityIcons = {};
 
   // statuses for bus
   Map<String, double> busProgress =
@@ -172,18 +178,36 @@ class _HomepagesState extends State<Homepages> {
     }
   }
 
-  //Markers color by status
-  double getMarkerHue(String status) {
-    switch (status) {
-      case "LOW":
-        return BitmapDescriptor.hueGreen;
-      case "MEDIUM":
-        return BitmapDescriptor.hueOrange;
-      case "HIGH":
-        return BitmapDescriptor.hueRed;
-      default:
-        return BitmapDescriptor.hueAzure;
-    }
+  double stationHeatWeight(dynamic waitingValue, String status) {
+    final waiting = double.tryParse(waitingValue?.toString() ?? "") ?? 0;
+    final waitingWeight = (waiting / 20).clamp(0.18, 1.0).toDouble();
+    final statusWeight = switch (status.toUpperCase()) {
+      "HIGH" => 1.0,
+      "MEDIUM" => 0.62,
+      _ => 0.28,
+    };
+
+    return waitingWeight > statusWeight ? waitingWeight : statusWeight;
+  }
+
+  String stationDensityLevel(dynamic waitingValue, String status) {
+    final weight = stationHeatWeight(waitingValue, status);
+    if (weight >= 0.78) return "HIGH";
+    if (weight >= 0.48) return "MEDIUM";
+    return "LOW";
+  }
+
+  BitmapDescriptor stationIconFor(
+    dynamic waitingValue,
+    String status,
+    bool isSelected,
+  ) {
+    final level = stationDensityLevel(waitingValue, status);
+    final icons = isSelected
+        ? selectedStationDensityIcons
+        : stationDensityIcons;
+    return icons[level] ??
+        (isSelected ? selectedStationMarkerIcon : stationMarkerIcon);
   }
 
   double distanceBetween(LatLng from, LatLng to) {
@@ -355,42 +379,29 @@ class _HomepagesState extends State<Homepages> {
   double calculateRideDistanceMeters() {
     if (selectedFromStation == null || selectedStation == null) return 0;
 
-    final tripLine = getTripLineStations();
-    if (tripLine == null || tripLine.length < 2) {
-      return distanceBetween(
-        LatLng(selectedFromStation!["lat"], selectedFromStation!["lng"]),
-        LatLng(selectedStation!["lat"], selectedStation!["lng"]),
-      );
-    }
-
-    final fromId = selectedFromStation!["id"]?.toString();
-    final toId = selectedStation!["id"]?.toString();
-    final fromIndex = tripLine.indexWhere(
-      (station) => station["id"]?.toString() == fromId,
-    );
-    final toIndex = tripLine.indexWhere(
-      (station) => station["id"]?.toString() == toId,
-    );
-
-    if (fromIndex < 0 || toIndex < 0 || fromIndex == toIndex) return 0;
-
+    final points = getSelectedTripPoints();
+    if (points.length < 2) return 0;
     double distance = 0;
-    int currentIndex = fromIndex;
-
-    while (currentIndex != toIndex) {
-      final nextIndex = (currentIndex + 1) % tripLine.length;
-      final currentStation = tripLine[currentIndex];
-      final nextStation = tripLine[nextIndex];
-
-      distance += distanceBetween(
-        LatLng(currentStation["lat"], currentStation["lng"]),
-        LatLng(nextStation["lat"], nextStation["lng"]),
-      );
-
-      currentIndex = nextIndex;
+    for (var i = 0; i < points.length - 1; i++) {
+      distance += distanceBetween(points[i], points[i + 1]);
     }
 
     return distance;
+  }
+
+  int nearestRoutePointIndex(List<LatLng> routePoints, LatLng target) {
+    var nearestIndex = 0;
+    var nearestDistance = double.infinity;
+
+    for (var i = 0; i < routePoints.length; i++) {
+      final distance = distanceBetween(routePoints[i], target);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = i;
+      }
+    }
+
+    return nearestIndex;
   }
 
   List<LatLng> getSelectedTripPoints() {
@@ -415,18 +426,42 @@ class _HomepagesState extends State<Homepages> {
 
     if (fromIndex < 0 || toIndex < 0) return [];
 
-    final points = <LatLng>[];
+    final lineRoute = identical(tripLine, line1) ? route1 : route2;
+    if (lineRoute.length > 1) {
+      final fromPosition = LatLng(
+        selectedFromStation!["lat"],
+        selectedFromStation!["lng"],
+      );
+      final toPosition = LatLng(
+        selectedStation!["lat"],
+        selectedStation!["lng"],
+      );
+      final routeFromIndex = nearestRoutePointIndex(lineRoute, fromPosition);
+      final routeToIndex = nearestRoutePointIndex(lineRoute, toPosition);
+
+      if (fromIndex <= toIndex && routeFromIndex <= routeToIndex) {
+        return lineRoute.sublist(routeFromIndex, routeToIndex + 1);
+      }
+      if (fromIndex > toIndex && routeFromIndex > routeToIndex) {
+        return [
+          ...lineRoute.sublist(routeFromIndex),
+          ...lineRoute.sublist(0, routeToIndex + 1),
+        ];
+      }
+    }
+
+    final fallbackPoints = <LatLng>[];
     int currentIndex = fromIndex;
 
     while (true) {
       final station = tripLine[currentIndex];
-      points.add(LatLng(station["lat"], station["lng"]));
+      fallbackPoints.add(LatLng(station["lat"], station["lng"]));
 
       if (currentIndex == toIndex) break;
       currentIndex = (currentIndex + 1) % tripLine.length;
     }
 
-    return points;
+    return fallbackPoints;
   }
 
   int calculateRideMinutes() {
@@ -593,6 +628,31 @@ class _HomepagesState extends State<Homepages> {
     return points.map((p) => LatLng(p["lat"], p["lng"])).toList();
   }
 
+  List<LatLng> densifyRoadRoute(
+    List<LatLng> points, {
+    int segmentsPerEdge = 10,
+  }) {
+    if (points.length < 2) return points;
+
+    final result = <LatLng>[];
+    for (var i = 0; i < points.length - 1; i++) {
+      final start = points[i];
+      final end = points[i + 1];
+
+      for (var step = 0; step < segmentsPerEdge; step++) {
+        final t = step / segmentsPerEdge;
+        result.add(
+          LatLng(
+            start.latitude + ((end.latitude - start.latitude) * t),
+            start.longitude + ((end.longitude - start.longitude) * t),
+          ),
+        );
+      }
+    }
+    result.add(points.last);
+    return result;
+  }
+
   Future<List<LatLng>> fetchRouteForPoints(
     List<Map<String, dynamic>> points,
   ) async {
@@ -627,9 +687,117 @@ class _HomepagesState extends State<Homepages> {
     return fetchRouteForPoints(getSelectedLine());
   }
 
+  Future<BitmapDescriptor> createStationDensityIcon(
+    ui.Image source,
+    Color color,
+    double logicalSize,
+  ) async {
+    const canvasSize = 144.0;
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    const center = ui.Offset(canvasSize / 2, canvasSize / 2);
+
+    canvas.drawCircle(
+      center,
+      68,
+      ui.Paint()..color = Colors.white.withValues(alpha: 0.96),
+    );
+    canvas.drawCircle(
+      center,
+      65,
+      ui.Paint()
+        ..color = color
+        ..style = ui.PaintingStyle.stroke
+        ..strokeWidth = 10,
+    );
+
+    final sourceRect = ui.Rect.fromLTWH(
+      0,
+      0,
+      source.width.toDouble(),
+      source.height.toDouble(),
+    );
+    const destinationRect = ui.Rect.fromLTWH(13, 13, 118, 118);
+    canvas.drawImageRect(
+      source,
+      sourceRect,
+      destinationRect,
+      ui.Paint()..filterQuality = ui.FilterQuality.high,
+    );
+
+    final renderedImage = await recorder.endRecording().toImage(
+      canvasSize.toInt(),
+      canvasSize.toInt(),
+    );
+    final pngData = await renderedImage.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    renderedImage.dispose();
+
+    return BitmapDescriptor.bytes(
+      pngData!.buffer.asUint8List(
+        pngData.offsetInBytes,
+        pngData.lengthInBytes,
+      ),
+      width: logicalSize,
+      height: logicalSize,
+    );
+  }
+
+  Future<void> loadStationMarkerIcons() async {
+    final assetData = await rootBundle.load("assets/dindin.png");
+    final codec = await ui.instantiateImageCodec(
+      assetData.buffer.asUint8List(
+        assetData.offsetInBytes,
+        assetData.lengthInBytes,
+      ),
+      targetWidth: 128,
+      targetHeight: 128,
+    );
+    final frame = await codec.getNextFrame();
+    final source = frame.image;
+    const colors = {
+      "LOW": Color(0xFF00A84F),
+      "MEDIUM": Color(0xFFFFA800),
+      "HIGH": Color(0xFFE32636),
+    };
+    final normalIcons = <String, BitmapDescriptor>{};
+    final selectedIcons = <String, BitmapDescriptor>{};
+
+    for (final entry in colors.entries) {
+      normalIcons[entry.key] = await createStationDensityIcon(
+        source,
+        entry.value,
+        38,
+      );
+      selectedIcons[entry.key] = await createStationDensityIcon(
+        source,
+        entry.value,
+        46,
+      );
+    }
+
+    source.dispose();
+    codec.dispose();
+
+    if (!mounted) return;
+
+    setState(() {
+      stationDensityIcons
+        ..clear()
+        ..addAll(normalIcons);
+      selectedStationDensityIcons
+        ..clear()
+        ..addAll(selectedIcons);
+      stationMarkerIcon = normalIcons["LOW"]!;
+      selectedStationMarkerIcon = selectedIcons["LOW"]!;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    loadStationMarkerIcons();
     fetchStations();
     fetchBuses();
 
@@ -846,10 +1014,10 @@ class _HomepagesState extends State<Homepages> {
 
     setState(() {
       route1 = newRoute1.isNotEmpty
-          ? catmullRomSpline(newRoute1, segments: 10)
+          ? densifyRoadRoute(newRoute1)
           : getLineLatLngs(line1);
       route2 = newRoute2.isNotEmpty
-          ? catmullRomSpline(newRoute2, segments: 10)
+          ? densifyRoadRoute(newRoute2)
           : getLineLatLngs(line2);
     });
 
@@ -862,9 +1030,7 @@ class _HomepagesState extends State<Homepages> {
     if (!mounted) return;
 
     setState(() {
-      route = newRoute.isNotEmpty
-          ? catmullRomSpline(newRoute, segments: 10)
-          : [];
+      route = densifyRoadRoute(newRoute);
     });
   }
 
@@ -894,56 +1060,6 @@ class _HomepagesState extends State<Homepages> {
           ? minMinutes.ceil()
           : 0;
     }
-  }
-
-  List<LatLng> catmullRomSpline(List<LatLng> points, {int segments = 10}) {
-    List<LatLng> result = [];
-    for (int i = 0; i < points.length - 1; i++) {
-      LatLng p0 = i > 0 ? points[i - 1] : points[i];
-      LatLng p1 = points[i];
-      LatLng p2 = points[i + 1];
-      LatLng p3 = i < points.length - 2 ? points[i + 2] : points[i + 1];
-
-      for (int j = 0; j <= segments; j++) {
-        double t = j / segments;
-        double tt = t * t;
-        double ttt = tt * t;
-
-        double lat =
-            0.5 *
-            ((2 * p1.latitude) +
-                (-p0.latitude + p2.latitude) * t +
-                (2 * p0.latitude -
-                        5 * p1.latitude +
-                        4 * p2.latitude -
-                        p3.latitude) *
-                    tt +
-                (-p0.latitude +
-                        3 * p1.latitude -
-                        3 * p2.latitude +
-                        p3.latitude) *
-                    ttt);
-
-        double lng =
-            0.5 *
-            ((2 * p1.longitude) +
-                (-p0.longitude + p2.longitude) * t +
-                (2 * p0.longitude -
-                        5 * p1.longitude +
-                        4 * p2.longitude -
-                        p3.longitude) *
-                    tt +
-                (-p0.longitude +
-                        3 * p1.longitude -
-                        3 * p2.longitude +
-                        p3.longitude) *
-                    ttt);
-
-        result.add(LatLng(lat, lng));
-      }
-    }
-    result.add(points.last);
-    return result;
   }
 
   @override
@@ -1006,9 +1122,9 @@ class _HomepagesState extends State<Homepages> {
                 return Marker(
                   markerId: MarkerId("station-${station["id"]}"),
                   position: LatLng(station["lat"], station["lng"]),
-                  icon: BitmapDescriptor.defaultMarkerWithHue(
-                    isSelected ? BitmapDescriptor.hueRose : getMarkerHue(status),
-                  ),
+                  anchor: const Offset(0.5, 0.5),
+                  zIndexInt: 2,
+                  icon: stationIconFor(waiting, status, isSelected),
                   infoWindow: InfoWindow(
                     title: cleanStationName(station),
                     snippet: "$waiting people - $status",
