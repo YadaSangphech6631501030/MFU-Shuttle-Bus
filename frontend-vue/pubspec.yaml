@@ -67,6 +67,15 @@ flutter:
     - assets/mfu_logo.png
     - assets/bus.png
     - assets/dindin.png
+    - assets/gemcar_right.png
+    - assets/gemcar_left.png
+    - assets/gamcar_front.png
+    - assets/gemcar_top.png
+    - assets/gemcar_back.png
+    - assets/gemcar_turnright.png
+    - assets/gemcar_turnleft.png
+    - assets/bus_stop_1.png
+    - assets/bus_stop_2.png
 
 
   # To add assets to your application, add an assets section, like this:
