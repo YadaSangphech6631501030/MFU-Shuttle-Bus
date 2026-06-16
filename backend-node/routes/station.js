@@ -67,6 +67,28 @@ function normalizeStationBody(body, { partial = false } = {}) {
     station.cameraUrl = "";
   }
 
+  if (body.detectionRoi !== undefined) {
+    const roi = body.detectionRoi;
+    const isValidRoi = Array.isArray(roi) && roi.every((point) => (
+      Array.isArray(point) &&
+      point.length === 2 &&
+      Number.isFinite(Number(point[0])) &&
+      Number.isFinite(Number(point[1])) &&
+      Number(point[0]) >= 0 &&
+      Number(point[0]) <= 1 &&
+      Number(point[1]) >= 0 &&
+      Number(point[1]) <= 1
+    ));
+
+    if (!isValidRoi && roi !== null) {
+      return { error: "Detection ROI must be an array of [x, y] values from 0 to 1" };
+    }
+
+    station.detectionRoi = roi === null ? [] : roi.map((point) => [Number(point[0]), Number(point[1])]);
+  } else if (!partial) {
+    station.detectionRoi = [];
+  }
+
   return { station };
 }
 

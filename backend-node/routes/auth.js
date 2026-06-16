@@ -164,10 +164,43 @@ router.get("/admin/users", tokenRequired, adminOnly, async (req, res) => {
     const db = getDB();
     const users = db.collection("users");
 
-    const allUsers = await users.find().toArray();
+    const allUsers = await users.find({}, { projection: { password: 0 } }).toArray();
 
     res.json(allUsers);
   } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// update user role only admin
+router.put("/admin/user/:username/role", tokenRequired, adminOnly, async (req, res) => {
+  try {
+    const { role } = req.body;
+    const allowedRoles = ["admin", "user"];
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ error: "Role must be admin or user" });
+    }
+
+    if (req.params.username === req.user.username && role !== "admin") {
+      return res.status(400).json({ error: "Cannot remove your own admin role" });
+    }
+
+    const db = getDB();
+    const users = db.collection("users");
+
+    const result = await users.updateOne(
+      { username: req.params.username },
+      { $set: { role } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ message: "User role updated" });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });

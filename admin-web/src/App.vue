@@ -1,0 +1,1182 @@
+<script setup lang="ts">
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { api } from './services/api';
+import type { Bus, DetectorStatus, Report, Station, User } from './types';
+
+type Lang = 'en' | 'th';
+type TabKey = 'dashboard' | 'stations' | 'cctv' | 'buses' | 'reports' | 'users';
+type LatLng = { lat: number; lng: number };
+type CameraPreviewKind = 'none' | 'rtsp' | 'image' | 'video' | 'link';
+
+type GoogleLatLngValue = {
+  lat: () => number;
+  lng: () => number;
+};
+
+type GoogleMapMouseEvent = {
+  latLng?: GoogleLatLngValue;
+};
+
+type GoogleMap = {
+  addListener: (eventName: string, handler: (event: GoogleMapMouseEvent) => void) => void;
+  setCenter: (position: LatLng) => void;
+};
+
+type GoogleMarker = {
+  addListener: (eventName: string, handler: () => void) => void;
+  getPosition: () => GoogleLatLngValue | undefined;
+  setPosition: (position: LatLng) => void;
+};
+
+type GoogleMapsApi = {
+  Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMap;
+  Marker: new (options: Record<string, unknown>) => GoogleMarker;
+};
+
+declare global {
+  interface Window {
+    google?: {
+      maps: GoogleMapsApi;
+    };
+    initMfuStationMap?: () => void;
+  }
+}
+
+const LANGUAGE_KEY = 'mfu_admin_language';
+const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+const MFU_CENTER: LatLng = { lat: 20.0446, lng: 99.8957 };
+let googleMapsPromise: Promise<void> | null = null;
+
+const lang = ref<Lang>(savedLanguage === 'th' ? 'th' : 'en');
+const tabs: Array<{ key: TabKey }> = [
+  { key: 'dashboard' },
+  { key: 'stations' },
+  { key: 'cctv' },
+  { key: 'buses' },
+  { key: 'reports' },
+  { key: 'users' },
+];
+const activeTab = ref<TabKey>('dashboard');
+
+const dictionary = {
+  en: {
+    tabs: {
+      dashboard: 'Dashboard',
+      stations: 'Stations',
+      cctv: 'Station CCTV',
+      buses: 'Buses',
+      reports: 'Reports',
+      users: 'Users',
+    },
+    language: 'TH',
+    loginSubtitle: '',
+    username: 'Username',
+    password: 'Password',
+    usernamePlaceholder: 'admin username',
+    passwordPlaceholder: 'password',
+    signIn: 'Sign in',
+    signingIn: 'Signing in...',
+    logout: 'Log out',
+    refresh: 'Refresh data',
+    loading: 'Loading...',
+    genericError: 'Something went wrong',
+    adminOnlyError: 'This account is not an administrator.',
+    totalStations: 'Total stations',
+    activeStops: 'Active pickup points',
+    onlineBuses: 'Online buses',
+    fromTotalBuses: 'from {count} buses',
+    pendingReports: 'Pending reports',
+    unresolvedItems: 'Items not resolved yet',
+    usersCount: 'Users',
+    systemAccounts: 'System accounts',
+    stationList: 'Station list',
+    stationName: 'Station name',
+    line: 'Line',
+    coordinates: 'Coordinates',
+    status: 'Status',
+    edit: 'Edit',
+    delete: 'Delete',
+    editStation: 'Edit station',
+    addStation: 'Add station',
+    cancel: 'Cancel',
+    stationIdPlaceholder: 'Example: S01',
+    stationNamePlaceholder: 'Pickup point name',
+    mapPicker: 'Map location picker',
+    mapHint: 'Click the map or drag the marker to update latitude and longitude.',
+    mapMissingKey: 'Add VITE_GOOGLE_MAPS_API_KEY in admin-web/.env to enable Google Map picker.',
+    mapLoadFailed: 'Google Map could not be loaded.',
+    mapLoading: 'Loading map...',
+    useCurrentLocation: 'Use current location',
+    locateFailed: 'Could not get your current location.',
+    saveChanges: 'Save changes',
+    allBuses: 'All buses',
+    unknownBus: 'Unknown bus',
+    noDriver: 'No driver name',
+    noLine: 'No line',
+    issueReports: 'Issue reports',
+    issueReport: 'Issue report',
+    anonymous: 'anonymous',
+    systemUsers: 'System users',
+    changeRole: 'Change role',
+    deleteStationConfirm: 'Delete station "{name}"?',
+    deleteUserConfirm: 'Delete user "{name}"?',
+  },
+  th: {
+    tabs: {
+      dashboard: 'ภาพรวม',
+      stations: 'สถานี',
+      cctv: 'Station CCTV',
+      buses: 'รถทั้งหมด',
+      reports: 'รายงาน',
+      users: 'ผู้ใช้',
+    },
+    language: 'EN',
+    loginSubtitle: '',
+    username: 'ชื่อผู้ใช้',
+    password: 'รหัสผ่าน',
+    usernamePlaceholder: 'ชื่อผู้ใช้แอดมิน',
+    passwordPlaceholder: 'รหัสผ่าน',
+    signIn: 'เข้าสู่ระบบ',
+    signingIn: 'กำลังเข้าสู่ระบบ...',
+    logout: 'ออกจากระบบ',
+    refresh: 'รีเฟรชข้อมูล',
+    loading: 'กำลังโหลด...',
+    genericError: 'เกิดข้อผิดพลาด',
+    adminOnlyError: 'บัญชีนี้ไม่ใช่ผู้ดูแลระบบ',
+    totalStations: 'สถานีทั้งหมด',
+    activeStops: 'จุดจอดที่เปิดให้บริการ',
+    onlineBuses: 'รถออนไลน์',
+    fromTotalBuses: 'จากทั้งหมด {count} คัน',
+    pendingReports: 'รายงานรอดำเนินการ',
+    unresolvedItems: 'รายการที่ยังไม่ปิดงาน',
+    usersCount: 'ผู้ใช้',
+    systemAccounts: 'บัญชีในระบบ',
+    stationList: 'รายการสถานี',
+    stationName: 'ชื่อสถานี',
+    line: 'สาย',
+    coordinates: 'พิกัด',
+    status: 'สถานะ',
+    edit: 'แก้ไข',
+    delete: 'ลบ',
+    editStation: 'แก้ไขสถานี',
+    addStation: 'เพิ่มสถานี',
+    cancel: 'ยกเลิก',
+    stationIdPlaceholder: 'เช่น S01',
+    stationNamePlaceholder: 'ชื่อจุดจอด',
+    mapPicker: 'เลือกตำแหน่งจากแผนที่',
+    mapHint: 'คลิกบนแผนที่หรือลากหมุดเพื่ออัปเดต latitude และ longitude',
+    mapMissingKey: 'เพิ่ม VITE_GOOGLE_MAPS_API_KEY ใน admin-web/.env เพื่อเปิดใช้ Google Map',
+    mapLoadFailed: 'โหลด Google Map ไม่สำเร็จ',
+    mapLoading: 'กำลังโหลดแผนที่...',
+    useCurrentLocation: 'ใช้ตำแหน่งปัจจุบัน',
+    locateFailed: 'ไม่สามารถอ่านตำแหน่งปัจจุบันได้',
+    saveChanges: 'บันทึกการแก้ไข',
+    allBuses: 'รถทั้งหมด',
+    unknownBus: 'ไม่ระบุรถ',
+    noDriver: 'ไม่มีชื่อคนขับ',
+    noLine: 'ไม่ระบุสาย',
+    issueReports: 'รายงานปัญหา',
+    issueReport: 'รายงานปัญหา',
+    anonymous: 'ไม่ระบุชื่อ',
+    systemUsers: 'ผู้ใช้ในระบบ',
+    changeRole: 'เปลี่ยนสิทธิ์',
+    deleteStationConfirm: 'ลบสถานี "{name}" ใช่ไหม?',
+    deleteUserConfirm: 'ลบผู้ใช้ "{name}" ใช่ไหม?',
+  },
+} as const;
+
+const text = computed(() => dictionary[lang.value]);
+const activeTitle = computed(() => text.value.tabs[activeTab.value]);
+
+const loading = ref(false);
+const error = ref('');
+const isLoggedIn = ref(Boolean(api.token));
+
+const loginForm = reactive({
+  username: '',
+  password: '',
+});
+
+const stations = ref<Station[]>([]);
+const buses = ref<Bus[]>([]);
+const reports = ref<Report[]>([]);
+const users = ref<User[]>([]);
+
+const emptyStation = (): Station => ({
+  id: '',
+  name: '',
+  lat: 0,
+  lng: 0,
+  lines: ['line1'],
+  waiting: 0,
+  status: 'LOW',
+  cameraUrl: '',
+  detectionRoi: [],
+});
+
+const stationForm = reactive<Station>(emptyStation());
+const stationRoiText = ref('');
+const editingStationKey = ref<string | null>(null);
+const stationMapEl = ref<HTMLElement | null>(null);
+const stationMap = ref<GoogleMap | null>(null);
+const stationMarker = ref<GoogleMarker | null>(null);
+const stationMapLoading = ref(false);
+const stationMapError = ref('');
+const openRoleMenu = ref<string | null>(null);
+const selectedCameraStationId = ref<string | null>(null);
+const detectorStatus = ref<DetectorStatus | null>(null);
+const detectorBusy = ref(false);
+const roiDraft = ref<Array<[number, number]>>([]);
+const isEditingRoi = ref(false);
+const draggingRoiPointIndex = ref<number | null>(null);
+let detectorFrameTimer: number | undefined;
+
+const onlineBuses = computed(() => buses.value.filter((bus) => bus.status?.toLowerCase() !== 'offline').length);
+const pendingReports = computed(() => reports.value.filter((report) => report.status !== 'resolved').length);
+const selectedCameraStation = computed(() => {
+  if (stations.value.length === 0) return null;
+  return stations.value.find((station) => station.id === selectedCameraStationId.value) ?? stations.value[0];
+});
+const selectedCameraUrl = computed(() => normalizeCameraUrl(selectedCameraStation.value?.cameraUrl));
+const selectedCameraPreviewKind = computed(() => getCameraPreviewKind(selectedCameraUrl.value));
+const detectorStreamUrl = computed(() => (
+  selectedCameraStation.value && detectorStatus.value?.running
+    ? api.getDetectorStreamUrl(selectedCameraStation.value.id)
+    : ''
+));
+
+function fillTemplate(template: string, values: Record<string, string | number>) {
+  return template.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ''));
+}
+
+function toggleLanguage() {
+  lang.value = lang.value === 'en' ? 'th' : 'en';
+  localStorage.setItem(LANGUAGE_KEY, lang.value);
+}
+
+function setActiveTab(tab: TabKey) {
+  activeTab.value = tab;
+}
+
+function selectValue(event: Event) {
+  return (event.target as HTMLSelectElement).value;
+}
+
+function normalizeCameraUrl(value?: string) {
+  return String(value ?? '').trim();
+}
+
+function hasCamera(station?: Station | null) {
+  return normalizeCameraUrl(station?.cameraUrl).length > 0;
+}
+
+function getCameraPreviewKind(url?: string): CameraPreviewKind {
+  const normalizedUrl = normalizeCameraUrl(url);
+  if (!normalizedUrl) return 'none';
+  if (/^rtsp:\/\//i.test(normalizedUrl)) return 'rtsp';
+  if (/(\.jpg|\.jpeg|\.png|\.gif|\.webp|\.mjpg|\.mjpeg)(\?|$)/i.test(normalizedUrl)) return 'image';
+  if (/(\.mp4|\.webm|\.ogg|\.m3u8)(\?|$)/i.test(normalizedUrl)) return 'video';
+  return 'link';
+}
+
+function selectCameraStation(station: Station) {
+  selectedCameraStationId.value = station.id;
+}
+
+function openCameraStation(station: Station) {
+  selectCameraStation(station);
+  activeTab.value = 'cctv';
+}
+
+function syncSelectedCameraStation(nextStations: Station[]) {
+  if (nextStations.length === 0) {
+    selectedCameraStationId.value = null;
+    return;
+  }
+
+  if (selectedCameraStationId.value && nextStations.some((station) => station.id === selectedCameraStationId.value)) {
+    return;
+  }
+
+  const station08 = nextStations.find((station) => station.id.toLowerCase() === 'station08');
+  selectedCameraStationId.value = (station08 ?? nextStations.find(hasCamera) ?? nextStations[0]).id;
+}
+
+async function copyCameraUrl() {
+  if (!selectedCameraUrl.value) return;
+  await navigator.clipboard.writeText(selectedCameraUrl.value);
+}
+
+function syncRoiDraftFromStation() {
+  roiDraft.value = selectedCameraStation.value?.detectionRoi?.length
+    ? selectedCameraStation.value.detectionRoi.map((point) => [point[0], point[1]])
+    : [];
+}
+
+async function loadDetectorStatus() {
+  const station = selectedCameraStation.value;
+  if (!station) return;
+
+  try {
+    detectorStatus.value = await api.getDetectorStatus(station.id);
+  } catch {
+    detectorStatus.value = null;
+  }
+}
+
+async function startSelectedDetector() {
+  const station = selectedCameraStation.value;
+  if (!station) return;
+
+  detectorBusy.value = true;
+  try {
+    detectorStatus.value = await api.startDetector(station.id);
+    window.setTimeout(() => {
+      void loadDetectorStatus();
+    }, 2500);
+  } finally {
+    detectorBusy.value = false;
+  }
+}
+
+async function stopSelectedDetector() {
+  const station = selectedCameraStation.value;
+  if (!station) return;
+
+  detectorBusy.value = true;
+  try {
+    detectorStatus.value = await api.stopDetector(station.id);
+  } finally {
+    detectorBusy.value = false;
+  }
+}
+
+function getPointerInRoi(event: PointerEvent) {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+  const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+  return [Number(x.toFixed(4)), Number(y.toFixed(4))] as [number, number];
+}
+
+function startRoiEditor() {
+  syncRoiDraftFromStation();
+  isEditingRoi.value = true;
+}
+
+function cancelRoiEditor() {
+  isEditingRoi.value = false;
+  draggingRoiPointIndex.value = null;
+  syncRoiDraftFromStation();
+}
+
+function setRoiPreset(preset: 'full' | 'right' | 'left' | 'bottom' | 'center') {
+  const presets: Record<typeof preset, Array<[number, number]>> = {
+    full: [[0, 0], [1, 0], [1, 1], [0, 1]],
+    right: [[0.5, 0], [1, 0], [1, 1], [0.5, 1]],
+    left: [[0, 0], [0.5, 0], [0.5, 1], [0, 1]],
+    bottom: [[0, 0.5], [1, 0.5], [1, 1], [0, 1]],
+    center: [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]],
+  };
+  roiDraft.value = presets[preset];
+}
+
+function clearRoiDraft() {
+  roiDraft.value = [];
+}
+
+function handleRoiCanvasPointerDown(event: PointerEvent) {
+  if (!isEditingRoi.value || roiDraft.value.length >= 8) return;
+  roiDraft.value = [...roiDraft.value, getPointerInRoi(event)];
+}
+
+function startDragRoiPoint(index: number, event: PointerEvent) {
+  event.stopPropagation();
+  draggingRoiPointIndex.value = index;
+}
+
+function dragRoiPoint(event: PointerEvent) {
+  if (draggingRoiPointIndex.value === null) return;
+
+  const nextPoints = [...roiDraft.value];
+  nextPoints[draggingRoiPointIndex.value] = getPointerInRoi(event);
+  roiDraft.value = nextPoints;
+}
+
+function stopDragRoiPoint() {
+  draggingRoiPointIndex.value = null;
+}
+
+async function saveSelectedRoi() {
+  const station = selectedCameraStation.value;
+  if (!station) return;
+
+  const payload: Station = {
+    ...station,
+    detectionRoi: roiDraft.value,
+  };
+
+  await withLoading(async () => {
+    await api.updateStation(station.id, payload);
+    stations.value = await api.getStations();
+    syncSelectedCameraStation(stations.value);
+    isEditingRoi.value = false;
+  });
+}
+
+function resetStationForm() {
+  Object.assign(stationForm, emptyStation());
+  stationRoiText.value = '';
+  editingStationKey.value = null;
+  void nextTick(initStationMap);
+}
+
+function formatRoi(roi?: Array<[number, number]>) {
+  return roi && roi.length ? JSON.stringify(roi) : '';
+}
+
+function parseRoiText() {
+  const raw = stationRoiText.value.trim();
+  if (!raw) return [];
+
+  const parsed = JSON.parse(raw);
+  const isValid = Array.isArray(parsed) && parsed.every((point) => (
+    Array.isArray(point) &&
+    point.length === 2 &&
+    Number.isFinite(Number(point[0])) &&
+    Number.isFinite(Number(point[1])) &&
+    Number(point[0]) >= 0 &&
+    Number(point[0]) <= 1 &&
+    Number(point[1]) >= 0 &&
+    Number(point[1]) <= 1
+  ));
+
+  if (!isValid) {
+    throw new Error('Detection ROI must be JSON like [[0.1,0.2],[0.9,0.2],[0.9,0.8],[0.1,0.8]]');
+  }
+
+  return parsed.map((point) => [Number(point[0]), Number(point[1])]) as Array<[number, number]>;
+}
+
+function getStationPosition() {
+  const lat = Number(stationForm.lat);
+  const lng = Number(stationForm.lng);
+
+  if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
+    return { lat, lng };
+  }
+
+  return MFU_CENTER;
+}
+
+function setStationPosition(position: LatLng) {
+  stationForm.lat = Number(position.lat.toFixed(6));
+  stationForm.lng = Number(position.lng.toFixed(6));
+  stationMarker.value?.setPosition(position);
+  stationMap.value?.setCenter(position);
+}
+
+function syncMarkerFromForm() {
+  if (!stationMarker.value || !stationMap.value) return;
+
+  const position = getStationPosition();
+  stationMarker.value.setPosition(position);
+  stationMap.value.setCenter(position);
+}
+
+function loadGoogleMaps() {
+  if (window.google?.maps) return Promise.resolve();
+  if (googleMapsPromise) return googleMapsPromise;
+
+  googleMapsPromise = new Promise((resolve, reject) => {
+    if (!GOOGLE_MAPS_API_KEY) {
+      reject(new Error(text.value.mapMissingKey));
+      return;
+    }
+
+    window.initMfuStationMap = () => resolve();
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&callback=initMfuStationMap`;
+    script.async = true;
+    script.defer = true;
+    script.onerror = () => reject(new Error(text.value.mapLoadFailed));
+    document.head.appendChild(script);
+  });
+
+  return googleMapsPromise;
+}
+
+async function initStationMap() {
+  if (activeTab.value !== 'stations' || !stationMapEl.value) return;
+
+  if (stationMap.value && stationMarker.value) {
+    syncMarkerFromForm();
+    return;
+  }
+
+  stationMapLoading.value = true;
+  stationMapError.value = '';
+
+  try {
+    await loadGoogleMaps();
+
+    const maps = window.google?.maps;
+    if (!maps || !stationMapEl.value) {
+      throw new Error(text.value.mapLoadFailed);
+    }
+
+    const position = getStationPosition();
+    stationMap.value = new maps.Map(stationMapEl.value, {
+      center: position,
+      zoom: 17,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true,
+    });
+
+    stationMarker.value = new maps.Marker({
+      position,
+      map: stationMap.value,
+      draggable: true,
+      title: 'Station location',
+    });
+
+    stationMap.value.addListener('click', (event: GoogleMapMouseEvent) => {
+      if (!event.latLng) return;
+      setStationPosition({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+    });
+
+    stationMarker.value.addListener('dragend', () => {
+      const markerPosition = stationMarker.value?.getPosition();
+      if (!markerPosition) return;
+      setStationPosition({ lat: markerPosition.lat(), lng: markerPosition.lng() });
+    });
+  } catch (err) {
+    stationMapError.value = err instanceof Error ? err.message : text.value.mapLoadFailed;
+  } finally {
+    stationMapLoading.value = false;
+  }
+}
+
+function useCurrentLocation() {
+  if (!navigator.geolocation) {
+    stationMapError.value = text.value.locateFailed;
+    return;
+  }
+
+  stationMapLoading.value = true;
+  stationMapError.value = '';
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      setStationPosition({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+      stationMapLoading.value = false;
+    },
+    () => {
+      stationMapError.value = text.value.locateFailed;
+      stationMapLoading.value = false;
+    },
+    { enableHighAccuracy: true, timeout: 10000 },
+  );
+}
+
+async function withLoading(task: () => Promise<void>) {
+  loading.value = true;
+  error.value = '';
+  try {
+    await task();
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : text.value.genericError;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadData() {
+  await withLoading(async () => {
+    const [stationData, busData, reportData, userData] = await Promise.all([
+      api.getStations(),
+      api.getBuses(),
+      api.getReports(),
+      api.getUsers(),
+    ]);
+
+    stations.value = stationData;
+    syncSelectedCameraStation(stationData);
+    buses.value = busData;
+    reports.value = reportData;
+    users.value = userData;
+  });
+}
+
+async function login() {
+  await withLoading(async () => {
+    const result = await api.login(loginForm.username.trim(), loginForm.password);
+    if (result.role !== 'admin') {
+      api.clearSession();
+      throw new Error(text.value.adminOnlyError);
+    }
+    isLoggedIn.value = true;
+    await loadData();
+  });
+}
+
+function logout() {
+  api.clearSession();
+  isLoggedIn.value = false;
+  loginForm.password = '';
+}
+
+function editStation(station: Station) {
+  Object.assign(stationForm, {
+    ...station,
+    lines: [...station.lines],
+  });
+  stationRoiText.value = formatRoi(station.detectionRoi);
+  editingStationKey.value = station.id;
+  selectCameraStation(station);
+  void nextTick(initStationMap);
+}
+
+async function saveStation() {
+  await withLoading(async () => {
+    const payload: Station = {
+      ...stationForm,
+      id: stationForm.id.trim(),
+      name: stationForm.name.trim(),
+      lat: Number(stationForm.lat),
+      lng: Number(stationForm.lng),
+      waiting: 0,
+      status: 'LOW',
+      lines: stationForm.lines.length ? stationForm.lines : ['line1'],
+      detectionRoi: parseRoiText(),
+    };
+
+    if (editingStationKey.value) {
+      await api.updateStation(editingStationKey.value, payload);
+    } else {
+      await api.createStation(payload);
+    }
+
+    resetStationForm();
+    stations.value = await api.getStations();
+    syncSelectedCameraStation(stations.value);
+  });
+}
+
+async function deleteStation(station: Station) {
+  const stationKey = station.id;
+  const message = fillTemplate(text.value.deleteStationConfirm, { name: station.name });
+  if (!stationKey || !confirm(message)) return;
+
+  await withLoading(async () => {
+    await api.deleteStation(stationKey);
+    stations.value = await api.getStations();
+    syncSelectedCameraStation(stations.value);
+  });
+}
+
+async function updateReportStatus(report: Report, status: string) {
+  await withLoading(async () => {
+    await api.updateReportStatus(report._id, status);
+    reports.value = await api.getReports();
+  });
+}
+
+async function updateUserRole(user: User, role: 'admin' | 'user') {
+  openRoleMenu.value = null;
+  await withLoading(async () => {
+    await api.updateUserRole(user.username, role);
+    users.value = await api.getUsers();
+  });
+}
+
+function toggleRoleMenu(user: User) {
+  openRoleMenu.value = openRoleMenu.value === user.username ? null : user.username;
+}
+
+async function deleteUser(user: User) {
+  const message = fillTemplate(text.value.deleteUserConfirm, { name: user.username });
+  if (!confirm(message)) return;
+
+  await withLoading(async () => {
+    await api.deleteUser(user.username);
+    users.value = await api.getUsers();
+  });
+}
+
+onMounted(() => {
+  if (isLoggedIn.value) {
+    void loadData();
+  }
+
+  detectorFrameTimer = window.setInterval(() => {
+    void loadDetectorStatus();
+  }, 2000);
+});
+
+onUnmounted(() => {
+  if (detectorFrameTimer) {
+    window.clearInterval(detectorFrameTimer);
+  }
+});
+
+watch(activeTab, (tab) => {
+  if (tab === 'stations') {
+    void nextTick(initStationMap);
+  }
+});
+
+watch(
+  () => [stationForm.lat, stationForm.lng],
+  () => {
+    syncMarkerFromForm();
+  },
+);
+
+watch(selectedCameraStationId, () => {
+  detectorStatus.value = null;
+  syncRoiDraftFromStation();
+  void loadDetectorStatus();
+});
+</script>
+
+<template>
+  <main v-if="!isLoggedIn" class="login-page">
+    <button class="language-toggle login-language" type="button" @click="toggleLanguage">
+      {{ text.language }}
+    </button>
+
+    <section class="login-card">
+      <div class="brand-mark">MFU</div>
+      <p class="eyebrow">Admin Dashboard</p>
+      <h1>MFU Shuttle Bus</h1>
+      <p class="muted">{{ text.loginSubtitle }}</p>
+
+      <form class="login-form" @submit.prevent="login">
+        <label>
+          {{ text.username }}
+          <input v-model="loginForm.username" required autocomplete="username" :placeholder="text.usernamePlaceholder" />
+        </label>
+        <label>
+          {{ text.password }}
+          <input v-model="loginForm.password" required type="password" autocomplete="current-password" :placeholder="text.passwordPlaceholder" />
+        </label>
+        <button class="primary-btn" type="submit" :disabled="loading">
+          {{ loading ? text.signingIn : text.signIn }}
+        </button>
+      </form>
+
+      <p v-if="error" class="error-text">{{ error }}</p>
+      <p class="api-note">API: {{ api.baseUrl }}</p>
+    </section>
+  </main>
+
+  <div v-else class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark small">MFU</div>
+        <div>
+          <strong>Shuttle Admin</strong>
+          <span>Mae Fah Luang</span>
+        </div>
+      </div>
+
+      <nav>
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          :class="{ active: activeTab === tab.key }"
+          @click="setActiveTab(tab.key)"
+        >
+          {{ text.tabs[tab.key] }}
+        </button>
+      </nav>
+
+      <button class="ghost-btn logout" @click="logout">{{ text.logout }}</button>
+    </aside>
+
+    <section class="content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">MFU Shuttle Bus</p>
+          <h1>{{ activeTitle }}</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="language-toggle" type="button" @click="toggleLanguage">
+            {{ text.language }}
+          </button>
+          <button class="secondary-btn" :disabled="loading" @click="loadData">
+            {{ loading ? text.loading : text.refresh }}
+          </button>
+        </div>
+      </header>
+
+      <p v-if="error" class="error-banner">{{ error }}</p>
+
+      <section v-if="activeTab === 'dashboard'" class="grid dashboard-grid">
+        <article class="stat-card">
+          <span>{{ text.totalStations }}</span>
+          <strong>{{ stations.length }}</strong>
+          <small>{{ text.activeStops }}</small>
+        </article>
+        <article class="stat-card">
+          <span>{{ text.onlineBuses }}</span>
+          <strong>{{ onlineBuses }}</strong>
+          <small>{{ fillTemplate(text.fromTotalBuses, { count: buses.length }) }}</small>
+        </article>
+        <article class="stat-card">
+          <span>{{ text.pendingReports }}</span>
+          <strong>{{ pendingReports }}</strong>
+          <small>{{ text.unresolvedItems }}</small>
+        </article>
+        <article class="stat-card">
+          <span>{{ text.usersCount }}</span>
+          <strong>{{ users.length }}</strong>
+          <small>{{ text.systemAccounts }}</small>
+        </article>
+      </section>
+
+      <section v-if="activeTab === 'stations'" class="two-column">
+        <article class="panel">
+          <div class="panel-heading">
+            <h2>{{ text.stationList }}</h2>
+            <span>{{ stations.length }} stations</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>{{ text.stationName }}</th>
+                  <th>{{ text.line }}</th>
+                  <th>{{ text.coordinates }}</th>
+                  <th>{{ text.status }}</th>
+                  <th>Camera</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="station in stations" :key="station._id || station.id">
+                  <td>{{ station.id }}</td>
+                  <td>{{ station.name }}</td>
+                  <td>{{ station.lines.join(', ') }}</td>
+                  <td>{{ station.lat }}, {{ station.lng }}</td>
+                  <td><span class="chip">{{ station.status || 'LOW' }}</span></td>
+                  <td>
+                    <span class="chip" :class="{ 'chip-muted': !hasCamera(station) }">
+                      {{ hasCamera(station) ? 'Configured' : 'Empty' }}
+                    </span>
+                  </td>
+                  <td class="actions">
+                    <button class="link-btn" @click="openCameraStation(station)">Camera</button>
+                    <button class="link-btn" @click="editStation(station)">{{ text.edit }}</button>
+                    <button class="danger-link" @click="deleteStation(station)">{{ text.delete }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel form-panel">
+          <div class="panel-heading">
+            <h2>{{ editingStationKey ? text.editStation : text.addStation }}</h2>
+            <button v-if="editingStationKey" class="link-btn" @click="resetStationForm">{{ text.cancel }}</button>
+          </div>
+          <form class="station-form" @submit.prevent="saveStation">
+            <label>ID <input v-model="stationForm.id" required :placeholder="text.stationIdPlaceholder" /></label>
+            <label>{{ text.stationName }} <input v-model="stationForm.name" required :placeholder="text.stationNamePlaceholder" /></label>
+            <div class="split">
+              <label>Latitude <input v-model.number="stationForm.lat" required type="number" step="any" /></label>
+              <label>Longitude <input v-model.number="stationForm.lng" required type="number" step="any" /></label>
+            </div>
+            <div class="map-picker">
+              <div class="map-picker-header">
+                <div>
+                  <strong>{{ text.mapPicker }}</strong>
+                  <p>{{ text.mapHint }}</p>
+                </div>
+                <button class="secondary-btn compact-btn" type="button" @click="useCurrentLocation">
+                  {{ text.useCurrentLocation }}
+                </button>
+              </div>
+              <div ref="stationMapEl" class="station-map"></div>
+              <div v-if="stationMapLoading" class="map-overlay">{{ text.mapLoading }}</div>
+              <p v-if="stationMapError" class="map-error">{{ stationMapError }}</p>
+            </div>
+            <div class="checkbox-row">
+              <label><input v-model="stationForm.lines" type="checkbox" value="line1" /> Line 1</label>
+              <label><input v-model="stationForm.lines" type="checkbox" value="line2" /> Line 2</label>
+            </div>
+            <label>Camera URL <input v-model="stationForm.cameraUrl" placeholder="rtsp://... or https://..." /></label>
+            <label>
+              Detection ROI
+              <textarea
+                v-model="stationRoiText"
+                placeholder="[[0.1,0.2],[0.9,0.2],[0.9,0.8],[0.1,0.8]]"
+                rows="3"
+              ></textarea>
+            </label>
+            <button class="primary-btn" type="submit" :disabled="loading">
+              {{ editingStationKey ? text.saveChanges : text.addStation }}
+            </button>
+          </form>
+
+        </article>
+      </section>
+
+      <section v-if="activeTab === 'cctv'" class="cctv-layout">
+        <article class="panel cctv-list-panel">
+          <div class="panel-heading">
+            <h2>Station CCTV</h2>
+            <span>{{ stations.filter(hasCamera).length }} cameras</span>
+          </div>
+          <div class="cctv-station-list">
+            <button
+              v-for="station in stations"
+              :key="station._id || station.id"
+              class="cctv-station-item"
+              :class="{ active: selectedCameraStation?.id === station.id }"
+              type="button"
+              @click="selectCameraStation(station)"
+            >
+              <span>
+                <strong>{{ station.name }}</strong>
+                <small>{{ station.id }} · {{ station.lines.join(', ') }}</small>
+              </span>
+              <span class="chip" :class="{ 'chip-muted': !hasCamera(station) }">
+                {{ hasCamera(station) ? 'Ready' : 'No camera' }}
+              </span>
+            </button>
+          </div>
+        </article>
+
+        <article class="panel cctv-view-panel">
+          <section class="camera-panel camera-panel-standalone">
+            <div class="camera-panel-header">
+              <div>
+                <h3>Station camera</h3>
+                <p v-if="selectedCameraStation">{{ selectedCameraStation.name }} · {{ selectedCameraStation.id }}</p>
+              </div>
+              <span class="chip" :class="{ 'chip-muted': !hasCamera(selectedCameraStation) }">
+                {{ hasCamera(selectedCameraStation) ? 'Configured' : 'No camera' }}
+              </span>
+            </div>
+
+            <div
+              class="camera-preview-shell cctv-preview"
+              :class="{ 'roi-editing': isEditingRoi }"
+              @pointerdown="handleRoiCanvasPointerDown"
+              @pointermove="dragRoiPoint"
+              @pointerup="stopDragRoiPoint"
+              @pointerleave="stopDragRoiPoint"
+            >
+              <img
+                v-if="detectorStreamUrl"
+                class="camera-preview-media"
+                :src="detectorStreamUrl"
+                :alt="selectedCameraStation?.name || 'YOLO detector frame'"
+              />
+              <img
+                v-else-if="selectedCameraPreviewKind === 'image' && selectedCameraUrl"
+                class="camera-preview-media"
+                :src="selectedCameraUrl"
+                :alt="selectedCameraStation?.name || 'Station camera'"
+              />
+              <video
+                v-else-if="selectedCameraPreviewKind === 'video' && selectedCameraUrl"
+                class="camera-preview-media"
+                :src="selectedCameraUrl"
+                controls
+                muted
+                playsinline
+              ></video>
+              <div v-else class="camera-preview-empty">
+                <strong v-if="selectedCameraPreviewKind === 'rtsp'">
+                  {{ detectorStatus?.running ? 'YOLO is starting' : 'RTSP camera saved' }}
+                </strong>
+                <strong v-else-if="selectedCameraPreviewKind === 'none'">No camera source</strong>
+                <strong v-else>Preview unavailable</strong>
+                <p v-if="selectedCameraPreviewKind === 'rtsp'">
+                  {{ detectorStatus?.running ? 'Waiting for the first detected frame...' : 'Press Start YOLO to read RTSP on the backend and show detected frames here.' }}
+                </p>
+                <p v-else-if="selectedCameraPreviewKind === 'none'">
+                  Edit this station and save a Camera URL first.
+                </p>
+                <p v-else>
+                  This link is saved, but it is not a browser-playable stream.
+                </p>
+              </div>
+              <svg
+                v-if="roiDraft.length"
+                class="roi-overlay"
+                viewBox="0 0 1 1"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <polygon class="roi-polygon" :points="roiDraft.map((point) => point.join(',')).join(' ')" />
+                <circle
+                  v-for="(point, index) in roiDraft"
+                  :key="index"
+                  class="roi-handle"
+                  :cx="point[0]"
+                  :cy="point[1]"
+                  r="0.018"
+                  @pointerdown="startDragRoiPoint(index, $event)"
+                />
+              </svg>
+            </div>
+
+            <label v-if="selectedCameraStation">
+              Camera source
+              <input :value="selectedCameraUrl" readonly />
+            </label>
+
+            <div class="roi-toolbar">
+              <button v-if="!isEditingRoi" class="secondary-btn compact-btn" type="button" @click="startRoiEditor">
+                Draw Detection Area
+              </button>
+              <template v-else>
+                <button class="primary-btn compact-btn" type="button" @click="saveSelectedRoi">Save Area</button>
+                <button class="secondary-btn compact-btn" type="button" @click="cancelRoiEditor">Cancel</button>
+                <button class="secondary-btn compact-btn" type="button" @click="clearRoiDraft">Clear</button>
+                <button class="secondary-btn compact-btn" type="button" @click="setRoiPreset('full')">Full</button>
+                <button class="secondary-btn compact-btn" type="button" @click="setRoiPreset('right')">Right half</button>
+                <button class="secondary-btn compact-btn" type="button" @click="setRoiPreset('left')">Left half</button>
+                <button class="secondary-btn compact-btn" type="button" @click="setRoiPreset('bottom')">Bottom</button>
+                <button class="secondary-btn compact-btn" type="button" @click="setRoiPreset('center')">Center</button>
+              </template>
+            </div>
+
+            <div v-if="selectedCameraUrl" class="camera-actions">
+              <button
+                v-if="!detectorStatus?.running"
+                class="primary-btn compact-btn"
+                type="button"
+                :disabled="detectorBusy"
+                @click="startSelectedDetector"
+              >
+                {{ detectorBusy ? 'Starting...' : 'Start YOLO' }}
+              </button>
+              <button
+                v-else
+                class="secondary-btn compact-btn"
+                type="button"
+                :disabled="detectorBusy"
+                @click="stopSelectedDetector"
+              >
+                {{ detectorBusy ? 'Stopping...' : 'Stop YOLO' }}
+              </button>
+              <button class="secondary-btn compact-btn" type="button" @click="copyCameraUrl">
+                Copy URL
+              </button>
+              <a
+                v-if="selectedCameraPreviewKind !== 'rtsp'"
+                class="secondary-btn compact-btn camera-link"
+                :href="selectedCameraUrl"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open
+              </a>
+            </div>
+
+            <div v-if="detectorStatus" class="detector-status">
+              <span :class="{ live: detectorStatus.running }"></span>
+              {{ detectorStatus.running ? 'Detector running' : 'Detector stopped' }}
+              <small v-if="detectorStatus.lastError">{{ detectorStatus.lastError }}</small>
+              <small v-else-if="detectorStatus.lastLog">{{ detectorStatus.lastLog }}</small>
+            </div>
+          </section>
+        </article>
+      </section>
+
+      <section v-if="activeTab === 'buses'" class="panel">
+        <div class="panel-heading">
+          <h2>{{ text.allBuses }}</h2>
+          <span>{{ buses.length }} buses</span>
+        </div>
+        <div class="card-list">
+          <article v-for="bus in buses" :key="bus._id || bus.busId" class="list-card">
+            <div>
+              <strong>{{ bus.busId || bus.licensePlate || text.unknownBus }}</strong>
+              <p>{{ bus.driverName || text.noDriver }} · {{ bus.line || text.noLine }}</p>
+            </div>
+            <span class="chip">{{ bus.status || 'unknown' }}</span>
+          </article>
+        </div>
+      </section>
+
+      <section v-if="activeTab === 'reports'" class="panel">
+        <div class="panel-heading">
+          <h2>{{ text.issueReports }}</h2>
+          <span>{{ reports.length }} reports</span>
+        </div>
+        <div class="card-list">
+          <article v-for="report in reports" :key="report._id" class="list-card report-card">
+            <div>
+              <strong>{{ report.title || report.category || report.type || text.issueReport }}</strong>
+              <p>{{ report.description || report.detail || report.location || '-' }}</p>
+              <small>{{ report.username || report.user?.username || report.userId || report.UserId || text.anonymous }} · {{ report.createdAt || report.time || '-' }}</small>
+            </div>
+            <select :value="report.status || 'pending'" @change="updateReportStatus(report, selectValue($event))">
+              <option value="pending">pending</option>
+              <option value="in_progress">in_progress</option>
+              <option value="resolved">resolved</option>
+            </select>
+          </article>
+        </div>
+      </section>
+
+      <section v-if="activeTab === 'users'" class="panel">
+        <div class="panel-heading">
+          <h2>{{ text.systemUsers }}</h2>
+          <span>{{ users.length }} users</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="user in users" :key="user._id || user.username">
+                <td>{{ user.username }}</td>
+                <td>{{ user.email || '-' }}</td>
+                <td>
+                  <div class="role-menu">
+                    <button
+                      class="role-select"
+                      type="button"
+                      :aria-label="text.changeRole"
+                      @click="toggleRoleMenu(user)"
+                    >
+                      {{ user.role || 'user' }}
+                      <span aria-hidden="true">⌄</span>
+                    </button>
+                    <div v-if="openRoleMenu === user.username" class="role-options">
+                      <button type="button" @click="updateUserRole(user, 'user')">user</button>
+                      <button type="button" @click="updateUserRole(user, 'admin')">admin</button>
+                    </div>
+                  </div>
+                </td>
+                <td class="actions">
+                  <button class="danger-link" @click="deleteUser(user)">{{ text.delete }}</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </div>
+</template>
