@@ -35,6 +35,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
   List<Map<String, dynamic>> dbLine1Stations = [];
   List<Map<String, dynamic>> dbLine2Stations = [];
   Map<String, LatLng> busPositions = {};
+  BitmapDescriptor stationMarkerIcon = BitmapDescriptor.defaultMarker;
 
   // statuses for bus
   Map<String, double> busProgress =
@@ -235,6 +236,31 @@ class _AdminHomepageState extends State<AdminHomepage> {
     return points.map((p) => LatLng(p["lat"], p["lng"])).toList();
   }
 
+  List<LatLng> densifyRoadRoute(
+    List<LatLng> points, {
+    int segmentsPerEdge = 10,
+  }) {
+    if (points.length < 2) return points;
+
+    final result = <LatLng>[];
+    for (var i = 0; i < points.length - 1; i++) {
+      final start = points[i];
+      final end = points[i + 1];
+
+      for (var step = 0; step < segmentsPerEdge; step++) {
+        final t = step / segmentsPerEdge;
+        result.add(
+          LatLng(
+            start.latitude + ((end.latitude - start.latitude) * t),
+            start.longitude + ((end.longitude - start.longitude) * t),
+          ),
+        );
+      }
+    }
+    result.add(points.last);
+    return result;
+  }
+
   Future<List<LatLng>> fetchRouteForPoints(
     List<Map<String, dynamic>> points,
   ) async {
@@ -265,6 +291,21 @@ class _AdminHomepageState extends State<AdminHomepage> {
     }
   }
 
+  Future<void> loadStationMarkerIcon() async {
+    final icon = await BitmapDescriptor.asset(
+      const ImageConfiguration(),
+      "assets/bus_stop_2.png",
+      width: 60,
+      height: 60,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      stationMarkerIcon = icon;
+    });
+  }
+
   @override
   void dispose() {
     stationTimer?.cancel();
@@ -278,6 +319,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
   @override
   void initState() {
     super.initState();
+    loadStationMarkerIcon();
     updateAllRoutes();
     fetchStations();
     fetchBuses();
@@ -578,10 +620,10 @@ class _AdminHomepageState extends State<AdminHomepage> {
 
     setState(() {
       route1 = newRoute1.isNotEmpty
-          ? catmullRomSpline(newRoute1, segments: 10)
+          ? densifyRoadRoute(newRoute1)
           : getLineLatLngs(dbLine1Stations);
       route2 = newRoute2.isNotEmpty
-          ? catmullRomSpline(newRoute2, segments: 10)
+          ? densifyRoadRoute(newRoute2)
           : getLineLatLngs(dbLine2Stations);
     });
 
@@ -592,9 +634,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
     final newRoute = await fetchRealRoute();
 
     setState(() {
-      route = newRoute.isNotEmpty
-          ? catmullRomSpline(newRoute, segments: 10)
-          : [];
+      route = densifyRoadRoute(newRoute);
     });
   }
 
@@ -624,56 +664,6 @@ class _AdminHomepageState extends State<AdminHomepage> {
           ? minMinutes.ceil()
           : 0;
     }
-  }
-
-  List<LatLng> catmullRomSpline(List<LatLng> points, {int segments = 10}) {
-    List<LatLng> result = [];
-    for (int i = 0; i < points.length - 1; i++) {
-      LatLng p0 = i > 0 ? points[i - 1] : points[i];
-      LatLng p1 = points[i];
-      LatLng p2 = points[i + 1];
-      LatLng p3 = i < points.length - 2 ? points[i + 2] : points[i + 1];
-
-      for (int j = 0; j <= segments; j++) {
-        double t = j / segments;
-        double tt = t * t;
-        double ttt = tt * t;
-
-        double lat =
-            0.5 *
-            ((2 * p1.latitude) +
-                (-p0.latitude + p2.latitude) * t +
-                (2 * p0.latitude -
-                        5 * p1.latitude +
-                        4 * p2.latitude -
-                        p3.latitude) *
-                    tt +
-                (-p0.latitude +
-                        3 * p1.latitude -
-                        3 * p2.latitude +
-                        p3.latitude) *
-                    ttt);
-
-        double lng =
-            0.5 *
-            ((2 * p1.longitude) +
-                (-p0.longitude + p2.longitude) * t +
-                (2 * p0.longitude -
-                        5 * p1.longitude +
-                        4 * p2.longitude -
-                        p3.longitude) *
-                    tt +
-                (-p0.longitude +
-                        3 * p1.longitude -
-                        3 * p2.longitude +
-                        p3.longitude) *
-                    ttt);
-
-        result.add(LatLng(lat, lng));
-      }
-    }
-    result.add(points.last);
-    return result;
   }
 
   @override
@@ -736,9 +726,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
                 return Marker(
                   markerId: MarkerId("station-${station["id"]}"),
                   position: LatLng(station["lat"], station["lng"]),
-                  icon: BitmapDescriptor.defaultMarkerWithHue(
-                    getMarkerHue(status),
-                  ),
+                  icon: stationMarkerIcon,
                   infoWindow: InfoWindow(
                     title: station["name"]?.toString(),
                     snippet: "$waiting passengers - $status",
