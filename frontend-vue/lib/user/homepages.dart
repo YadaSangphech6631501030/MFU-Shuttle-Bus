@@ -46,11 +46,11 @@ class _HomepagesState extends State<Homepages> {
 
   // statuses for bus
   Map<String, double> busProgress =
-      {}; // เก็บ index ปัจจุบันใน route ของรถแต่ละคัน
+      {}; // ÃƒÂ Ã‚Â¹Ã¢â€šÂ¬ÃƒÂ Ã‚Â¸Ã‚ÂÃƒÂ Ã‚Â¹Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¸Ã…Â¡ index ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂºÃƒÂ Ã‚Â¸Ã‚Â±ÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â¸ÃƒÂ Ã‚Â¸Ã…Â¡ÃƒÂ Ã‚Â¸Ã‚Â±ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ÃƒÂ Ã‚Â¹Ã†â€™ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ route ÃƒÂ Ã‚Â¸Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¸Ã‚Â£ÃƒÂ Ã‚Â¸Ã¢â‚¬â€œÃƒÂ Ã‚Â¹Ã‚ÂÃƒÂ Ã‚Â¸Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â¥ÃƒÂ Ã‚Â¸Ã‚Â°ÃƒÂ Ã‚Â¸Ã¢â‚¬Å¾ÃƒÂ Ã‚Â¸Ã‚Â±ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢
   Map<String, DateTime?> busWaitUntil =
-      {}; // เวลาที่รถจะเริ่มวิ่งต่อได้ (ใช้หยุดสถานี)
+      {}; // ÃƒÂ Ã‚Â¹Ã¢â€šÂ¬ÃƒÂ Ã‚Â¸Ã‚Â§ÃƒÂ Ã‚Â¸Ã‚Â¥ÃƒÂ Ã‚Â¸Ã‚Â²ÃƒÂ Ã‚Â¸Ã¢â‚¬â€ÃƒÂ Ã‚Â¸Ã‚ÂµÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â£ÃƒÂ Ã‚Â¸Ã¢â‚¬â€œÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â°ÃƒÂ Ã‚Â¹Ã¢â€šÂ¬ÃƒÂ Ã‚Â¸Ã‚Â£ÃƒÂ Ã‚Â¸Ã‚Â´ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â¡ÃƒÂ Ã‚Â¸Ã‚Â§ÃƒÂ Ã‚Â¸Ã‚Â´ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¸Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¹Ã¢â‚¬Å¾ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂÃƒÂ Ã‚Â¹Ã¢â‚¬Â° (ÃƒÂ Ã‚Â¹Ã†â€™ÃƒÂ Ã‚Â¸Ã…Â ÃƒÂ Ã‚Â¹Ã¢â‚¬Â°ÃƒÂ Ã‚Â¸Ã‚Â«ÃƒÂ Ã‚Â¸Ã‚Â¢ÃƒÂ Ã‚Â¸Ã‚Â¸ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂÃƒÂ Ã‚Â¸Ã‚ÂªÃƒÂ Ã‚Â¸Ã¢â‚¬â€œÃƒÂ Ã‚Â¸Ã‚Â²ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ÃƒÂ Ã‚Â¸Ã‚Âµ)
   Map<String, String?> lastStationId =
-      {}; // จำว่าสถานีล่าสุดที่จอดคือที่ไหน (กันจอดซ้ำ)
+      {}; // ÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â³ÃƒÂ Ã‚Â¸Ã‚Â§ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â²ÃƒÂ Ã‚Â¸Ã‚ÂªÃƒÂ Ã‚Â¸Ã¢â‚¬â€œÃƒÂ Ã‚Â¸Ã‚Â²ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ÃƒÂ Ã‚Â¸Ã‚ÂµÃƒÂ Ã‚Â¸Ã‚Â¥ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â²ÃƒÂ Ã‚Â¸Ã‚ÂªÃƒÂ Ã‚Â¸Ã‚Â¸ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂÃƒÂ Ã‚Â¸Ã¢â‚¬â€ÃƒÂ Ã‚Â¸Ã‚ÂµÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂÃƒÂ Ã‚Â¸Ã¢â‚¬Å¾ÃƒÂ Ã‚Â¸Ã‚Â·ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã¢â‚¬â€ÃƒÂ Ã‚Â¸Ã‚ÂµÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¹Ã¢â‚¬Å¾ÃƒÂ Ã‚Â¸Ã‚Â«ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ (ÃƒÂ Ã‚Â¸Ã‚ÂÃƒÂ Ã‚Â¸Ã‚Â±ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂÃƒÂ Ã‚Â¸Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¹Ã¢â‚¬Â°ÃƒÂ Ã‚Â¸Ã‚Â³)
 
   double speed = 1.2;
   List<LatLng> route = [];
@@ -118,7 +118,7 @@ class _HomepagesState extends State<Homepages> {
   Widget buildReportItem(IconData icon, String title, Color color) {
     return GestureDetector(
       onTap: () {
-        print("เลือก: $title");
+        print("ÃƒÂ Ã‚Â¹Ã¢â€šÂ¬ÃƒÂ Ã‚Â¸Ã‚Â¥ÃƒÂ Ã‚Â¸Ã‚Â·ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã‚Â: $title");
       },
       child: Container(
         decoration: BoxDecoration(
@@ -254,10 +254,10 @@ class _HomepagesState extends State<Homepages> {
 
     var name = raw
         .replaceFirst(
-          RegExp(r'^station\s*0*\d+\s*[:\-–—.]?\s*', caseSensitive: false),
+          RegExp(r'^station\s*0*\d+\s*[:\-ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â.]?\s*', caseSensitive: false),
           '',
         )
-        .replaceFirst(RegExp(r'^0*\d+\s*[:\-–—.]?\s*'), '')
+        .replaceFirst(RegExp(r'^0*\d+\s*[:\-ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â.]?\s*'), '')
         .replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '')
         .trim();
 
@@ -326,6 +326,18 @@ class _HomepagesState extends State<Homepages> {
     );
   }
 
+  void resetStationSelection() {
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      selectedFromStation = null;
+      selectedStation = null;
+      showStationSuggestions = false;
+      filteredStations.clear();
+      fromSearchController.clear();
+      searchController.clear();
+    });
+  }
   Map<String, dynamic>? getNearestBusInfo(Map<String, dynamic>? station) {
     if (station == null) return null;
 
@@ -668,7 +680,7 @@ class _HomepagesState extends State<Homepages> {
       final data = jsonDecode(res.body);
 
       if (data["routes"] == null || data["routes"].isEmpty) {
-        print("❌ fallback route");
+        print("ÃƒÂ¢Ã‚ÂÃ…â€™ fallback route");
         return getLineLatLngs(points);
       }
 
@@ -678,7 +690,7 @@ class _HomepagesState extends State<Homepages> {
         return LatLng(c[1], c[0]);
       }).toList();
     } catch (e) {
-      print("❌ ROUTE ERROR: $e");
+      print("ÃƒÂ¢Ã‚ÂÃ…â€™ ROUTE ERROR: $e");
       return getLineLatLngs(points);
     }
   }
@@ -929,19 +941,19 @@ class _HomepagesState extends State<Homepages> {
         final id = buses[i]["busNumber"].toString();
         final now = DateTime.now();
 
-        // ✅ WAIT
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ WAIT
         if (BusController.instance.busWaitUntil[id] != null &&
             now.isBefore(BusController.instance.busWaitUntil[id]!)) {
           continue;
         }
 
-        // ✅ initial spacing
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ initial spacing
         double currentProgress =
             BusController.instance.busProgress[id] ?? (i * spacing);
 
         double nextProgress = currentProgress + speed;
 
-        // ✅ COLLISION (soft)
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ COLLISION (soft)
         bool blocked = false;
         for (var otherBus in buses) {
           final otherId = otherBus["busNumber"].toString();
@@ -960,7 +972,7 @@ class _HomepagesState extends State<Homepages> {
 
         if (blocked) continue;
 
-        // ✅ LOOP (วน)
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ LOOP (ÃƒÂ Ã‚Â¸Ã‚Â§ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢)
         int idx = nextProgress.floor();
 
         if (idx >= route.length - 1) {
@@ -983,7 +995,7 @@ class _HomepagesState extends State<Homepages> {
 
         BusController.instance.busPositions[id] = newPos;
 
-        // ✅ STOP AT STATION
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ STOP AT STATION
         for (var station in getSelectedLine()) {
           LatLng stationLatLng = LatLng(station["lat"], station["lng"]);
 
@@ -1076,6 +1088,7 @@ class _HomepagesState extends State<Homepages> {
             ),
             onMapCreated: (controller) => mapController = controller,
             onCameraMove: (position) => currentZoom = position.zoom,
+            onTap: (_) => resetStationSelection(),
             zoomControlsEnabled: false,
             mapToolbarEnabled: false,
             polylines: {
@@ -1193,15 +1206,15 @@ class _HomepagesState extends State<Homepages> {
                               Column(
                                 children: [
                                   _infoRow(
-                                    "👥 Amount waiting ",
+                                    "ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â¥ Amount waiting ",
                                     "$waiting people",
                                   ),
                                   _infoRow(
-                                    "⏱ The car will arrive in",
+                                    "ÃƒÂ¢Ã‚ÂÃ‚Â± The car will arrive in",
                                     "$displayETA minutes",
                                   ),
-                                  _infoRow("🚦 Crowding", status),
-                                  _infoRow("📢 Status", "Normal"),
+                                  _infoRow("ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â¦ Crowding", status),
+                                  _infoRow("ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¢ Status", "Normal"),
                                 ],
                               ),
                               const SizedBox(height: 50),
