@@ -13,7 +13,14 @@ import 'bus_controller.dart';
 import 'user_setting.dart';
 
 class Homepages extends StatefulWidget {
-  const Homepages({super.key});
+  final LatLng? initialMapTarget;
+  final double initialMapZoom;
+
+  const Homepages({
+    super.key,
+    this.initialMapTarget,
+    this.initialMapZoom = 17.35,
+  });
 
   @override
   State<Homepages> createState() => _HomepagesState();
@@ -21,12 +28,17 @@ class Homepages extends StatefulWidget {
 
 class _HomepagesState extends State<Homepages> {
   static const String _favoriteStationsKey = 'favorite_stations';
+  static const LatLng _mSquareStationCenter = LatLng(
+    20.045780781087203,
+    99.89135359185909,
+  );
+  static const double _defaultMapZoom = 17.35;
 
   int currentIndex = 0;
 
-  String selectedLine = "line1";
+  String selectedLine = "all";
   GoogleMapController? mapController;
-  double currentZoom = 16;
+  double currentZoom = _defaultMapZoom;
 
   Timer? stationTimer;
   Timer? busTimer;
@@ -122,7 +134,7 @@ class _HomepagesState extends State<Homepages> {
   Widget buildReportItem(IconData icon, String title, Color color) {
     return GestureDetector(
       onTap: () {
-        print(
+        debugPrint(
           "ÃƒÂ Ã‚Â¹Ã¢â€šÂ¬ÃƒÂ Ã‚Â¸Ã‚Â¥ÃƒÂ Ã‚Â¸Ã‚Â·ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã‚Â: $title",
         );
       },
@@ -180,7 +192,7 @@ class _HomepagesState extends State<Homepages> {
 
       updateAllRoutes();
     } catch (e) {
-      print("API ERROR: $e");
+      debugPrint("API ERROR: $e");
     }
   }
 
@@ -228,7 +240,104 @@ class _HomepagesState extends State<Homepages> {
   final List<Map<String, dynamic>> line2 = [];
 
   List<Map<String, dynamic>> getSelectedLine() {
+    if (selectedLine == "all") return getAllLines();
     return selectedLine == "line1" ? line1 : line2;
+  }
+
+  List<LatLng> getSelectedLinePoints() {
+    if (selectedLine == "all") return [];
+    final selectedRoute = selectedLine == "line1" ? route1 : route2;
+    return selectedRoute.isNotEmpty
+        ? selectedRoute
+        : getLineLatLngs(getSelectedLine());
+  }
+
+  Color lineColor(String line) {
+    if (line == "line1") return const Color(0xFFBC9945);
+    if (line == "line2") return Colors.grey.shade700;
+    return Colors.black87;
+  }
+
+  String lineLabel(String line) {
+    if (line == "line1") return "Line 1";
+    if (line == "line2") return "Line 2";
+    return "All";
+  }
+
+  bool stationInLine(Map<String, dynamic>? station, String line) {
+    if (station == null) return true;
+    if (line == "all") return true;
+    final stationId = station["id"]?.toString();
+    final stations = line == "line1" ? line1 : line2;
+    return stations.any((item) => item["id"]?.toString() == stationId);
+  }
+
+  String lineForStation(Map<String, dynamic> station) {
+    final stationId = station["id"]?.toString();
+    if (line1.any((item) => item["id"]?.toString() == stationId)) {
+      return "line1";
+    }
+    if (line2.any((item) => item["id"]?.toString() == stationId)) {
+      return "line2";
+    }
+    return selectedLine;
+  }
+
+  void selectLine(String line) {
+    final nextLine = selectedLine == line ? "all" : line;
+
+    setState(() {
+      selectedLine = nextLine;
+      showStationSuggestions = false;
+      filteredStations.clear();
+
+      if (!stationInLine(selectedFromStation, nextLine)) {
+        selectedFromStation = null;
+        fromSearchController.clear();
+      }
+
+      if (!stationInLine(selectedStation, nextLine)) {
+        selectedStation = null;
+        searchController.clear();
+      }
+    });
+
+    updateRoute();
+  }
+
+  Future<void> focusInitialMapTarget() async {
+    final controller = mapController;
+    if (controller == null) return;
+
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          widget.initialMapTarget ?? _mSquareStationCenter,
+          widget.initialMapZoom,
+        ),
+      );
+    } catch (e) {
+      debugPrint("MAP CAMERA ERROR: $e");
+    }
+  }
+
+  LatLngBounds lineBounds(List<LatLng> points) {
+    var minLat = points.first.latitude;
+    var maxLat = points.first.latitude;
+    var minLng = points.first.longitude;
+    var maxLng = points.first.longitude;
+
+    for (final point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
   }
 
   List<Map<String, dynamic>> getAllLines() {
@@ -349,8 +458,11 @@ class _HomepagesState extends State<Homepages> {
 
   void selectStation(Map<String, dynamic> station) {
     final stationName = cleanStationName(station);
+    final stationLine = lineForStation(station);
+    final shouldUpdateLine = selectedLine != stationLine;
 
     setState(() {
+      selectedLine = stationLine;
       if (activeSearchField == "from") {
         selectedFromStation = station;
         fromSearchController.text = stationName;
@@ -361,6 +473,10 @@ class _HomepagesState extends State<Homepages> {
       showStationSuggestions = false;
       filteredStations.clear();
     });
+
+    if (shouldUpdateLine) {
+      updateRoute();
+    }
 
     mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(LatLng(station["lat"], station["lng"]), 17),
@@ -562,7 +678,7 @@ class _HomepagesState extends State<Homepages> {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.18),
+              color: Colors.black.withValues(alpha: 0.18),
               blurRadius: 16,
               offset: const Offset(0, 5),
             ),
@@ -678,6 +794,81 @@ class _HomepagesState extends State<Homepages> {
     );
   }
 
+  Widget _buildLineSelector() {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE8E8E8)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _lineSelectorButton(line: "all"),
+            const SizedBox(height: 5),
+            _lineSelectorButton(line: "line1"),
+            const SizedBox(height: 5),
+            _lineSelectorButton(line: "line2"),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _lineSelectorButton({required String line}) {
+    final isSelected = selectedLine == line;
+    final color = lineColor(line);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => selectLine(line),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 84,
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? color : const Color(0xFFE4E4E4),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              line == "all"
+                  ? Icons.route_rounded
+                  : Icons.directions_bus_rounded,
+              size: 18,
+              color: isSelected ? Colors.white : color,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              lineLabel(line),
+              style: GoogleFonts.kanit(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? Colors.white : Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<LatLng> getLineLatLngs(List<Map<String, dynamic>> points) {
     return points.map((p) => LatLng(p["lat"], p["lng"])).toList();
   }
@@ -722,7 +913,7 @@ class _HomepagesState extends State<Homepages> {
       final data = jsonDecode(res.body);
 
       if (data["routes"] == null || data["routes"].isEmpty) {
-        print("ÃƒÂ¢Ã‚ÂÃ…â€™ fallback route");
+        debugPrint("all back route");
         return getLineLatLngs(points);
       }
 
@@ -732,7 +923,7 @@ class _HomepagesState extends State<Homepages> {
         return LatLng(c[1], c[0]);
       }).toList();
     } catch (e) {
-      print("ÃƒÂ¢Ã‚ÂÃ…â€™ ROUTE ERROR: $e");
+      debugPrint("ROUTE ERROR: $e");
       return getLineLatLngs(points);
     }
   }
@@ -848,6 +1039,7 @@ class _HomepagesState extends State<Homepages> {
   @override
   void initState() {
     super.initState();
+    currentZoom = widget.initialMapZoom;
     loadStationMarkerIcons();
     fetchStations();
     fetchBuses();
@@ -899,7 +1091,7 @@ class _HomepagesState extends State<Homepages> {
         return SafeArea(
           top: false,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(18, 6, 18, 24),
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -907,28 +1099,14 @@ class _HomepagesState extends State<Homepages> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.location_on,
-                        color: statusColor,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         stationName,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.kanit(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -938,46 +1116,33 @@ class _HomepagesState extends State<Homepages> {
                         minWidth: 36,
                         minHeight: 36,
                       ),
-                      icon: const Icon(Icons.close, size: 20),
+                      icon: const Icon(Icons.close_rounded, size: 20),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      _stationDetailRow(
-                        Icons.people_outline,
-                        "Waiting",
-                        "$waiting people",
-                      ),
-                      const Divider(height: 18),
-                      _stationDetailRow(
-                        Icons.schedule,
-                        "Arrival",
-                        "$arrivalMinutes min",
-                      ),
-                      const Divider(height: 18),
-                      _stationDetailRow(
-                        Icons.speed,
-                        "Crowding",
-                        status,
-                        valueColor: statusColor,
-                      ),
-                      const Divider(height: 18),
-                      _stationDetailRow(Icons.info_outline, "Status", "Normal"),
-                    ],
-                  ),
+                const SizedBox(height: 8),
+                Column(
+                  children: [
+                    _stationMetric(
+                      icon: Icons.directions_bus_rounded,
+                      label: "Bus Arrival",
+                      value: "$arrivalMinutes min",
+                    ),
+                    const SizedBox(height: 8),
+                    _stationMetric(
+                      icon: Icons.people_outline,
+                      label: "People Waiting",
+                      value: "$waiting people",
+                    ),
+                    const SizedBox(height: 8),
+                    _stationMetric(
+                      icon: Icons.location_on_outlined,
+                      label: "Station Status",
+                      value: status.toUpperCase(),
+                      valueColor: statusColor,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -987,35 +1152,72 @@ class _HomepagesState extends State<Homepages> {
     );
   }
 
-  Widget _stationDetailRow(
-    IconData icon,
-    String label,
-    String value, {
+  Widget _stationMetric({
+    required IconData icon,
+    required String label,
+    required String value,
     Color? valueColor,
   }) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 20, color: Colors.black54),
-        const SizedBox(width: 10),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFFD2232A).withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 18, color: const Color(0xFFD2232A)),
+        ),
+        const SizedBox(width: 9),
         Expanded(
           child: Text(
             label,
-            style: GoogleFonts.kanit(fontSize: 14, color: Colors.black54),
-          ),
-        ),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.kanit(
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: valueColor ?? Colors.black,
+              color: Colors.black87,
             ),
           ),
         ),
+        const SizedBox(width: 10),
+        _stationMetricValue(value, valueColor),
       ],
+    );
+  }
+
+  Widget _stationMetricValue(String value, Color? valueColor) {
+    final textStyle = GoogleFonts.kanit(
+      fontSize: 14,
+      fontWeight: valueColor == null ? FontWeight.w500 : FontWeight.w700,
+      color: valueColor ?? Colors.black54,
+    );
+
+    if (valueColor == null) {
+      return Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.right,
+        style: textStyle,
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: valueColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: textStyle,
+      ),
     );
   }
 
@@ -1030,6 +1232,52 @@ class _HomepagesState extends State<Homepages> {
     }
   }
 
+  Widget _stationSearchField({
+    required TextEditingController controller,
+    required String hintText,
+    required IconData icon,
+    required VoidCallback onTap,
+    required ValueChanged<String> onChanged,
+    required VoidCallback onClear,
+    required TextInputAction textInputAction,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE9E9E9)),
+      ),
+      child: TextField(
+        controller: controller,
+        onTap: onTap,
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: GoogleFonts.kanit(fontSize: 14, color: Colors.black45),
+          prefixIcon: Icon(icon, color: Colors.black54, size: 18),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 38,
+            minHeight: 40,
+          ),
+          suffixIcon: controller.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  onPressed: onClear,
+                )
+              : null,
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 11,
+            horizontal: 4,
+          ),
+        ),
+        style: GoogleFonts.kanit(fontSize: 13, fontWeight: FontWeight.w500),
+        textInputAction: textInputAction,
+      ),
+    );
+  }
+
   //fetch bus
   Future<void> fetchBuses() async {
     try {
@@ -1041,7 +1289,7 @@ class _HomepagesState extends State<Homepages> {
 
       BusController.instance.updateBuses(data);
     } catch (e) {
-      print("BUS ERROR: $e");
+      debugPrint("BUS ERROR: $e");
     }
   }
 
@@ -1116,19 +1364,16 @@ class _HomepagesState extends State<Homepages> {
         final id = buses[i]["busNumber"].toString();
         final now = DateTime.now();
 
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ WAIT
         if (BusController.instance.busWaitUntil[id] != null &&
             now.isBefore(BusController.instance.busWaitUntil[id]!)) {
           continue;
         }
 
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ initial spacing
         double currentProgress =
             BusController.instance.busProgress[id] ?? (i * spacing);
 
         double nextProgress = currentProgress + speed;
 
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ COLLISION (soft)
         bool blocked = false;
         for (var otherBus in buses) {
           final otherId = otherBus["busNumber"].toString();
@@ -1147,7 +1392,6 @@ class _HomepagesState extends State<Homepages> {
 
         if (blocked) continue;
 
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ LOOP (ÃƒÂ Ã‚Â¸Ã‚Â§ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢)
         int idx = nextProgress.floor();
 
         if (idx >= route.length - 1) {
@@ -1170,7 +1414,6 @@ class _HomepagesState extends State<Homepages> {
 
         BusController.instance.busPositions[id] = newPos;
 
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ STOP AT STATION
         for (var station in getSelectedLine()) {
           LatLng stationLatLng = LatLng(station["lat"], station["lng"]);
 
@@ -1252,33 +1495,51 @@ class _HomepagesState extends State<Homepages> {
   @override
   Widget build(BuildContext context) {
     final selectedTripPoints = getSelectedTripPoints();
+    final selectedLinePoints = getSelectedLinePoints();
+    final activeLineColor = lineColor(selectedLine);
+    final showAllLines = selectedLine == "all";
+    final hasTrackingPanel =
+        selectedFromStation != null || selectedStation != null;
 
     return Scaffold(
       body: Stack(
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: const LatLng(20.045, 99.894),
+              target: widget.initialMapTarget ?? _mSquareStationCenter,
               zoom: currentZoom,
             ),
-            onMapCreated: (controller) => mapController = controller,
+            onMapCreated: (controller) {
+              mapController = controller;
+              focusInitialMapTarget();
+            },
             onCameraMove: (position) => currentZoom = position.zoom,
             onTap: (_) => resetStationSelection(),
             zoomControlsEnabled: false,
+            minMaxZoomPreference: const MinMaxZoomPreference(15.8, 19),
             mapToolbarEnabled: false,
+            myLocationButtonEnabled: false,
             polylines: {
-              Polyline(
-                polylineId: const PolylineId("line2"),
-                points: route2.isNotEmpty ? route2 : getLineLatLngs(line2),
-                color: Colors.grey.shade700,
-                width: 2,
-              ),
-              Polyline(
-                polylineId: const PolylineId("line1"),
-                points: route1.isNotEmpty ? route1 : getLineLatLngs(line1),
-                color: const Color(0xFFBC9945),
-                width: 2,
-              ),
+              if (showAllLines) ...{
+                Polyline(
+                  polylineId: const PolylineId("line1"),
+                  points: route1.isNotEmpty ? route1 : getLineLatLngs(line1),
+                  color: lineColor("line1"),
+                  width: 4,
+                ),
+                Polyline(
+                  polylineId: const PolylineId("line2"),
+                  points: route2.isNotEmpty ? route2 : getLineLatLngs(line2),
+                  color: lineColor("line2"),
+                  width: 4,
+                ),
+              } else if (selectedLinePoints.length > 1)
+                Polyline(
+                  polylineId: PolylineId(selectedLine),
+                  points: selectedLinePoints,
+                  color: activeLineColor,
+                  width: 5,
+                ),
               if (selectedTripPoints.length > 1)
                 Polyline(
                   polylineId: const PolylineId("selected-station-route"),
@@ -1288,7 +1549,7 @@ class _HomepagesState extends State<Homepages> {
                 ),
             },
             markers: {
-              ...getAllLines().map((station) {
+              ...getSelectedLine().map((station) {
                 Map<String, dynamic>? stationMatch;
 
                 try {
@@ -1353,8 +1614,7 @@ class _HomepagesState extends State<Homepages> {
             },
           ),
 
-          if (selectedFromStation != null || selectedStation != null)
-            buildTrackingPanel(),
+          if (hasTrackingPanel) buildTrackingPanel(),
 
           // Search station tab below app bar
           Positioned(
@@ -1364,104 +1624,98 @@ class _HomepagesState extends State<Homepages> {
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFECECEC)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.16),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
                       ),
                     ],
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      TextField(
-                        controller: fromSearchController,
-                        onTap: () =>
-                            searchStations(fromSearchController.text, "from"),
-                        onChanged: (value) => searchStations(value, "from"),
-                        decoration: InputDecoration(
-                          hintText: 'From station',
-                          hintStyle: GoogleFonts.kanit(fontSize: 14),
-                          prefixIcon: const Icon(
-                            Icons.my_location,
-                            color: Colors.black54,
-                            size: 18,
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFD2232A),
+                                width: 3,
+                              ),
+                            ),
                           ),
-                          prefixIconConstraints: const BoxConstraints(
-                            minWidth: 34,
-                            minHeight: 34,
+                          Container(
+                            width: 2,
+                            height: 38,
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            color: const Color(0xFFE0E0E0),
                           ),
-                          suffixIcon: fromSearchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.close, size: 18),
-                                  onPressed: () {
-                                    fromSearchController.clear();
-                                    setState(() {
-                                      selectedFromStation = null;
-                                      showStationSuggestions = false;
-                                      filteredStations.clear();
-                                    });
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 4,
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade700,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        style: GoogleFonts.kanit(fontSize: 13),
-                        textInputAction: TextInputAction.next,
+                        ],
                       ),
-                      Divider(height: 1, color: Colors.grey.shade200),
-                      TextField(
-                        controller: searchController,
-                        onTap: () =>
-                            searchStations(searchController.text, "to"),
-                        onChanged: (value) => searchStations(value, "to"),
-                        decoration: InputDecoration(
-                          hintText: 'To station',
-                          hintStyle: GoogleFonts.kanit(fontSize: 14),
-                          prefixIcon: const Icon(
-                            Icons.location_on_outlined,
-                            color: Colors.black54,
-                            size: 18,
-                          ),
-                          prefixIconConstraints: const BoxConstraints(
-                            minWidth: 34,
-                            minHeight: 34,
-                          ),
-                          suffixIcon: searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.close, size: 18),
-                                  onPressed: () {
-                                    searchController.clear();
-                                    setState(() {
-                                      selectedStation = null;
-                                      showStationSuggestions = false;
-                                      filteredStations.clear();
-                                    });
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 4,
-                          ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _stationSearchField(
+                              controller: fromSearchController,
+                              hintText: "From station",
+                              icon: Icons.my_location,
+                              onTap: () => searchStations(
+                                fromSearchController.text,
+                                "from",
+                              ),
+                              onChanged: (value) =>
+                                  searchStations(value, "from"),
+                              onClear: () {
+                                fromSearchController.clear();
+                                setState(() {
+                                  selectedFromStation = null;
+                                  showStationSuggestions = false;
+                                  filteredStations.clear();
+                                });
+                              },
+                              textInputAction: TextInputAction.next,
+                            ),
+                            const SizedBox(height: 8),
+                            _stationSearchField(
+                              controller: searchController,
+                              hintText: "To station",
+                              icon: Icons.location_on_outlined,
+                              onTap: () =>
+                                  searchStations(searchController.text, "to"),
+                              onChanged: (value) => searchStations(value, "to"),
+                              onClear: () {
+                                searchController.clear();
+                                setState(() {
+                                  selectedStation = null;
+                                  showStationSuggestions = false;
+                                  filteredStations.clear();
+                                });
+                              },
+                              textInputAction: TextInputAction.search,
+                            ),
+                          ],
                         ),
-                        style: GoogleFonts.kanit(fontSize: 13),
-                        textInputAction: TextInputAction.search,
                       ),
                     ],
                   ),
@@ -1475,7 +1729,7 @@ class _HomepagesState extends State<Homepages> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.14),
+                          color: Colors.black.withValues(alpha: 0.14),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -1486,7 +1740,7 @@ class _HomepagesState extends State<Homepages> {
                         padding: EdgeInsets.zero,
                         shrinkWrap: true,
                         itemCount: filteredStations.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (context, index) =>
                             Divider(height: 1, color: Colors.grey.shade200),
                         itemBuilder: (context, index) {
                           final station = filteredStations[index];
@@ -1532,6 +1786,12 @@ class _HomepagesState extends State<Homepages> {
             ),
           ),
 
+          Positioned(
+            right: 16,
+            bottom: hasTrackingPanel ? 176 : 24,
+            child: _buildLineSelector(),
+          ),
+
           // App bar
           Positioned(
             top: 0,
@@ -1548,7 +1808,7 @@ class _HomepagesState extends State<Homepages> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 8,
                   ),
                 ],
