@@ -19,7 +19,7 @@ class Homepages extends StatefulWidget {
   const Homepages({
     super.key,
     this.initialMapTarget,
-    this.initialMapZoom = 17.35,
+    this.initialMapZoom = 16.9,
   });
 
   @override
@@ -32,12 +32,20 @@ class _HomepagesState extends State<Homepages> {
     20.045780781087203,
     99.89135359185909,
   );
-  static const double _defaultMapZoom = 17.35;
+  static const double _defaultMapZoom = 16.9;
+  static const double _defaultMapTilt = 55;
+  static const double _defaultMapBearing = 0;
+  static const double _routeOverviewPadding = 78;
+  static const double _routeOverviewNorthOffsetDegrees = 0.0045;
+  static const double _tiltStartZoom = 15.2;
+  static const double _tiltFullZoom = 17.2;
 
   int currentIndex = 0;
 
   String selectedLine = "all";
   GoogleMapController? mapController;
+  CameraPosition? latestCameraPosition;
+  bool isAdjustingZoomTilt = false;
   double currentZoom = _defaultMapZoom;
 
   Timer? stationTimer;
@@ -59,6 +67,13 @@ class _HomepagesState extends State<Homepages> {
   BitmapDescriptor selectedStationMarkerIcon = BitmapDescriptor.defaultMarker;
   final Map<String, BitmapDescriptor> stationDensityIcons = {};
   final Map<String, BitmapDescriptor> selectedStationDensityIcons = {};
+  final Map<String, BitmapDescriptor> busMarkerIcons = {};
+  static const Map<String, String> _busMarkerAssets = {
+    "left": "assets/gemcar_left.png",
+    "right": "assets/gemcar_right.png",
+    "turnLeft": "assets/gemcar_turnleft.png",
+    "turnRight": "assets/gemcar_turnright.png",
+  };
 
   // statuses for bus
   Map<String, double> busProgress =
@@ -228,6 +243,13 @@ class _HomepagesState extends State<Homepages> {
         (isSelected ? selectedStationMarkerIcon : stationMarkerIcon);
   }
 
+  BitmapDescriptor busIconFor(String id) {
+    final sprite = BusController.instance.busSprites[id] ?? "right";
+    return busMarkerIcons[sprite] ??
+        busMarkerIcons["right"] ??
+        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+  }
+
   double distanceBetween(LatLng from, LatLng to) {
     return const ll.Distance().as(
       ll.LengthUnit.Meter,
@@ -303,6 +325,48 @@ class _HomepagesState extends State<Homepages> {
     });
 
     updateRoute();
+    focusLineOverview(nextLine);
+  }
+
+  void handleCameraMove(CameraPosition position) {
+    latestCameraPosition = position;
+    currentZoom = position.zoom;
+  }
+
+  double tiltForZoom(double zoom) {
+    if (zoom <= _tiltStartZoom) return 0;
+    if (zoom >= _tiltFullZoom) return _defaultMapTilt;
+
+    final progress =
+        (zoom - _tiltStartZoom) / (_tiltFullZoom - _tiltStartZoom);
+    return _defaultMapTilt * progress;
+  }
+
+  Future<void> adjustTiltForCurrentZoom() async {
+    final controller = mapController;
+    final position = latestCameraPosition;
+    if (controller == null || position == null || isAdjustingZoomTilt) return;
+
+    final targetTilt = tiltForZoom(position.zoom);
+    if ((position.tilt - targetTilt).abs() < 3) return;
+
+    isAdjustingZoomTilt = true;
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: position.target,
+            zoom: position.zoom,
+            tilt: targetTilt,
+            bearing: position.bearing,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint("MAP TILT ERROR: $e");
+    } finally {
+      isAdjustingZoomTilt = false;
+    }
   }
 
   Future<void> focusInitialMapTarget() async {
@@ -311,14 +375,62 @@ class _HomepagesState extends State<Homepages> {
 
     try {
       await controller.animateCamera(
-        CameraUpdate.newLatLngZoom(
-          widget.initialMapTarget ?? _mSquareStationCenter,
-          widget.initialMapZoom,
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: widget.initialMapTarget ?? _mSquareStationCenter,
+            zoom: widget.initialMapZoom,
+            tilt: _defaultMapTilt,
+            bearing: _defaultMapBearing,
+          ),
         ),
       );
     } catch (e) {
       debugPrint("MAP CAMERA ERROR: $e");
     }
+  }
+
+  Future<void> focusLineOverview(String line) async {
+    final controller = mapController;
+    if (controller == null) return;
+
+    final points = routePointsForLineOverview(line);
+    if (points.length < 2) return;
+
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          routeOverviewBounds(points),
+          _routeOverviewPadding,
+        ),
+      );
+    } catch (e) {
+      debugPrint("MAP LINE CAMERA ERROR: $e");
+    }
+  }
+
+  LatLngBounds routeOverviewBounds(List<LatLng> points) {
+    final bounds = lineBounds(points);
+    return LatLngBounds(
+      southwest: bounds.southwest,
+      northeast: LatLng(
+        bounds.northeast.latitude + _routeOverviewNorthOffsetDegrees,
+        bounds.northeast.longitude,
+      ),
+    );
+  }
+
+  List<LatLng> routePointsForLineOverview(String line) {
+    if (line == "line1") {
+      return route1.isNotEmpty ? route1 : getLineLatLngs(line1);
+    }
+    if (line == "line2") {
+      return route2.isNotEmpty ? route2 : getLineLatLngs(line2);
+    }
+
+    final points = <LatLng>[];
+    points.addAll(route1.isNotEmpty ? route1 : getLineLatLngs(line1));
+    points.addAll(route2.isNotEmpty ? route2 : getLineLatLngs(line2));
+    return points;
   }
 
   LatLngBounds lineBounds(List<LatLng> points) {
@@ -479,7 +591,14 @@ class _HomepagesState extends State<Homepages> {
     }
 
     mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(LatLng(station["lat"], station["lng"]), 17),
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: LatLng(station["lat"], station["lng"]),
+          zoom: 17,
+          tilt: _defaultMapTilt,
+          bearing: _defaultMapBearing,
+        ),
+      ),
     );
   }
 
@@ -1010,12 +1129,12 @@ class _HomepagesState extends State<Homepages> {
       normalIcons[entry.key] = await createStationDensityIcon(
         source,
         entry.value,
-        46,
+        41,
       );
       selectedIcons[entry.key] = await createStationDensityIcon(
         source,
         entry.value,
-        56,
+        50,
       );
     }
 
@@ -1036,11 +1155,33 @@ class _HomepagesState extends State<Homepages> {
     });
   }
 
+  Future<void> loadBusMarkerIcons() async {
+    final icons = <String, BitmapDescriptor>{};
+
+    for (final entry in _busMarkerAssets.entries) {
+      icons[entry.key] = await BitmapDescriptor.asset(
+        const ImageConfiguration(),
+        entry.value,
+        width: 53,
+        height: 53,
+      );
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      busMarkerIcons
+        ..clear()
+        ..addAll(icons);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     currentZoom = widget.initialMapZoom;
     loadStationMarkerIcons();
+    loadBusMarkerIcons();
     fetchStations();
     fetchBuses();
 
@@ -1397,6 +1538,7 @@ class _HomepagesState extends State<Homepages> {
         if (idx >= route.length - 1) {
           BusController.instance.busProgress[id] = 0;
           BusController.instance.busPositions[id] = route[0];
+          BusController.instance.updateBusVisualState(id, route, 0);
           continue;
         }
 
@@ -1413,6 +1555,7 @@ class _HomepagesState extends State<Homepages> {
         );
 
         BusController.instance.busPositions[id] = newPos;
+        BusController.instance.updateBusVisualState(id, route, idx);
 
         for (var station in getSelectedLine()) {
           LatLng stationLatLng = LatLng(station["lat"], station["lng"]);
@@ -1508,17 +1651,23 @@ class _HomepagesState extends State<Homepages> {
             initialCameraPosition: CameraPosition(
               target: widget.initialMapTarget ?? _mSquareStationCenter,
               zoom: currentZoom,
+              tilt: _defaultMapTilt,
+              bearing: _defaultMapBearing,
             ),
             onMapCreated: (controller) {
               mapController = controller;
               focusInitialMapTarget();
             },
-            onCameraMove: (position) => currentZoom = position.zoom,
+            onCameraMove: handleCameraMove,
+            onCameraIdle: adjustTiltForCurrentZoom,
             onTap: (_) => resetStationSelection(),
             zoomControlsEnabled: false,
-            minMaxZoomPreference: const MinMaxZoomPreference(15.8, 19),
+            minMaxZoomPreference: const MinMaxZoomPreference(13.8, 19),
             mapToolbarEnabled: false,
             myLocationButtonEnabled: false,
+            buildingsEnabled: true,
+            rotateGesturesEnabled: true,
+            tiltGesturesEnabled: true,
             polylines: {
               if (showAllLines) ...{
                 Polyline(
@@ -1604,10 +1753,9 @@ class _HomepagesState extends State<Homepages> {
                     return Marker(
                       markerId: MarkerId("bus-$id"),
                       position: pos,
+                      anchor: const Offset(0.5, 0.5),
                       zIndexInt: 10,
-                      icon: BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueBlue,
-                      ),
+                      icon: busIconFor(id),
                       infoWindow: InfoWindow(title: "Bus $id"),
                     );
                   }),
