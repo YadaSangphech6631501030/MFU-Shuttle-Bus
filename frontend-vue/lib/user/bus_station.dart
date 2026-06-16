@@ -105,14 +105,14 @@ Widget build(BuildContext context) {
             const SizedBox(height: 8),
 
             LineSection(
-              title: "สาย 1",
+              title: "Line 1",
               stations: line1Stations,
             ),
 
             const SizedBox(height: 16),
 
             LineSection(
-              title: "สาย 2 (โรงพยาบาลแม่ฟ้าหลวง)",
+              title: "Line2 (MFU Medical Center)",
               stations: line2Stations,
             ),
           ],
@@ -138,9 +138,9 @@ class _LineSectionState extends State<LineSection> {
   bool isOpen = false;
 
   Color _getLineColor() {
-    if (widget.title.contains("สาย 1")) {
+    if (widget.title.contains("Line 1")) {
       return const Color(0xFFD4AF37);
-    } else if (widget.title.contains("สาย 2")) {
+    } else if (widget.title.contains("Line2")) {
       return Colors.grey.shade700;
     }
     return Colors.grey;

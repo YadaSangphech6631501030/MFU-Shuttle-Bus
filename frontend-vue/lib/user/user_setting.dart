@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../admin/report_pages.dart';
 import 'bus_station.dart';
+import 'favorite_station.dart';
 import 'setting.dart';
 
 class UserSetting extends StatefulWidget {
@@ -13,48 +14,83 @@ class UserSetting extends StatefulWidget {
 class _UserSettingState extends State<UserSetting> {
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    const homeAppBarHeight = 88.0;
+    const backButtonSize = 44.0;
+    final backButtonTop =
+        (topPadding + ((homeAppBarHeight - topPadding - backButtonSize) / 2))
+            .clamp(0.0, homeAppBarHeight - backButtonSize);
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leadingWidth: 70,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(4),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(homeAppBarHeight),
+        child: Material(
+          color: Colors.white,
+          elevation: 0,
+          child: Container(
+            height: homeAppBarHeight,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+              ),
             ),
-            child: const Icon(
-              Icons.arrow_back_ios,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: Align(
-          alignment: Alignment.centerRight,
-          child: RichText(
-            text: const TextSpan(
+            child: Stack(
               children: [
-                TextSpan(
-                  text: 'MFU ',
-                  style: TextStyle(
-                    color: Color(0xFFD2232A),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                Positioned.fill(
+                  top: topPadding,
+                  right: 16,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: RichText(
+                      text: const TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'MFU ',
+                            style: TextStyle(
+                              color: Color(0xFFD2232A),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
+                          TextSpan(
+                            text: 'SHUTTLE BUS',
+                            style: TextStyle(
+                              color: Color(0xFFBC9945),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                TextSpan(
-                  text: 'SHUTTLE BUS',
-                  style: TextStyle(
-                    color: Color(0xFFBC9945),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                Positioned(
+                  left: 16,
+                  top: backButtonTop,
+                  child: SizedBox(
+                    width: backButtonSize,
+                    height: backButtonSize,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.black,
+                          size: 18,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
                   ),
                 ),
               ],
@@ -64,95 +100,120 @@ class _UserSettingState extends State<UserSetting> {
       ),
       body: Column(
         children: [
-          const Divider(height: 1),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Icon(
-                Icons.directions_bus,
-                color: Color(0xFFD2232A),
-              ),
-            ),
-            title: const Text(
-              'MFU Transit',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 16,
-              ),
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFD2232A)),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const BusStationPage(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              children: [
+                _sectionTitle('Transit'),
+                _settingTile(
+                  icon: Icons.directions_bus,
+                  title: 'MFU Transit',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BusStationPage(),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+                _settingTile(
+                  icon: Icons.favorite_border,
+                  title: 'Favorite Stations',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FavoriteStationPage(),
+                      ),
+                    );
+                  },
+                ),
+                _sectionTitle('Preferences'),
+                _settingTile(
+                  icon: Icons.settings,
+                  title: 'Settings',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const Setting()),
+                    );
+                  },
+                ),
+                _sectionTitle('Support'),
+                _settingTile(
+                  icon: Icons.help_outline,
+                  title: 'Help & Feedback',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ReportPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Icon(
-                Icons.settings,
-                color: Color(0xFFD2232A),
-              ),
-            ),
-            title: const Text(
-              'Settings',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 16,
-              ),
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFD2232A)),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const Setting(),
+          const SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Text(
+                'Version 1.0.0',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black45,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
-              );
-            },
-          ),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Icon(
-                Icons.help_outline,
-                color: Color(0xFFD2232A),
               ),
             ),
-            title: const Text(
-              'Help & Feedback',
-              style: TextStyle(
-                fontSize: 16,
-              ),
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16,color: Color(0xFFD2232A)),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ReportPage(),
-                ),
-              );
-            },
           ),
         ],
       ),
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      child: Text(
+        title.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  Widget _settingTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Icon(icon, color: const Color(0xFFD2232A)),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: Color(0xFFD2232A),
+      ),
+      onTap: onTap,
     );
   }
 }

@@ -253,34 +253,72 @@ class _ReportPageState extends State<ReportPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final topPadding = MediaQuery.of(context).padding.top;
+    const homeAppBarHeight = 88.0;
+    const backButtonSize = 44.0;
+    final backButtonTop =
+        (topPadding + ((homeAppBarHeight - topPadding - backButtonSize) / 2))
+            .clamp(0.0, homeAppBarHeight - backButtonSize);
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(4),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(homeAppBarHeight),
+        child: Material(
+          color: Colors.white,
+          elevation: 0,
+          child: Container(
+            height: homeAppBarHeight,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+              ),
             ),
-            child: const Icon(
-              Icons.arrow_back_ios,
-              color: Colors.black,
-              size: 20,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  top: topPadding,
+                  child: const Center(
+                    child: Text(
+                      "Report Problem",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 16,
+                  top: backButtonTop,
+                  child: SizedBox(
+                    width: backButtonSize,
+                    height: backButtonSize,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.black,
+                          size: 18,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: const Text("Report Problem"),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1),
         ),
       ),
 
