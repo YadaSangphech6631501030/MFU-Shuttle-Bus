@@ -4,9 +4,10 @@ import { api } from './services/api';
 import type { Bus, DetectorStatus, Report, Station, User } from './types';
 
 type Lang = 'en' | 'th';
-type TabKey = 'dashboard' | 'stations' | 'cctv' | 'buses' | 'reports' | 'users';
+type TabKey = 'dashboard' | 'stations' | 'routes' | 'cctv' | 'buses' | 'reports' | 'users';
 type LatLng = { lat: number; lng: number };
 type CameraPreviewKind = 'none' | 'rtsp' | 'image' | 'video' | 'link';
+type RouteLine = 'line1' | 'line2';
 
 type GoogleLatLngValue = {
   lat: () => number;
@@ -17,9 +18,18 @@ type GoogleMapMouseEvent = {
   latLng?: GoogleLatLngValue;
 };
 
+type GoogleMapEventListener = {
+  remove: () => void;
+};
+
+type GooglePolylineMouseEvent = GoogleMapMouseEvent & {
+  vertex?: number;
+};
+
 type GoogleMap = {
-  addListener: (eventName: string, handler: (event: GoogleMapMouseEvent) => void) => void;
+  addListener: (eventName: string, handler: (event: GoogleMapMouseEvent) => void) => GoogleMapEventListener;
   setCenter: (position: LatLng) => void;
+  fitBounds: (bounds: GoogleLatLngBounds) => void;
 };
 
 type GoogleMarker = {
@@ -28,9 +38,31 @@ type GoogleMarker = {
   setPosition: (position: LatLng) => void;
 };
 
+type GoogleMapPath = {
+  addListener: (eventName: string, handler: () => void) => GoogleMapEventListener;
+  clear: () => void;
+  getArray: () => GoogleLatLngValue[];
+  getLength: () => number;
+  push: (position: LatLng) => number;
+  removeAt: (index: number) => GoogleLatLngValue;
+};
+
+type GooglePolyline = {
+  addListener: (eventName: string, handler: (event: GooglePolylineMouseEvent) => void) => GoogleMapEventListener;
+  getPath: () => GoogleMapPath;
+  setMap: (map: GoogleMap | null) => void;
+  setPath: (path: LatLng[]) => void;
+};
+
+type GoogleLatLngBounds = {
+  extend: (position: LatLng) => void;
+};
+
 type GoogleMapsApi = {
   Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMap;
   Marker: new (options: Record<string, unknown>) => GoogleMarker;
+  Polyline: new (options: Record<string, unknown>) => GooglePolyline;
+  LatLngBounds: new () => GoogleLatLngBounds;
 };
 
 declare global {
@@ -43,6 +75,7 @@ declare global {
 }
 
 const LANGUAGE_KEY = 'mfu_admin_language';
+const ROUTE_EDITOR_STORAGE_PREFIX = 'mfu_route_editor_';
 const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 const MFU_CENTER: LatLng = { lat: 20.0446, lng: 99.8957 };
@@ -52,6 +85,7 @@ const lang = ref<Lang>(savedLanguage === 'th' ? 'th' : 'en');
 const tabs: Array<{ key: TabKey }> = [
   { key: 'dashboard' },
   { key: 'stations' },
+  { key: 'routes' },
   { key: 'cctv' },
   { key: 'buses' },
   { key: 'reports' },
@@ -64,6 +98,7 @@ const dictionary = {
     tabs: {
       dashboard: 'Dashboard',
       stations: 'Stations',
+      routes: 'Route Editor',
       cctv: 'Station CCTV',
       buses: 'Buses',
       reports: 'Reports',
@@ -126,6 +161,7 @@ const dictionary = {
     tabs: {
       dashboard: 'ภาพรวม',
       stations: 'สถานี',
+      routes: 'แก้เส้นทาง',
       cctv: 'Station CCTV',
       buses: 'รถทั้งหมด',
       reports: 'รายงาน',
@@ -223,6 +259,15 @@ const stationMap = ref<GoogleMap | null>(null);
 const stationMarker = ref<GoogleMarker | null>(null);
 const stationMapLoading = ref(false);
 const stationMapError = ref('');
+const routeMapEl = ref<HTMLElement | null>(null);
+const routeMap = ref<GoogleMap | null>(null);
+const routePolyline = ref<GooglePolyline | null>(null);
+const routeEditorLine = ref<RouteLine>('line1');
+const routeDraft = ref<LatLng[]>([]);
+const routeGeoJsonText = ref('');
+const routeMapLoading = ref(false);
+const routeMapError = ref('');
+const routeEditorMessage = ref('');
 const openRoleMenu = ref<string | null>(null);
 const selectedCameraStationId = ref<string | null>(null);
 const detectorStatus = ref<DetectorStatus | null>(null);
@@ -245,9 +290,130 @@ const detectorStreamUrl = computed(() => (
     ? api.getDetectorStreamUrl(selectedCameraStation.value.id)
     : ''
 ));
+const routePointCount = computed(() => routeDraft.value.length);
+const routeEditorLineLabel = computed(() => (routeEditorLine.value === 'line1' ? 'Line 1' : 'Line 2'));
 
 function fillTemplate(template: string, values: Record<string, string | number>) {
   return template.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ''));
+}
+
+function googleLatLngToLiteral(value: GoogleLatLngValue): LatLng {
+  return {
+    lat: Number(value.lat().toFixed(6)),
+    lng: Number(value.lng().toFixed(6)),
+  };
+}
+
+function routeEditorStorageKey() {
+  return `${ROUTE_EDITOR_STORAGE_PREFIX}${routeEditorLine.value}`;
+}
+
+function buildRouteGeoJson(points: LatLng[], line: RouteLine = routeEditorLine.value) {
+  return {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: {
+          routeId: line,
+          source: 'admin-web-route-editor',
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates: points.map((point) => [
+            Number(point.lng.toFixed(6)),
+            Number(point.lat.toFixed(6)),
+          ]),
+        },
+      },
+    ],
+  };
+}
+
+function extractGeoJsonLineCoordinates(value: unknown): unknown[] {
+  if (!value || typeof value !== 'object') return [];
+
+  const geoJson = value as Record<string, unknown>;
+  if (geoJson.type === 'FeatureCollection') {
+    const features = Array.isArray(geoJson.features) ? geoJson.features : [];
+    return features.length ? extractGeoJsonLineCoordinates(features[0]) : [];
+  }
+
+  if (geoJson.type === 'Feature') {
+    return extractGeoJsonLineCoordinates(geoJson.geometry);
+  }
+
+  if (geoJson.type === 'LineString') {
+    return Array.isArray(geoJson.coordinates) ? geoJson.coordinates : [];
+  }
+
+  return [];
+}
+
+function parseGeoJsonRoute(raw: string) {
+  const parsed = JSON.parse(raw);
+  const coordinates = extractGeoJsonLineCoordinates(parsed);
+  const points = coordinates
+    .filter((point): point is unknown[] => Array.isArray(point) && point.length >= 2)
+    .map((point) => ({
+      lat: Number(point[1]),
+      lng: Number(point[0]),
+    }))
+    .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+
+  if (points.length < 2) {
+    throw new Error('GeoJSON route must contain at least 2 coordinates.');
+  }
+
+  return points;
+}
+
+function syncRouteGeoJsonText() {
+  routeGeoJsonText.value = JSON.stringify(buildRouteGeoJson(routeDraft.value), null, 2);
+}
+
+function syncRouteDraftFromPolyline() {
+  const path = routePolyline.value?.getPath();
+  if (!path) return;
+
+  routeDraft.value = path.getArray().map(googleLatLngToLiteral);
+  syncRouteGeoJsonText();
+}
+
+function setRouteDraft(points: LatLng[], message = '') {
+  routeDraft.value = points.map((point) => ({
+    lat: Number(point.lat.toFixed(6)),
+    lng: Number(point.lng.toFixed(6)),
+  }));
+  routePolyline.value?.setPath(routeDraft.value);
+  attachRoutePathListeners();
+  syncRouteGeoJsonText();
+  focusRouteDraft();
+  routeEditorMessage.value = message;
+}
+
+function attachRoutePathListeners() {
+  const path = routePolyline.value?.getPath();
+  if (!path) return;
+
+  path.addListener('set_at', syncRouteDraftFromPolyline);
+  path.addListener('insert_at', syncRouteDraftFromPolyline);
+  path.addListener('remove_at', syncRouteDraftFromPolyline);
+}
+
+function focusRouteDraft() {
+  const maps = window.google?.maps;
+  const map = routeMap.value;
+  if (!maps || !map || routeDraft.value.length === 0) return;
+
+  if (routeDraft.value.length === 1) {
+    map.setCenter(routeDraft.value[0]);
+    return;
+  }
+
+  const bounds = new maps.LatLngBounds();
+  routeDraft.value.forEach((point) => bounds.extend(point));
+  map.fitBounds(bounds);
 }
 
 function toggleLanguage() {
@@ -257,6 +423,10 @@ function toggleLanguage() {
 
 function setActiveTab(tab: TabKey) {
   activeTab.value = tab;
+}
+
+function setRouteEditorLine(line: RouteLine) {
+  routeEditorLine.value = line;
 }
 
 function selectValue(event: Event) {
@@ -559,6 +729,161 @@ async function initStationMap() {
   }
 }
 
+function loadSavedRouteDraft() {
+  const savedRoute = localStorage.getItem(routeEditorStorageKey());
+  if (!savedRoute) {
+    setRouteDraft([], '');
+    syncRouteGeoJsonText();
+    return;
+  }
+
+  try {
+    setRouteDraft(parseGeoJsonRoute(savedRoute), `Loaded temporary ${routeEditorLineLabel.value} draft.`);
+  } catch {
+    localStorage.removeItem(routeEditorStorageKey());
+    setRouteDraft([], '');
+    syncRouteGeoJsonText();
+  }
+}
+
+async function initRouteMap() {
+  if (activeTab.value !== 'routes' || !routeMapEl.value) return;
+
+  if (routeMap.value && routePolyline.value) {
+    focusRouteDraft();
+    return;
+  }
+
+  routeMapLoading.value = true;
+  routeMapError.value = '';
+
+  try {
+    await loadGoogleMaps();
+
+    const maps = window.google?.maps;
+    if (!maps || !routeMapEl.value) {
+      throw new Error(text.value.mapLoadFailed);
+    }
+
+    routeMap.value = new maps.Map(routeMapEl.value, {
+      center: MFU_CENTER,
+      zoom: 16,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true,
+    });
+
+    routePolyline.value = new maps.Polyline({
+      map: routeMap.value,
+      path: routeDraft.value,
+      strokeColor: '#bc9945',
+      strokeOpacity: 0.95,
+      strokeWeight: 5,
+      editable: true,
+      draggable: false,
+      zIndex: 30,
+    });
+
+    attachRoutePathListeners();
+
+    routeMap.value.addListener('click', (event) => {
+      if (!event.latLng) return;
+      routePolyline.value?.getPath().push(googleLatLngToLiteral(event.latLng));
+      syncRouteDraftFromPolyline();
+      routeEditorMessage.value = 'Point added.';
+    });
+
+    routePolyline.value.addListener('rightclick', (event) => {
+      if (typeof event.vertex !== 'number') return;
+      routePolyline.value?.getPath().removeAt(event.vertex);
+      syncRouteDraftFromPolyline();
+      routeEditorMessage.value = 'Point removed.';
+    });
+
+    loadSavedRouteDraft();
+    focusRouteDraft();
+  } catch (err) {
+    routeMapError.value = err instanceof Error ? err.message : text.value.mapLoadFailed;
+  } finally {
+    routeMapLoading.value = false;
+  }
+}
+
+function loadRouteFromStations() {
+  const line1Stations = stations.value
+    .filter((station) => station.lines.includes(routeEditorLine.value))
+    .map((station) => ({ lat: Number(station.lat), lng: Number(station.lng) }))
+    .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+
+  if (line1Stations.length < 2) {
+    routeEditorMessage.value = `${routeEditorLineLabel.value} needs at least 2 stations.`;
+    return;
+  }
+
+  setRouteDraft(line1Stations, `Loaded ${routeEditorLineLabel.value} station points.`);
+}
+
+function loadRouteFromGeoJsonText() {
+  try {
+    setRouteDraft(parseGeoJsonRoute(routeGeoJsonText.value), 'GeoJSON loaded.');
+    routeMapError.value = '';
+  } catch (err) {
+    routeMapError.value = err instanceof Error ? err.message : 'Invalid GeoJSON.';
+  }
+}
+
+async function importRouteFile(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  routeGeoJsonText.value = await file.text();
+  loadRouteFromGeoJsonText();
+  input.value = '';
+}
+
+function undoRoutePoint() {
+  const path = routePolyline.value?.getPath();
+  if (!path || path.getLength() === 0) return;
+
+  path.removeAt(path.getLength() - 1);
+  syncRouteDraftFromPolyline();
+  routeEditorMessage.value = 'Last point removed.';
+}
+
+function clearRouteDraft() {
+  setRouteDraft([], 'Route cleared.');
+}
+
+function saveRouteDraftTemporary() {
+  const geoJson = JSON.stringify(buildRouteGeoJson(routeDraft.value));
+  localStorage.setItem(routeEditorStorageKey(), geoJson);
+  routeEditorMessage.value = `Saved ${routeEditorLineLabel.value} temporarily in this browser.`;
+}
+
+function clearTemporaryRouteDraft() {
+  localStorage.removeItem(routeEditorStorageKey());
+  routeEditorMessage.value = `Temporary ${routeEditorLineLabel.value} draft cleared.`;
+}
+
+async function copyRouteGeoJson() {
+  syncRouteGeoJsonText();
+  await navigator.clipboard.writeText(routeGeoJsonText.value);
+  routeEditorMessage.value = 'GeoJSON copied.';
+}
+
+function downloadRouteGeoJson() {
+  syncRouteGeoJsonText();
+  const blob = new Blob([routeGeoJsonText.value], { type: 'application/geo+json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `polyline_${routeEditorLine.value}_mfu.geojson`;
+  link.click();
+  URL.revokeObjectURL(url);
+  routeEditorMessage.value = 'GeoJSON downloaded.';
+}
+
 function useCurrentLocation() {
   if (!navigator.geolocation) {
     stationMapError.value = text.value.locateFailed;
@@ -729,6 +1054,18 @@ watch(activeTab, (tab) => {
   if (tab === 'stations') {
     void nextTick(initStationMap);
   }
+  if (tab === 'routes') {
+    void nextTick(initRouteMap);
+  }
+});
+
+watch(routeEditorLine, () => {
+  if (activeTab.value !== 'routes') {
+    syncRouteGeoJsonText();
+    return;
+  }
+
+  loadSavedRouteDraft();
 });
 
 watch(
@@ -927,6 +1264,89 @@ watch(selectedCameraStationId, () => {
             </button>
           </form>
 
+        </article>
+      </section>
+
+      <section v-if="activeTab === 'routes'" class="route-editor-layout">
+        <article class="panel route-map-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>{{ routeEditorLineLabel }} temporary polyline</h2>
+              <span>Click map to add points. Drag line vertices to adjust. Right-click a vertex to remove it.</span>
+            </div>
+            <span>{{ routePointCount }} points</span>
+          </div>
+          <div class="route-line-switcher" aria-label="Route line selector">
+            <button
+              type="button"
+              :class="{ active: routeEditorLine === 'line1' }"
+              @click="setRouteEditorLine('line1')"
+            >
+              Line 1
+            </button>
+            <button
+              type="button"
+              :class="{ active: routeEditorLine === 'line2' }"
+              @click="setRouteEditorLine('line2')"
+            >
+              Line 2
+            </button>
+          </div>
+          <div class="route-map-shell">
+            <div ref="routeMapEl" class="route-map"></div>
+            <div v-if="routeMapLoading" class="map-overlay">{{ text.mapLoading }}</div>
+          </div>
+          <p v-if="routeMapError" class="map-error">{{ routeMapError }}</p>
+          <p v-if="routeEditorMessage" class="route-editor-message">{{ routeEditorMessage }}</p>
+        </article>
+
+        <article class="panel route-tools-panel">
+          <div class="panel-heading">
+            <h2>Tools</h2>
+            <span>Temporary</span>
+          </div>
+
+          <div class="route-tool-group">
+            <button class="secondary-btn compact-btn" type="button" @click="loadRouteFromStations">
+              Start from {{ routeEditorLineLabel }} stations
+            </button>
+            <label class="file-btn">
+              Import GeoJSON
+              <input accept=".geojson,.json,application/geo+json,application/json" type="file" @change="importRouteFile" />
+            </label>
+            <button class="secondary-btn compact-btn" type="button" @click="undoRoutePoint">
+              Undo last point
+            </button>
+            <button class="secondary-btn compact-btn" type="button" @click="clearRouteDraft">
+              Clear map
+            </button>
+          </div>
+
+          <div class="route-tool-group">
+            <button class="primary-btn compact-btn" type="button" @click="saveRouteDraftTemporary">
+              Save temporary
+            </button>
+            <button class="secondary-btn compact-btn" type="button" @click="clearTemporaryRouteDraft">
+              Clear saved draft
+            </button>
+          </div>
+
+          <label>
+            GeoJSON
+            <textarea v-model="routeGeoJsonText" class="route-geojson-textarea" spellcheck="false"></textarea>
+          </label>
+
+          <div class="route-tool-group">
+            <button class="secondary-btn compact-btn" type="button" @click="loadRouteFromGeoJsonText">
+              Load text
+            </button>
+            <button class="secondary-btn compact-btn" type="button" @click="copyRouteGeoJson">
+              Copy GeoJSON
+            </button>
+            <button class="secondary-btn compact-btn" type="button" @click="downloadRouteGeoJson">
+              Download
+            </button>
+          </div>
         </article>
       </section>
 

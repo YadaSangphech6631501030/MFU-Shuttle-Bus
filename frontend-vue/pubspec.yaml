@@ -76,6 +76,8 @@ flutter:
     - assets/gemcar_turnleft.png
     - assets/bus_stop_1.png
     - assets/bus_stop_2.png
+    - assets/routes/polyline_line1_mfu.geojson
+    - assets/routes/polyline_line2_mfu.geojson
 
 
   # To add assets to your application, add an assets section, like this:
