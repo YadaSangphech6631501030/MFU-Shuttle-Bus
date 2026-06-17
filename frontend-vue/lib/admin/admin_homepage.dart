@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'admin_bottom_bar.dart';
 import 'admin_setting.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
+import 'package:shuttle_bus_fronted/services/route_asset_service.dart';
 import '../user/bus_controller.dart';
 import '../user/bus_page.dart';
 
@@ -303,6 +304,16 @@ class _AdminHomepageState extends State<AdminHomepage> {
       print("ROUTE ERROR: $e");
       return getLineLatLngs(points);
     }
+  }
+
+  Future<List<LatLng>> fetchRouteForLine(
+    String line,
+    List<Map<String, dynamic>> points,
+  ) async {
+    final assetRoute = await RouteAssetService.loadRouteForLine(line);
+    if (assetRoute.isNotEmpty) return assetRoute;
+
+    return fetchRouteForPoints(points);
   }
 
   Future<void> loadStationMarkerIcon() async {
@@ -653,8 +664,8 @@ class _AdminHomepageState extends State<AdminHomepage> {
   }
 
   Future<void> updateAllRoutes() async {
-    final newRoute1 = await fetchRouteForPoints(dbLine1Stations);
-    final newRoute2 = await fetchRouteForPoints(dbLine2Stations);
+    final newRoute1 = await fetchRouteForLine("line1", dbLine1Stations);
+    final newRoute2 = await fetchRouteForLine("line2", dbLine2Stations);
 
     setState(() {
       route1 = newRoute1.isNotEmpty
@@ -669,7 +680,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
   }
 
   void updateRoute() async {
-    final newRoute = await fetchRealRoute();
+    final newRoute = await fetchRouteForLine(selectedLine, getSelectedLine());
 
     setState(() {
       route = densifyRoadRoute(newRoute);

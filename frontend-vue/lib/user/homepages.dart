@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import 'package:shuttle_bus_fronted/services/language_service.dart';
+import 'package:shuttle_bus_fronted/services/route_asset_service.dart';
 import 'bus_controller.dart';
 import 'user_setting.dart';
 
@@ -1105,8 +1106,18 @@ class _HomepagesState extends State<Homepages> {
     }
   }
 
+  Future<List<LatLng>> fetchRouteForLine(
+    String line,
+    List<Map<String, dynamic>> points,
+  ) async {
+    final assetRoute = await RouteAssetService.loadRouteForLine(line);
+    if (assetRoute.isNotEmpty) return assetRoute;
+
+    return fetchRouteForPoints(points);
+  }
+
   Future<List<LatLng>> fetchRealRoute() async {
-    return fetchRouteForPoints(getActiveBusLine());
+    return fetchRouteForLine(activeBusLine, getActiveBusLine());
   }
 
   Future<BitmapDescriptor> createStationDensityIcon(
@@ -1638,8 +1649,8 @@ class _HomepagesState extends State<Homepages> {
   }
 
   Future<void> updateAllRoutes() async {
-    final newRoute1 = await fetchRouteForPoints(line1);
-    final newRoute2 = await fetchRouteForPoints(line2);
+    final newRoute1 = await fetchRouteForLine("line1", line1);
+    final newRoute2 = await fetchRouteForLine("line2", line2);
 
     if (!mounted) return;
 

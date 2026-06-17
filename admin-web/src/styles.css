@@ -610,6 +610,112 @@ th {
     #efe3c9;
 }
 
+.route-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 20px;
+  align-items: start;
+}
+
+.route-map-panel .panel-heading {
+  align-items: flex-start;
+}
+
+.route-map-panel .panel-heading span {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.route-map-shell {
+  position: relative;
+}
+
+.route-line-switcher {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff8e8;
+}
+
+.route-line-switcher button {
+  border: 0;
+  border-radius: 12px;
+  padding: 9px 14px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.route-line-switcher button.active {
+  color: white;
+  background: linear-gradient(135deg, var(--mfu-red-soft), var(--mfu-red-dark));
+  box-shadow: 0 8px 18px rgba(122, 16, 24, 0.18);
+}
+
+.route-map {
+  min-height: calc(100vh - 240px);
+  overflow: hidden;
+  border: 1px solid #dec68e;
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(122, 16, 24, 0.08), rgba(255, 255, 255, 0.72)),
+    #efe3c9;
+}
+
+.route-tools-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.route-tool-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: #fff5dd;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.file-btn input {
+  display: none;
+}
+
+.route-geojson-textarea {
+  min-height: 260px;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.route-editor-message {
+  margin: 12px 0 0;
+  border-radius: 14px;
+  padding: 11px 13px;
+  color: #5c4210;
+  background: #fff5d6;
+  border: 1px solid #e2c46f;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .map-overlay {
   position: absolute;
   inset: auto 26px 26px 26px;
@@ -825,6 +931,10 @@ th {
   }
 
   .cctv-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .route-editor-layout {
     grid-template-columns: 1fr;
   }
 
