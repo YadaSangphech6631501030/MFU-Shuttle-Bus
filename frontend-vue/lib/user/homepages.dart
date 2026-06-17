@@ -35,7 +35,6 @@ class _HomepagesState extends State<Homepages> {
   static const double _defaultMapZoom = 16.9;
   static const double _defaultMapTilt = 55;
   static const double _defaultMapBearing = 0;
-  static const double _routeOverviewPadding = 78;
   static const double _routeOverviewNorthOffsetDegrees = 0.0045;
   static const double _tiltStartZoom = 15.2;
   static const double _tiltFullZoom = 17.2;
@@ -43,6 +42,7 @@ class _HomepagesState extends State<Homepages> {
   int currentIndex = 0;
 
   String selectedLine = "all";
+  String activeBusLine = "line1";
   GoogleMapController? mapController;
   CameraPosition? latestCameraPosition;
   bool isAdjustingZoomTilt = false;
@@ -266,6 +266,10 @@ class _HomepagesState extends State<Homepages> {
     return selectedLine == "line1" ? line1 : line2;
   }
 
+  List<Map<String, dynamic>> getActiveBusLine() {
+    return activeBusLine == "line1" ? line1 : line2;
+  }
+
   List<LatLng> getSelectedLinePoints() {
     if (selectedLine == "all") return [];
     final selectedRoute = selectedLine == "line1" ? route1 : route2;
@@ -277,7 +281,7 @@ class _HomepagesState extends State<Homepages> {
   Color lineColor(String line) {
     if (line == "line1") return const Color(0xFFBC9945);
     if (line == "line2") return Colors.grey.shade700;
-    return Colors.black87;
+    return const Color(0xFFBC9945);
   }
 
   String lineLabel(String line) {
@@ -310,6 +314,9 @@ class _HomepagesState extends State<Homepages> {
 
     setState(() {
       selectedLine = nextLine;
+      if (nextLine != "all") {
+        activeBusLine = nextLine;
+      }
       showStationSuggestions = false;
       filteredStations.clear();
 
@@ -325,7 +332,6 @@ class _HomepagesState extends State<Homepages> {
     });
 
     updateRoute();
-    focusLineOverview(nextLine);
   }
 
   void handleCameraMove(CameraPosition position) {
@@ -337,8 +343,7 @@ class _HomepagesState extends State<Homepages> {
     if (zoom <= _tiltStartZoom) return 0;
     if (zoom >= _tiltFullZoom) return _defaultMapTilt;
 
-    final progress =
-        (zoom - _tiltStartZoom) / (_tiltFullZoom - _tiltStartZoom);
+    final progress = (zoom - _tiltStartZoom) / (_tiltFullZoom - _tiltStartZoom);
     return _defaultMapTilt * progress;
   }
 
@@ -389,22 +394,21 @@ class _HomepagesState extends State<Homepages> {
     }
   }
 
-  Future<void> focusLineOverview(String line) async {
+  Future<void> focusSelectedTrip() async {
     final controller = mapController;
     if (controller == null) return;
 
-    final points = routePointsForLineOverview(line);
+    final points = getSelectedTripPoints();
     if (points.length < 2) return;
+
+    FocusScope.of(context).unfocus();
 
     try {
       await controller.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          routeOverviewBounds(points),
-          _routeOverviewPadding,
-        ),
+        CameraUpdate.newLatLngBounds(routeOverviewBounds(points), 96),
       );
     } catch (e) {
-      debugPrint("MAP LINE CAMERA ERROR: $e");
+      debugPrint("MAP TRIP CAMERA ERROR: $e");
     }
   }
 
@@ -417,20 +421,6 @@ class _HomepagesState extends State<Homepages> {
         bounds.northeast.longitude,
       ),
     );
-  }
-
-  List<LatLng> routePointsForLineOverview(String line) {
-    if (line == "line1") {
-      return route1.isNotEmpty ? route1 : getLineLatLngs(line1);
-    }
-    if (line == "line2") {
-      return route2.isNotEmpty ? route2 : getLineLatLngs(line2);
-    }
-
-    final points = <LatLng>[];
-    points.addAll(route1.isNotEmpty ? route1 : getLineLatLngs(line1));
-    points.addAll(route2.isNotEmpty ? route2 : getLineLatLngs(line2));
-    return points;
   }
 
   LatLngBounds lineBounds(List<LatLng> points) {
@@ -575,6 +565,7 @@ class _HomepagesState extends State<Homepages> {
 
     setState(() {
       selectedLine = stationLine;
+      activeBusLine = stationLine;
       if (activeSearchField == "from") {
         selectedFromStation = station;
         fromSearchController.text = stationName;
@@ -590,16 +581,20 @@ class _HomepagesState extends State<Homepages> {
       updateRoute();
     }
 
-    mapController?.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: LatLng(station["lat"], station["lng"]),
-          zoom: 17,
-          tilt: _defaultMapTilt,
-          bearing: _defaultMapBearing,
+    if (selectedFromStation != null && selectedStation != null) {
+      focusSelectedTrip();
+    } else {
+      mapController?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(station["lat"], station["lng"]),
+            zoom: 17,
+            tilt: _defaultMapTilt,
+            bearing: _defaultMapBearing,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   void resetStationSelection() {
@@ -730,15 +725,20 @@ class _HomepagesState extends State<Homepages> {
       final routeFromIndex = nearestRoutePointIndex(lineRoute, fromPosition);
       final routeToIndex = nearestRoutePointIndex(lineRoute, toPosition);
 
-      if (fromIndex <= toIndex && routeFromIndex <= routeToIndex) {
-        return lineRoute.sublist(routeFromIndex, routeToIndex + 1);
-      }
-      if (fromIndex > toIndex && routeFromIndex > routeToIndex) {
+      if (routeFromIndex <= routeToIndex) {
         return [
-          ...lineRoute.sublist(routeFromIndex),
-          ...lineRoute.sublist(0, routeToIndex + 1),
+          fromPosition,
+          ...lineRoute.sublist(routeFromIndex, routeToIndex + 1),
+          toPosition,
         ];
       }
+
+      return [
+        fromPosition,
+        ...lineRoute.sublist(routeFromIndex),
+        ...lineRoute.sublist(0, routeToIndex + 1),
+        toPosition,
+      ];
     }
 
     final fallbackPoints = <LatLng>[];
@@ -752,7 +752,14 @@ class _HomepagesState extends State<Homepages> {
       currentIndex = (currentIndex + 1) % tripLine.length;
     }
 
-    return fallbackPoints;
+    if (fallbackPoints.length > 1) {
+      return fallbackPoints;
+    }
+
+    return [
+      LatLng(selectedFromStation!["lat"], selectedFromStation!["lng"]),
+      LatLng(selectedStation!["lat"], selectedStation!["lng"]),
+    ];
   }
 
   int calculateRideMinutes() {
@@ -1048,7 +1055,7 @@ class _HomepagesState extends State<Homepages> {
   }
 
   Future<List<LatLng>> fetchRealRoute() async {
-    return fetchRouteForPoints(getSelectedLine());
+    return fetchRouteForPoints(getActiveBusLine());
   }
 
   Future<BitmapDescriptor> createStationDensityIcon(
@@ -1462,7 +1469,7 @@ class _HomepagesState extends State<Homepages> {
 
   //updates ETA station
   void updateAllStationETA() {
-    for (var station in getSelectedLine()) {
+    for (var station in getActiveBusLine()) {
       final stationId = station["id"];
 
       double minMinutes = double.infinity;
@@ -1557,7 +1564,7 @@ class _HomepagesState extends State<Homepages> {
         BusController.instance.busPositions[id] = newPos;
         BusController.instance.updateBusVisualState(id, route, idx);
 
-        for (var station in getSelectedLine()) {
+        for (var station in getActiveBusLine()) {
           LatLng stationLatLng = LatLng(station["lat"], station["lng"]);
 
           double dist = distanceBetween(newPos, stationLatLng);
@@ -1616,7 +1623,7 @@ class _HomepagesState extends State<Homepages> {
 
       double minMinutes = double.infinity;
 
-      for (var station in getSelectedLine()) {
+      for (var station in getActiveBusLine()) {
         double dist = distanceBetween(
           pos,
           LatLng(station["lat"], station["lng"]),
@@ -1643,6 +1650,11 @@ class _HomepagesState extends State<Homepages> {
     final showAllLines = selectedLine == "all";
     final hasTrackingPanel =
         selectedFromStation != null || selectedStation != null;
+    final shouldShowLineSelector =
+        !showStationSuggestions &&
+        !hasTrackingPanel &&
+        fromSearchController.text.isEmpty &&
+        searchController.text.isEmpty;
 
     return Scaffold(
       body: Stack(
@@ -1934,11 +1946,8 @@ class _HomepagesState extends State<Homepages> {
             ),
           ),
 
-          Positioned(
-            right: 16,
-            bottom: hasTrackingPanel ? 176 : 24,
-            child: _buildLineSelector(),
-          ),
+          if (shouldShowLineSelector)
+            Positioned(right: 16, bottom: 24, child: _buildLineSelector()),
 
           // App bar
           Positioned(
