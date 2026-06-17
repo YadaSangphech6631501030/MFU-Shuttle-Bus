@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
+import 'package:shuttle_bus_fronted/services/language_service.dart';
 import 'bus_controller.dart';
 import 'user_setting.dart';
 
@@ -285,9 +286,36 @@ class _HomepagesState extends State<Homepages> {
   }
 
   String lineLabel(String line) {
-    if (line == "line1") return "Line 1";
-    if (line == "line2") return "Line 2";
-    return "All";
+    if (line == "line1") return _t(en: "Line 1", th: "สาย 1");
+    if (line == "line2") return _t(en: "Line 2", th: "สาย 2");
+    return _t(en: "All", th: "ทั้งหมด");
+  }
+
+  String _t({required String en, required String th}) {
+    return LanguageService.text(en: en, th: th);
+  }
+
+  String _minuteText(String value) {
+    return _t(en: "$value min", th: "$value นาที");
+  }
+
+  String _peopleText(int value) {
+    return _t(en: "$value people", th: "$value คน");
+  }
+
+  String _busText(String busNumber) {
+    return _t(en: "Bus $busNumber", th: "รถ $busNumber");
+  }
+
+  String _statusLabel(String status) {
+    switch (status.toUpperCase()) {
+      case "HIGH":
+        return _t(en: "HIGH", th: "หนาแน่น");
+      case "MEDIUM":
+        return _t(en: "MEDIUM", th: "ปานกลาง");
+      default:
+        return _t(en: "LOW", th: "ปกติ");
+    }
   }
 
   bool stationInLine(Map<String, dynamic>? station, String line) {
@@ -774,10 +802,10 @@ class _HomepagesState extends State<Homepages> {
     final toStation = selectedStation;
     final nearestInfo = getNearestBusInfo(fromStation);
     final fromName = fromStation == null
-        ? "Choose start station"
+        ? _t(en: "Choose start station", th: "เลือกสถานีต้นทาง")
         : cleanStationName(fromStation);
     final toName = toStation == null
-        ? "Choose destination"
+        ? _t(en: "Choose destination", th: "เลือกสถานีปลายทาง")
         : cleanStationName(toStation);
     final bus = nearestInfo?["bus"] as Map<String, dynamic>?;
     final busNumber = bus?["busNumber"]?.toString() ?? "-";
@@ -847,10 +875,19 @@ class _HomepagesState extends State<Homepages> {
                       const SizedBox(height: 4),
                       Text(
                         fromStation == null || toStation == null
-                            ? "Select From and To to calculate your trip"
+                            ? _t(
+                                en: "Select From and To to calculate your trip",
+                                th: "เลือกต้นทางและปลายทางเพื่อคำนวณการเดินทาง",
+                              )
                             : nearestInfo == null
-                            ? "Waiting for bus location at your start station..."
-                            : "Bus $busNumber reaches your start station in about $eta min",
+                            ? _t(
+                                en: "Waiting for bus location at your start station...",
+                                th: "กำลังรอตำแหน่งรถที่สถานีต้นทางของคุณ",
+                              )
+                            : _t(
+                                en: "Bus $busNumber reaches your start station in about $eta min",
+                                th: "รถ $busNumber จะถึงสถานีต้นทางประมาณ $eta นาที",
+                              ),
                         style: GoogleFonts.kanit(
                           fontSize: 13,
                           color: Colors.grey.shade600,
@@ -859,34 +896,44 @@ class _HomepagesState extends State<Homepages> {
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  onPressed: () {
-                    setState(() {
-                      selectedStation = null;
-                      searchController.clear();
-                      showStationSuggestions = false;
-                      filteredStations.clear();
-                    });
-                  },
-                ),
               ],
             ),
             const SizedBox(height: 14),
             Row(
               children: [
-                Expanded(child: _trackingMetric("Wait", "$eta min")),
+                Expanded(
+                  child: _trackingMetric(
+                    _t(en: "Wait", th: "รอรถ"),
+                    _minuteText(eta),
+                  ),
+                ),
                 Container(width: 1, height: 34, color: Colors.grey.shade200),
-                Expanded(child: _trackingMetric("On bus", "$rideMinutes min")),
+                Expanded(
+                  child: _trackingMetric(
+                    _t(en: "On bus", th: "บนรถ"),
+                    _minuteText(rideMinutes),
+                  ),
+                ),
                 Container(width: 1, height: 34, color: Colors.grey.shade200),
-                Expanded(child: _trackingMetric("Total", "$totalMinutes min")),
+                Expanded(
+                  child: _trackingMetric(
+                    _t(en: "Total", th: "รวม"),
+                    _minuteText(totalMinutes),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
               nearestInfo == null
-                  ? "Distance to start station: -"
-                  : "Nearest bus: Bus $busNumber, $distance from your start station",
+                  ? _t(
+                      en: "Distance to start station: -",
+                      th: "ระยะทางถึงสถานีต้นทาง: -",
+                    )
+                  : _t(
+                      en: "Nearest bus: Bus $busNumber, $distance from your start station",
+                      th: "รถที่ใกล้ที่สุด: รถ $busNumber ห่างจากสถานีต้นทาง $distance",
+                    ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.kanit(
@@ -960,7 +1007,7 @@ class _HomepagesState extends State<Homepages> {
       onTap: () => selectLine(line),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        width: 84,
+        width: 102,
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
@@ -981,12 +1028,16 @@ class _HomepagesState extends State<Homepages> {
               color: isSelected ? Colors.white : color,
             ),
             const SizedBox(width: 5),
-            Text(
-              lineLabel(line),
-              style: GoogleFonts.kanit(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: isSelected ? Colors.white : Colors.black87,
+            Flexible(
+              child: Text(
+                lineLabel(line),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.kanit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : Colors.black87,
+                ),
               ),
             ),
           ],
@@ -1274,20 +1325,20 @@ class _HomepagesState extends State<Homepages> {
                   children: [
                     _stationMetric(
                       icon: Icons.directions_bus_rounded,
-                      label: "Bus Arrival",
-                      value: "$arrivalMinutes min",
+                      label: _t(en: "Bus Arrival", th: "รถจะมาถึง"),
+                      value: _minuteText(arrivalMinutes.toString()),
                     ),
                     const SizedBox(height: 8),
                     _stationMetric(
                       icon: Icons.people_outline,
-                      label: "People Waiting",
-                      value: "$waiting people",
+                      label: _t(en: "People Waiting", th: "ผู้โดยสารรออยู่"),
+                      value: _peopleText(waiting),
                     ),
                     const SizedBox(height: 8),
                     _stationMetric(
                       icon: Icons.location_on_outlined,
-                      label: "Station Status",
-                      value: status.toUpperCase(),
+                      label: _t(en: "Station Status", th: "สถานะสถานี"),
+                      value: _statusLabel(status),
                       valueColor: statusColor,
                     ),
                   ],
@@ -1644,377 +1695,400 @@ class _HomepagesState extends State<Homepages> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedTripPoints = getSelectedTripPoints();
-    final selectedLinePoints = getSelectedLinePoints();
-    final activeLineColor = lineColor(selectedLine);
-    final showAllLines = selectedLine == "all";
-    final hasTrackingPanel =
-        selectedFromStation != null || selectedStation != null;
-    final shouldShowLineSelector =
-        !showStationSuggestions &&
-        !hasTrackingPanel &&
-        fromSearchController.text.isEmpty &&
-        searchController.text.isEmpty;
+    return ValueListenableBuilder<String>(
+      valueListenable: LanguageService.notifier,
+      builder: (context, _, child) {
+        final selectedTripPoints = getSelectedTripPoints();
+        final selectedLinePoints = getSelectedLinePoints();
+        final activeLineColor = lineColor(selectedLine);
+        final showAllLines = selectedLine == "all";
+        final hasTrackingPanel =
+            selectedFromStation != null || selectedStation != null;
+        final shouldShowLineSelector =
+            !showStationSuggestions &&
+            !hasTrackingPanel &&
+            fromSearchController.text.isEmpty &&
+            searchController.text.isEmpty;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: widget.initialMapTarget ?? _mSquareStationCenter,
-              zoom: currentZoom,
-              tilt: _defaultMapTilt,
-              bearing: _defaultMapBearing,
-            ),
-            onMapCreated: (controller) {
-              mapController = controller;
-              focusInitialMapTarget();
-            },
-            onCameraMove: handleCameraMove,
-            onCameraIdle: adjustTiltForCurrentZoom,
-            onTap: (_) => resetStationSelection(),
-            zoomControlsEnabled: false,
-            minMaxZoomPreference: const MinMaxZoomPreference(13.8, 19),
-            mapToolbarEnabled: false,
-            myLocationButtonEnabled: false,
-            buildingsEnabled: true,
-            rotateGesturesEnabled: true,
-            tiltGesturesEnabled: true,
-            polylines: {
-              if (showAllLines) ...{
-                Polyline(
-                  polylineId: const PolylineId("line1"),
-                  points: route1.isNotEmpty ? route1 : getLineLatLngs(line1),
-                  color: lineColor("line1"),
-                  width: 4,
+        return Scaffold(
+          body: Stack(
+            children: [
+              GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: widget.initialMapTarget ?? _mSquareStationCenter,
+                  zoom: currentZoom,
+                  tilt: _defaultMapTilt,
+                  bearing: _defaultMapBearing,
                 ),
-                Polyline(
-                  polylineId: const PolylineId("line2"),
-                  points: route2.isNotEmpty ? route2 : getLineLatLngs(line2),
-                  color: lineColor("line2"),
-                  width: 4,
-                ),
-              } else if (selectedLinePoints.length > 1)
-                Polyline(
-                  polylineId: PolylineId(selectedLine),
-                  points: selectedLinePoints,
-                  color: activeLineColor,
-                  width: 5,
-                ),
-              if (selectedTripPoints.length > 1)
-                Polyline(
-                  polylineId: const PolylineId("selected-station-route"),
-                  points: selectedTripPoints,
-                  color: const Color(0xFF1A73E8),
-                  width: 5,
-                ),
-            },
-            markers: {
-              ...getSelectedLine().map((station) {
-                Map<String, dynamic>? stationMatch;
+                onMapCreated: (controller) {
+                  mapController = controller;
+                  focusInitialMapTarget();
+                },
+                onCameraMove: handleCameraMove,
+                onCameraIdle: adjustTiltForCurrentZoom,
+                onTap: (_) => resetStationSelection(),
+                zoomControlsEnabled: false,
+                minMaxZoomPreference: const MinMaxZoomPreference(13.8, 19),
+                mapToolbarEnabled: false,
+                myLocationButtonEnabled: false,
+                buildingsEnabled: true,
+                rotateGesturesEnabled: true,
+                tiltGesturesEnabled: true,
+                polylines: {
+                  if (showAllLines) ...{
+                    Polyline(
+                      polylineId: const PolylineId("line1"),
+                      points: route1.isNotEmpty
+                          ? route1
+                          : getLineLatLngs(line1),
+                      color: lineColor("line1"),
+                      width: 4,
+                    ),
+                    Polyline(
+                      polylineId: const PolylineId("line2"),
+                      points: route2.isNotEmpty
+                          ? route2
+                          : getLineLatLngs(line2),
+                      color: lineColor("line2"),
+                      width: 4,
+                    ),
+                  } else if (selectedLinePoints.length > 1)
+                    Polyline(
+                      polylineId: PolylineId(selectedLine),
+                      points: selectedLinePoints,
+                      color: activeLineColor,
+                      width: 5,
+                    ),
+                  if (selectedTripPoints.length > 1)
+                    Polyline(
+                      polylineId: const PolylineId("selected-station-route"),
+                      points: selectedTripPoints,
+                      color: const Color(0xFF1A73E8),
+                      width: 5,
+                    ),
+                },
+                markers: {
+                  ...getSelectedLine().map((station) {
+                    Map<String, dynamic>? stationMatch;
 
-                try {
-                  stationMatch = stationData.firstWhere(
-                    (s) => s["id"] == station["id"],
-                  );
-                } catch (e) {
-                  stationMatch = null;
-                }
+                    try {
+                      stationMatch = stationData.firstWhere(
+                        (s) => s["id"] == station["id"],
+                      );
+                    } catch (e) {
+                      stationMatch = null;
+                    }
 
-                int waiting = stationMatch?["waiting"] ?? 0;
-                String status = stationMatch?["status"] ?? "LOW";
-                final isSelected =
-                    selectedStation?["id"]?.toString() ==
-                        station["id"]?.toString() ||
-                    selectedFromStation?["id"]?.toString() ==
-                        station["id"]?.toString();
-
-                return Marker(
-                  markerId: MarkerId("station-${station["id"]}"),
-                  position: LatLng(station["lat"], station["lng"]),
-                  anchor: const Offset(0.5, 0.5),
-                  zIndexInt: 2,
-                  icon: stationIconFor(waiting, status, isSelected),
-                  infoWindow: InfoWindow(
-                    title: cleanStationName(station),
-                    snippet: "$waiting people - $status",
-                  ),
-                  onTap: () {
-                    final eta = calculateETA(
-                      LatLng(station["lat"], station["lng"]),
-                    );
-
-                    _showStationDetails(
-                      station: station,
-                      waiting: waiting,
-                      status: status,
-                      arrivalMinutes: eta.ceil(),
-                    );
-                  },
-                );
-              }),
-              ...BusController.instance.busData
-                  .where((bus) {
-                    final id = bus["busNumber"].toString();
-                    return BusController.instance.busPositions[id] != null;
-                  })
-                  .map((bus) {
-                    final id = bus["busNumber"].toString();
-                    final pos = BusController.instance.busPositions[id]!;
+                    int waiting = stationMatch?["waiting"] ?? 0;
+                    String status = stationMatch?["status"] ?? "LOW";
+                    final isSelected =
+                        selectedStation?["id"]?.toString() ==
+                            station["id"]?.toString() ||
+                        selectedFromStation?["id"]?.toString() ==
+                            station["id"]?.toString();
 
                     return Marker(
-                      markerId: MarkerId("bus-$id"),
-                      position: pos,
+                      markerId: MarkerId("station-${station["id"]}"),
+                      position: LatLng(station["lat"], station["lng"]),
                       anchor: const Offset(0.5, 0.5),
-                      zIndexInt: 10,
-                      icon: busIconFor(id),
-                      infoWindow: InfoWindow(title: "Bus $id"),
+                      zIndexInt: 2,
+                      icon: stationIconFor(waiting, status, isSelected),
+                      infoWindow: InfoWindow(
+                        title: cleanStationName(station),
+                        snippet:
+                            "${_peopleText(waiting)} - ${_statusLabel(status)}",
+                      ),
+                      onTap: () {
+                        final eta = calculateETA(
+                          LatLng(station["lat"], station["lng"]),
+                        );
+
+                        _showStationDetails(
+                          station: station,
+                          waiting: waiting,
+                          status: status,
+                          arrivalMinutes: eta.ceil(),
+                        );
+                      },
                     );
                   }),
-            },
-          ),
+                  ...BusController.instance.busData
+                      .where((bus) {
+                        final id = bus["busNumber"].toString();
+                        return BusController.instance.busPositions[id] != null;
+                      })
+                      .map((bus) {
+                        final id = bus["busNumber"].toString();
+                        final pos = BusController.instance.busPositions[id]!;
 
-          if (hasTrackingPanel) buildTrackingPanel(),
+                        return Marker(
+                          markerId: MarkerId("bus-$id"),
+                          position: pos,
+                          anchor: const Offset(0.5, 0.5),
+                          zIndexInt: 10,
+                          icon: busIconFor(id),
+                          infoWindow: InfoWindow(title: _busText(id)),
+                        );
+                      }),
+                },
+              ),
 
-          // Search station tab below app bar
-          Positioned(
-            top: 92,
-            left: 16,
-            right: 16,
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFECECEC)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
+              if (hasTrackingPanel) buildTrackingPanel(),
+
+              // Search station tab below app bar
+              Positioned(
+                top: 92,
+                left: 16,
+                right: 16,
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFECECEC)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFFD2232A),
-                                width: 3,
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFFD2232A),
+                                    width: 3,
+                                  ),
+                                ),
                               ),
-                            ),
+                              Container(
+                                width: 2,
+                                height: 38,
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                color: const Color(0xFFE0E0E0),
+                              ),
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade700,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
                           ),
-                          Container(
-                            width: 2,
-                            height: 38,
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            color: const Color(0xFFE0E0E0),
-                          ),
-                          Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade700,
-                              shape: BoxShape.circle,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _stationSearchField(
+                                  controller: fromSearchController,
+                                  hintText: _t(
+                                    en: "From station",
+                                    th: "สถานีต้นทาง",
+                                  ),
+                                  icon: Icons.my_location,
+                                  onTap: () => searchStations(
+                                    fromSearchController.text,
+                                    "from",
+                                  ),
+                                  onChanged: (value) =>
+                                      searchStations(value, "from"),
+                                  onClear: () {
+                                    fromSearchController.clear();
+                                    setState(() {
+                                      selectedFromStation = null;
+                                      showStationSuggestions = false;
+                                      filteredStations.clear();
+                                    });
+                                  },
+                                  textInputAction: TextInputAction.next,
+                                ),
+                                const SizedBox(height: 8),
+                                _stationSearchField(
+                                  controller: searchController,
+                                  hintText: _t(
+                                    en: "To station",
+                                    th: "สถานีปลายทาง",
+                                  ),
+                                  icon: Icons.location_on_outlined,
+                                  onTap: () => searchStations(
+                                    searchController.text,
+                                    "to",
+                                  ),
+                                  onChanged: (value) =>
+                                      searchStations(value, "to"),
+                                  onClear: () {
+                                    searchController.clear();
+                                    setState(() {
+                                      selectedStation = null;
+                                      showStationSuggestions = false;
+                                      filteredStations.clear();
+                                    });
+                                  },
+                                  textInputAction: TextInputAction.search,
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _stationSearchField(
-                              controller: fromSearchController,
-                              hintText: "From station",
-                              icon: Icons.my_location,
-                              onTap: () => searchStations(
-                                fromSearchController.text,
-                                "from",
-                              ),
-                              onChanged: (value) =>
-                                  searchStations(value, "from"),
-                              onClear: () {
-                                fromSearchController.clear();
-                                setState(() {
-                                  selectedFromStation = null;
-                                  showStationSuggestions = false;
-                                  filteredStations.clear();
-                                });
-                              },
-                              textInputAction: TextInputAction.next,
+                    ),
+                    if (showStationSuggestions)
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        constraints: const BoxConstraints(maxHeight: 188),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.14),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
-                            const SizedBox(height: 8),
-                            _stationSearchField(
-                              controller: searchController,
-                              hintText: "To station",
-                              icon: Icons.location_on_outlined,
-                              onTap: () =>
-                                  searchStations(searchController.text, "to"),
-                              onChanged: (value) => searchStations(value, "to"),
-                              onClear: () {
-                                searchController.clear();
-                                setState(() {
-                                  selectedStation = null;
-                                  showStationSuggestions = false;
-                                  filteredStations.clear();
-                                });
-                              },
-                              textInputAction: TextInputAction.search,
+                          ],
+                        ),
+                        child: Scrollbar(
+                          child: ListView.separated(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: filteredStations.length,
+                            separatorBuilder: (context, index) =>
+                                Divider(height: 1, color: Colors.grey.shade200),
+                            itemBuilder: (context, index) {
+                              final station = filteredStations[index];
+                              final name = cleanStationName(station);
+                              final isFavorite = favoriteStationIds.contains(
+                                station["id"]?.toString(),
+                              );
+
+                              return InkWell(
+                                onTap: () => selectStation(station),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 9,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isFavorite
+                                            ? Icons.favorite
+                                            : Icons.directions_bus,
+                                        size: 16,
+                                        color: isFavorite
+                                            ? const Color(0xFFD2232A)
+                                            : Colors.grey,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.kanit(
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              if (shouldShowLineSelector)
+                Positioned(right: 16, bottom: 24, child: _buildLineSelector()),
+
+              // App bar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 88,
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top,
+                    left: 16,
+                    right: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Title text
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'MFU ',
+                              style: GoogleFonts.kanit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFD2232A),
+                              ),
+                            ),
+                            TextSpan(
+                              text: 'SHUTTLE BUS',
+                              style: GoogleFonts.kanit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFBC9945),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                if (showStationSuggestions)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    constraints: const BoxConstraints(maxHeight: 260),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.14),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Scrollbar(
-                      child: ListView.separated(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        itemCount: filteredStations.length,
-                        separatorBuilder: (context, index) =>
-                            Divider(height: 1, color: Colors.grey.shade200),
-                        itemBuilder: (context, index) {
-                          final station = filteredStations[index];
-                          final name = cleanStationName(station);
-                          final isFavorite = favoriteStationIds.contains(
-                            station["id"]?.toString(),
-                          );
 
-                          return InkWell(
-                            onTap: () => selectStation(station),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 13,
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    isFavorite
-                                        ? Icons.favorite
-                                        : Icons.directions_bus,
-                                    size: 18,
-                                    color: isFavorite
-                                        ? const Color(0xFFD2232A)
-                                        : Colors.grey,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      name,
-                                      style: GoogleFonts.kanit(fontSize: 13),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                      // Menu button
+                      IconButton(
+                        icon: const Icon(Icons.menu, color: Color(0xFFD2232A)),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const UserSetting(),
                             ),
                           );
                         },
                       ),
-                    ),
+                    ],
                   ),
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
-
-          if (shouldShowLineSelector)
-            Positioned(right: 16, bottom: 24, child: _buildLineSelector()),
-
-          // App bar
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 88,
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
-                left: 16,
-                right: 16,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Title text
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'MFU ',
-                          style: GoogleFonts.kanit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFD2232A),
-                          ),
-                        ),
-                        TextSpan(
-                          text: 'SHUTTLE BUS',
-                          style: GoogleFonts.kanit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFBC9945),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Menu button
-                  IconButton(
-                    icon: const Icon(Icons.menu, color: Color(0xFFD2232A)),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const UserSetting(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

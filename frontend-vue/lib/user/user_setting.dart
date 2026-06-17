@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/language_service.dart';
 import '../admin/report_pages.dart';
 import 'bus_station.dart';
 import 'favorite_station.dart';
@@ -14,165 +15,180 @@ class UserSetting extends StatefulWidget {
 class _UserSettingState extends State<UserSetting> {
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.of(context).padding.top;
-    const homeAppBarHeight = 88.0;
-    const backButtonSize = 44.0;
-    final backButtonTop =
-        (topPadding + ((homeAppBarHeight - topPadding - backButtonSize) / 2))
-            .clamp(0.0, homeAppBarHeight - backButtonSize);
+    return ValueListenableBuilder<String>(
+      valueListenable: LanguageService.notifier,
+      builder: (context, selectedLanguage, _) {
+        String text({required String en, required String th}) {
+          return selectedLanguage == LanguageService.thai ? th : en;
+        }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(homeAppBarHeight),
-        child: Material(
-          color: Colors.white,
-          elevation: 0,
-          child: Container(
-            height: homeAppBarHeight,
-            decoration: const BoxDecoration(
+        final topPadding = MediaQuery.of(context).padding.top;
+        const homeAppBarHeight = 88.0;
+        const backButtonSize = 44.0;
+        final backButtonTop =
+            (topPadding +
+                    ((homeAppBarHeight - topPadding - backButtonSize) / 2))
+                .clamp(0.0, homeAppBarHeight - backButtonSize);
+
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(homeAppBarHeight),
+            child: Material(
               color: Colors.white,
-              border: Border(
-                bottom: BorderSide(color: Color(0xFFE0E0E0), width: 1),
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  top: topPadding,
-                  right: 16,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: RichText(
-                      text: const TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'MFU ',
-                            style: TextStyle(
-                              color: Color(0xFFD2232A),
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                            ),
-                          ),
-                          TextSpan(
-                            text: 'SHUTTLE BUS',
-                            style: TextStyle(
-                              color: Color(0xFFBC9945),
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+              elevation: 0,
+              child: Container(
+                height: homeAppBarHeight,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    bottom: BorderSide(color: Color(0xFFE0E0E0), width: 1),
                   ),
                 ),
-                Positioned(
-                  left: 16,
-                  top: backButtonTop,
-                  child: SizedBox(
-                    width: backButtonSize,
-                    height: backButtonSize,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      icon: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: Colors.black,
-                          size: 18,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      top: topPadding,
+                      right: 16,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: RichText(
+                          text: const TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'MFU ',
+                                style: TextStyle(
+                                  color: Color(0xFFD2232A),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'SHUTTLE BUS',
+                                style: TextStyle(
+                                  color: Color(0xFFBC9945),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      onPressed: () {
-                        Navigator.pop(context);
+                    ),
+                    Positioned(
+                      left: 16,
+                      top: backButtonTop,
+                      child: SizedBox(
+                        width: backButtonSize,
+                        height: backButtonSize,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.black,
+                              size: 18,
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          body: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  children: [
+                    _sectionTitle(text(en: 'Transit', th: 'การเดินทาง')),
+                    _settingTile(
+                      icon: Icons.directions_bus,
+                      title: text(en: 'MFU Transit', th: 'รถรับส่ง มฟล.'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BusStationPage(),
+                          ),
+                        );
                       },
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              children: [
-                _sectionTitle('Transit'),
-                _settingTile(
-                  icon: Icons.directions_bus,
-                  title: 'MFU Transit',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BusStationPage(),
+                    _settingTile(
+                      icon: Icons.favorite_border,
+                      title: text(en: 'Favorite Stations', th: 'สถานีโปรด'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FavoriteStationPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    _sectionTitle(text(en: 'Preferences', th: 'การตั้งค่า')),
+                    _settingTile(
+                      icon: Icons.settings,
+                      title: text(en: 'Settings', th: 'ตั้งค่า'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const Setting(),
+                          ),
+                        );
+                      },
+                    ),
+                    _sectionTitle(text(en: 'Support', th: 'ช่วยเหลือ')),
+                    _settingTile(
+                      icon: Icons.help_outline,
+                      title: text(
+                        en: 'Help & Feedback',
+                        th: 'ช่วยเหลือและข้อเสนอแนะ',
                       ),
-                    );
-                  },
-                ),
-                _settingTile(
-                  icon: Icons.favorite_border,
-                  title: 'Favorite Stations',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const FavoriteStationPage(),
-                      ),
-                    );
-                  },
-                ),
-                _sectionTitle('Preferences'),
-                _settingTile(
-                  icon: Icons.settings,
-                  title: 'Settings',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const Setting()),
-                    );
-                  },
-                ),
-                _sectionTitle('Support'),
-                _settingTile(
-                  icon: Icons.help_outline,
-                  title: 'Help & Feedback',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ReportPage(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SafeArea(
-            top: false,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Text(
-                'Version 1.0.0',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.black45,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ReportPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
-            ),
+              const SafeArea(
+                top: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Text(
+                    'Version 1.0.0',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.black45,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'services/language_service.dart';
 import 'user/signin01.dart';
 import 'user/bus_controller.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await LanguageService.load();
   BusController.instance.start();
 
   runApp(const MyApp());
