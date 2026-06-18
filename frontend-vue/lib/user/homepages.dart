@@ -78,17 +78,16 @@ class _HomepagesState extends State<Homepages> {
   };
 
   // statuses for bus
-  Map<String, double> busProgress =
-      {}; // ÃƒÂ Ã‚Â¹Ã¢â€šÂ¬ÃƒÂ Ã‚Â¸Ã‚ÂÃƒÂ Ã‚Â¹Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¸Ã…Â¡ index ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂºÃƒÂ Ã‚Â¸Ã‚Â±ÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â¸ÃƒÂ Ã‚Â¸Ã…Â¡ÃƒÂ Ã‚Â¸Ã‚Â±ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ÃƒÂ Ã‚Â¹Ã†â€™ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ route ÃƒÂ Ã‚Â¸Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¸Ã‚Â£ÃƒÂ Ã‚Â¸Ã¢â‚¬â€œÃƒÂ Ã‚Â¹Ã‚ÂÃƒÂ Ã‚Â¸Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â¥ÃƒÂ Ã‚Â¸Ã‚Â°ÃƒÂ Ã‚Â¸Ã¢â‚¬Å¾ÃƒÂ Ã‚Â¸Ã‚Â±ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢
-  Map<String, DateTime?> busWaitUntil =
-      {}; // ÃƒÂ Ã‚Â¹Ã¢â€šÂ¬ÃƒÂ Ã‚Â¸Ã‚Â§ÃƒÂ Ã‚Â¸Ã‚Â¥ÃƒÂ Ã‚Â¸Ã‚Â²ÃƒÂ Ã‚Â¸Ã¢â‚¬â€ÃƒÂ Ã‚Â¸Ã‚ÂµÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â£ÃƒÂ Ã‚Â¸Ã¢â‚¬â€œÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â°ÃƒÂ Ã‚Â¹Ã¢â€šÂ¬ÃƒÂ Ã‚Â¸Ã‚Â£ÃƒÂ Ã‚Â¸Ã‚Â´ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â¡ÃƒÂ Ã‚Â¸Ã‚Â§ÃƒÂ Ã‚Â¸Ã‚Â´ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¸Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¹Ã¢â‚¬Å¾ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂÃƒÂ Ã‚Â¹Ã¢â‚¬Â° (ÃƒÂ Ã‚Â¹Ã†â€™ÃƒÂ Ã‚Â¸Ã…Â ÃƒÂ Ã‚Â¹Ã¢â‚¬Â°ÃƒÂ Ã‚Â¸Ã‚Â«ÃƒÂ Ã‚Â¸Ã‚Â¢ÃƒÂ Ã‚Â¸Ã‚Â¸ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂÃƒÂ Ã‚Â¸Ã‚ÂªÃƒÂ Ã‚Â¸Ã¢â‚¬â€œÃƒÂ Ã‚Â¸Ã‚Â²ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ÃƒÂ Ã‚Â¸Ã‚Âµ)
-  Map<String, String?> lastStationId =
-      {}; // ÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â³ÃƒÂ Ã‚Â¸Ã‚Â§ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â²ÃƒÂ Ã‚Â¸Ã‚ÂªÃƒÂ Ã‚Â¸Ã¢â‚¬â€œÃƒÂ Ã‚Â¸Ã‚Â²ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ÃƒÂ Ã‚Â¸Ã‚ÂµÃƒÂ Ã‚Â¸Ã‚Â¥ÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â²ÃƒÂ Ã‚Â¸Ã‚ÂªÃƒÂ Ã‚Â¸Ã‚Â¸ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂÃƒÂ Ã‚Â¸Ã¢â‚¬â€ÃƒÂ Ã‚Â¸Ã‚ÂµÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂÃƒÂ Ã‚Â¸Ã¢â‚¬Å¾ÃƒÂ Ã‚Â¸Ã‚Â·ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã¢â‚¬â€ÃƒÂ Ã‚Â¸Ã‚ÂµÃƒÂ Ã‚Â¹Ã‹â€ ÃƒÂ Ã‚Â¹Ã¢â‚¬Å¾ÃƒÂ Ã‚Â¸Ã‚Â«ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ (ÃƒÂ Ã‚Â¸Ã‚ÂÃƒÂ Ã‚Â¸Ã‚Â±ÃƒÂ Ã‚Â¸Ã¢â€žÂ¢ÃƒÂ Ã‚Â¸Ã‹â€ ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã¢â‚¬ÂÃƒÂ Ã‚Â¸Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¹Ã¢â‚¬Â°ÃƒÂ Ã‚Â¸Ã‚Â³)
+  Map<String, double> busProgress = {};
+  Map<String, DateTime?> busWaitUntil = {};
+  Map<String, String?> lastStationId = {};
 
   double speed = 1.2;
   List<LatLng> route = [];
   List<LatLng> route1 = [];
   List<LatLng> route2 = [];
+  List<LatLng> selectedTripRoute = [];
+  int selectedTripRouteRequestId = 0;
 
   //BusTimeline
   Widget busTimeline(List<Map<String, dynamic>> stations, double progress) {
@@ -151,9 +150,7 @@ class _HomepagesState extends State<Homepages> {
   Widget buildReportItem(IconData icon, String title, Color color) {
     return GestureDetector(
       onTap: () {
-        debugPrint(
-          "ÃƒÂ Ã‚Â¹Ã¢â€šÂ¬ÃƒÂ Ã‚Â¸Ã‚Â¥ÃƒÂ Ã‚Â¸Ã‚Â·ÃƒÂ Ã‚Â¸Ã‚Â­ÃƒÂ Ã‚Â¸Ã‚Â: $title",
-        );
+        debugPrint("Report tapped: $title");
       },
       child: Container(
         decoration: BoxDecoration(
@@ -193,17 +190,26 @@ class _HomepagesState extends State<Homepages> {
 
       if (!mounted) return;
 
+      final sortedLine1 =
+          lines[0].map((station) => Map<String, dynamic>.from(station)).toList()
+            ..sort(
+              (a, b) =>
+                  _stationNumber(a["id"]).compareTo(_stationNumber(b["id"])),
+            );
+      final sortedLine2 =
+          lines[1].map((station) => Map<String, dynamic>.from(station)).toList()
+            ..sort(
+              (a, b) =>
+                  _stationNumber(a["id"]).compareTo(_stationNumber(b["id"])),
+            );
+
       setState(() {
         line1
           ..clear()
-          ..addAll(
-            lines[0].map((station) => Map<String, dynamic>.from(station)),
-          );
+          ..addAll(sortedLine1);
         line2
           ..clear()
-          ..addAll(
-            lines[1].map((station) => Map<String, dynamic>.from(station)),
-          );
+          ..addAll(sortedLine2);
         stationData = stationById.values.toList();
       });
 
@@ -336,6 +342,65 @@ class _HomepagesState extends State<Homepages> {
       return "line2";
     }
     return selectedLine;
+  }
+
+  bool _lineContainsStation(
+    List<Map<String, dynamic>> line,
+    String? stationId,
+  ) {
+    if (stationId == null) return false;
+    return line.any((station) => station["id"]?.toString() == stationId);
+  }
+
+  List<Map<String, dynamic>> _stationsForLineKey(String line) {
+    return line == "line1" ? line1 : line2;
+  }
+
+  List<LatLng> _routeForLineKey(String line) {
+    return line == "line1" ? route1 : route2;
+  }
+
+  String? _bestTripLineKeyFor(
+    Map<String, dynamic>? fromStation,
+    Map<String, dynamic>? toStation, {
+    String? preferredLine,
+  }) {
+    final fromId = fromStation?["id"]?.toString();
+    final toId = toStation?["id"]?.toString();
+    if (fromId == null || toId == null) return null;
+
+    final candidates = <String>[];
+    if (_lineContainsStation(line1, fromId) &&
+        _lineContainsStation(line1, toId)) {
+      candidates.add("line1");
+    }
+    if (_lineContainsStation(line2, fromId) &&
+        _lineContainsStation(line2, toId)) {
+      candidates.add("line2");
+    }
+    if (candidates.isEmpty) return null;
+
+    if (candidates.length == 1) return candidates.first;
+
+    candidates.sort((a, b) {
+      final aPoints = _buildTripPointsForLine(
+        _stationsForLineKey(a),
+        _routeForLineKey(a),
+        fromStation!,
+        toStation!,
+      );
+      final bPoints = _buildTripPointsForLine(
+        _stationsForLineKey(b),
+        _routeForLineKey(b),
+        fromStation,
+        toStation,
+      );
+      return _pointsDistanceMeters(
+        aPoints,
+      ).compareTo(_pointsDistanceMeters(bPoints));
+    });
+
+    return candidates.first;
   }
 
   void selectLine(String line) {
@@ -590,11 +655,24 @@ class _HomepagesState extends State<Homepages> {
   void selectStation(Map<String, dynamic> station) {
     final stationName = cleanStationName(station);
     final stationLine = lineForStation(station);
-    final shouldUpdateLine = selectedLine != stationLine;
+    final nextFromStation = activeSearchField == "from"
+        ? station
+        : selectedFromStation;
+    final nextToStation = activeSearchField == "from"
+        ? selectedStation
+        : station;
+    final nextLine =
+        _bestTripLineKeyFor(
+          nextFromStation,
+          nextToStation,
+          preferredLine: selectedLine == "all" ? null : selectedLine,
+        ) ??
+        stationLine;
+    final shouldUpdateLine = selectedLine != nextLine;
 
     setState(() {
-      selectedLine = stationLine;
-      activeBusLine = stationLine;
+      selectedLine = nextLine;
+      activeBusLine = nextLine;
       if (activeSearchField == "from") {
         selectedFromStation = station;
         fromSearchController.text = stationName;
@@ -611,8 +689,12 @@ class _HomepagesState extends State<Homepages> {
     }
 
     if (selectedFromStation != null && selectedStation != null) {
-      focusSelectedTrip();
+      updateSelectedTripRoute(focusAfterUpdate: true);
     } else {
+      selectedTripRouteRequestId++;
+      setState(() {
+        selectedTripRoute = [];
+      });
       mapController?.animateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(
@@ -632,11 +714,82 @@ class _HomepagesState extends State<Homepages> {
     setState(() {
       selectedFromStation = null;
       selectedStation = null;
+      selectedLine = "all";
+      selectedTripRoute = [];
       showStationSuggestions = false;
       filteredStations.clear();
       fromSearchController.clear();
       searchController.clear();
     });
+  }
+
+  void hideSearchOverlay({bool resetLineWhenEmpty = false}) {
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      showStationSuggestions = false;
+      filteredStations.clear();
+      if (resetLineWhenEmpty &&
+          selectedFromStation == null &&
+          selectedStation == null) {
+        selectedLine = "all";
+      }
+    });
+  }
+
+  void clearTripSearch() {
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      selectedFromStation = null;
+      selectedStation = null;
+      selectedLine = "all";
+      selectedTripRoute = [];
+      showStationSuggestions = false;
+      filteredStations.clear();
+      fromSearchController.clear();
+      searchController.clear();
+    });
+  }
+
+  void swapTripStations() {
+    if (selectedFromStation == null && selectedStation == null) return;
+
+    final nextFromStation = selectedStation;
+    final nextToStation = selectedFromStation;
+    final nextLine =
+        _bestTripLineKeyFor(
+          nextFromStation,
+          nextToStation,
+          preferredLine: selectedLine == "all" ? null : selectedLine,
+        ) ??
+        selectedLine;
+
+    setState(() {
+      selectedFromStation = nextFromStation;
+      selectedStation = nextToStation;
+      selectedLine = nextLine;
+      if (nextLine != "all") {
+        activeBusLine = nextLine;
+      }
+      fromSearchController.text = nextFromStation == null
+          ? ""
+          : cleanStationName(nextFromStation);
+      searchController.text = nextToStation == null
+          ? ""
+          : cleanStationName(nextToStation);
+      showStationSuggestions = false;
+      filteredStations.clear();
+    });
+
+    if (selectedFromStation != null && selectedStation != null) {
+      updateSelectedTripRoute(focusAfterUpdate: true);
+    } else {
+      selectedTripRouteRequestId++;
+      setState(() {
+        selectedTripRoute = [];
+      });
+    }
   }
 
   Map<String, dynamic>? getNearestBusInfo(Map<String, dynamic>? station) {
@@ -675,20 +828,12 @@ class _HomepagesState extends State<Homepages> {
   }
 
   List<Map<String, dynamic>>? getTripLineStations() {
-    final fromId = selectedFromStation?["id"]?.toString();
-    final toId = selectedStation?["id"]?.toString();
-    if (fromId == null || toId == null) return null;
-
-    final lineOptions = [line1, line2];
-    for (final line in lineOptions) {
-      final hasFrom = line.any(
-        (station) => station["id"]?.toString() == fromId,
-      );
-      final hasTo = line.any((station) => station["id"]?.toString() == toId);
-      if (hasFrom && hasTo) return line;
-    }
-
-    return null;
+    final lineKey = _bestTripLineKeyFor(
+      selectedFromStation,
+      selectedStation,
+      preferredLine: selectedLine == "all" ? null : selectedLine,
+    );
+    return lineKey == null ? null : _stationsForLineKey(lineKey);
   }
 
   double calculateRideDistanceMeters() {
@@ -719,76 +864,202 @@ class _HomepagesState extends State<Homepages> {
     return nearestIndex;
   }
 
-  List<LatLng> getSelectedTripPoints() {
-    if (selectedFromStation == null || selectedStation == null) return [];
-
-    final tripLine = getTripLineStations();
-    if (tripLine == null || tripLine.isEmpty) {
-      return [
-        LatLng(selectedFromStation!["lat"], selectedFromStation!["lng"]),
-        LatLng(selectedStation!["lat"], selectedStation!["lng"]),
-      ];
+  List<int> nearestRoutePointIndexes(
+    List<LatLng> routePoints,
+    LatLng target, {
+    int limit = 12,
+  }) {
+    final indexedDistances = <MapEntry<int, double>>[];
+    for (var i = 0; i < routePoints.length; i++) {
+      indexedDistances.add(
+        MapEntry(i, distanceBetween(routePoints[i], target)),
+      );
     }
 
-    final fromId = selectedFromStation!["id"]?.toString();
-    final toId = selectedStation!["id"]?.toString();
-    final fromIndex = tripLine.indexWhere(
+    indexedDistances.sort((a, b) => a.value.compareTo(b.value));
+    return indexedDistances
+        .take(limit.clamp(1, routePoints.length))
+        .map((entry) => entry.key)
+        .toList();
+  }
+
+  List<Map<String, dynamic>> _orderedStationsBetween(
+    List<Map<String, dynamic>> line,
+    String fromId,
+    String toId,
+  ) {
+    final fromIndex = line.indexWhere(
       (station) => station["id"]?.toString() == fromId,
     );
-    final toIndex = tripLine.indexWhere(
+    final toIndex = line.indexWhere(
       (station) => station["id"]?.toString() == toId,
     );
-
     if (fromIndex < 0 || toIndex < 0) return [];
+    if (fromIndex == toIndex) return [line[fromIndex]];
 
-    final lineRoute = identical(tripLine, line1) ? route1 : route2;
-    if (lineRoute.length > 1) {
-      final fromPosition = LatLng(
-        selectedFromStation!["lat"],
-        selectedFromStation!["lng"],
-      );
-      final toPosition = LatLng(
-        selectedStation!["lat"],
-        selectedStation!["lng"],
-      );
-      final routeFromIndex = nearestRoutePointIndex(lineRoute, fromPosition);
-      final routeToIndex = nearestRoutePointIndex(lineRoute, toPosition);
+    final start = fromIndex < toIndex ? fromIndex : toIndex;
+    final end = fromIndex < toIndex ? toIndex : fromIndex;
+    final directStations = line.sublist(start, end + 1);
+    return fromIndex < toIndex
+        ? directStations
+        : directStations.reversed.toList();
+  }
 
-      if (routeFromIndex <= routeToIndex) {
-        return [
-          fromPosition,
-          ...lineRoute.sublist(routeFromIndex, routeToIndex + 1),
-          toPosition,
+  List<LatLng> _routeSegmentBetween(
+    List<LatLng> routePoints,
+    LatLng from,
+    LatLng to,
+  ) {
+    if (routePoints.length < 2) return [from, to];
+
+    final fromIndexes = nearestRoutePointIndexes(routePoints, from);
+    final toIndexes = nearestRoutePointIndexes(routePoints, to);
+    var bestSegment = <LatLng>[from, to];
+    var bestDistance = double.infinity;
+
+    for (final fromIndex in fromIndexes) {
+      for (final toIndex in toIndexes) {
+        if (fromIndex == toIndex) continue;
+
+        final start = fromIndex < toIndex ? fromIndex : toIndex;
+        final end = fromIndex < toIndex ? toIndex : fromIndex;
+        final routeSlice = routePoints.sublist(start, end + 1);
+        final segment = [
+          from,
+          ...(fromIndex < toIndex ? routeSlice : routeSlice.reversed),
+          to,
         ];
+        final distance = _pointsDistanceMeters(segment);
+
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestSegment = segment;
+        }
       }
+    }
 
-      return [
+    return bestSegment;
+  }
+
+  double _pointsDistanceMeters(List<LatLng> points) {
+    if (points.length < 2) return double.infinity;
+
+    var distance = 0.0;
+    for (var i = 0; i < points.length - 1; i++) {
+      distance += distanceBetween(points[i], points[i + 1]);
+    }
+    return distance;
+  }
+
+  LatLng _stationPosition(Map<String, dynamic> station) {
+    return LatLng(station["lat"], station["lng"]);
+  }
+
+  Future<void> updateSelectedTripRoute({bool focusAfterUpdate = false}) async {
+    final fromStation = selectedFromStation;
+    final toStation = selectedStation;
+    final requestId = ++selectedTripRouteRequestId;
+
+    if (fromStation == null || toStation == null) {
+      setState(() {
+        selectedTripRoute = [];
+      });
+      return;
+    }
+
+    final fallbackRoute = [
+      _stationPosition(fromStation),
+      _stationPosition(toStation),
+    ];
+
+    setState(() {
+      selectedTripRoute = fallbackRoute;
+    });
+
+    final route = await fetchRouteForPoints([fromStation, toStation]);
+    if (!mounted || requestId != selectedTripRouteRequestId) return;
+
+    var nextRoute = route.length > 1 ? route : fallbackRoute;
+    final fromPosition = fallbackRoute.first;
+    final startsNearFrom = distanceBetween(nextRoute.first, fromPosition);
+    final endsNearFrom = distanceBetween(nextRoute.last, fromPosition);
+    if (endsNearFrom < startsNearFrom) {
+      nextRoute = nextRoute.reversed.toList();
+    }
+
+    setState(() {
+      selectedTripRoute = [
         fromPosition,
-        ...lineRoute.sublist(routeFromIndex),
-        ...lineRoute.sublist(0, routeToIndex + 1),
-        toPosition,
+        ...nextRoute.skip(1).take(nextRoute.length - 2),
+        fallbackRoute.last,
       ];
+    });
+
+    if (focusAfterUpdate) {
+      await focusSelectedTrip();
+    }
+  }
+
+  List<LatLng> _buildTripPointsForLine(
+    List<Map<String, dynamic>> tripLine,
+    List<LatLng> lineRoute,
+    Map<String, dynamic> fromStation,
+    Map<String, dynamic> toStation,
+  ) {
+    final fromId = fromStation["id"]?.toString();
+    final toId = toStation["id"]?.toString();
+    if (fromId == null || toId == null) return [];
+
+    final orderedStations = _orderedStationsBetween(tripLine, fromId, toId);
+    if (orderedStations.length < 2) return [];
+
+    final fallbackPoints = orderedStations
+        .map((station) => LatLng(station["lat"], station["lng"]))
+        .toList();
+    if (lineRoute.length < 2) return fallbackPoints;
+
+    if (fallbackPoints.length == 2) {
+      return _routeSegmentBetween(
+        lineRoute,
+        fallbackPoints.first,
+        fallbackPoints.last,
+      );
     }
 
-    final fallbackPoints = <LatLng>[];
-    int currentIndex = fromIndex;
+    final points = <LatLng>[];
+    for (var i = 0; i < orderedStations.length - 1; i++) {
+      final from = LatLng(orderedStations[i]["lat"], orderedStations[i]["lng"]);
+      final to = LatLng(
+        orderedStations[i + 1]["lat"],
+        orderedStations[i + 1]["lng"],
+      );
+      final segment = _routeSegmentBetween(lineRoute, from, to);
 
-    while (true) {
-      final station = tripLine[currentIndex];
-      fallbackPoints.add(LatLng(station["lat"], station["lng"]));
-
-      if (currentIndex == toIndex) break;
-      currentIndex = (currentIndex + 1) % tripLine.length;
+      if (points.isEmpty) {
+        points.addAll(segment);
+      } else {
+        points.addAll(segment.skip(1));
+      }
     }
 
-    if (fallbackPoints.length > 1) {
-      return fallbackPoints;
-    }
+    return points.length > 1 ? points : fallbackPoints;
+  }
+
+  List<LatLng> getSelectedTripPoints() {
+    if (!hasCompleteTripSearch()) return [];
+    if (selectedTripRoute.length > 1) return selectedTripRoute;
 
     return [
-      LatLng(selectedFromStation!["lat"], selectedFromStation!["lng"]),
-      LatLng(selectedStation!["lat"], selectedStation!["lng"]),
+      _stationPosition(selectedFromStation!),
+      _stationPosition(selectedStation!),
     ];
+  }
+
+  bool hasCompleteTripSearch() {
+    return selectedFromStation != null &&
+        selectedStation != null &&
+        fromSearchController.text.trim().isNotEmpty &&
+        searchController.text.trim().isNotEmpty;
   }
 
   int calculateRideMinutes() {
@@ -897,6 +1168,24 @@ class _HomepagesState extends State<Homepages> {
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: clearTripSearch,
+                  borderRadius: BorderRadius.circular(18),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF2F2F2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 14),
@@ -988,8 +1277,6 @@ class _HomepagesState extends State<Homepages> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _lineSelectorButton(line: "all"),
-            const SizedBox(height: 5),
             _lineSelectorButton(line: "line1"),
             const SizedBox(height: 5),
             _lineSelectorButton(line: "line2"),
@@ -1008,7 +1295,7 @@ class _HomepagesState extends State<Homepages> {
       onTap: () => selectLine(line),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        width: 102,
+        width: 90,
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
@@ -1022,9 +1309,7 @@ class _HomepagesState extends State<Homepages> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              line == "all"
-                  ? Icons.route_rounded
-                  : Icons.directions_bus_rounded,
+              Icons.directions_bus_rounded,
               size: 18,
               color: isSelected ? Colors.white : color,
             ),
@@ -1442,13 +1727,37 @@ class _HomepagesState extends State<Homepages> {
     }
   }
 
+  Widget _searchActionButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+  }) {
+    final enabled = onTap != null;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: enabled ? const Color(0xFFF2F2F2) : const Color(0xFFF8F8F8),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          size: 21,
+          color: enabled ? Colors.black87 : Colors.black26,
+        ),
+      ),
+    );
+  }
+
   Widget _stationSearchField({
     required TextEditingController controller,
     required String hintText,
-    required IconData icon,
     required VoidCallback onTap,
     required ValueChanged<String> onChanged,
-    required VoidCallback onClear,
     required TextInputAction textInputAction,
   }) {
     return Container(
@@ -1464,22 +1773,11 @@ class _HomepagesState extends State<Homepages> {
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: GoogleFonts.kanit(fontSize: 14, color: Colors.black45),
-          prefixIcon: Icon(icon, color: Colors.black54, size: 18),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: 38,
-            minHeight: 40,
-          ),
-          suffixIcon: controller.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 18),
-                  onPressed: onClear,
-                )
-              : null,
           border: InputBorder.none,
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(
             vertical: 11,
-            horizontal: 4,
+            horizontal: 12,
           ),
         ),
         style: GoogleFonts.kanit(fontSize: 13, fontWeight: FontWeight.w500),
@@ -1713,8 +2011,12 @@ class _HomepagesState extends State<Homepages> {
         final selectedLinePoints = getSelectedLinePoints();
         final activeLineColor = lineColor(selectedLine);
         final showAllLines = selectedLine == "all";
-        final hasTrackingPanel =
-            selectedFromStation != null || selectedStation != null;
+        final hasTrackingPanel = hasCompleteTripSearch();
+        final hasTripSearchValues =
+            selectedFromStation != null ||
+            selectedStation != null ||
+            fromSearchController.text.isNotEmpty ||
+            searchController.text.isNotEmpty;
         final shouldShowLineSelector =
             !showStationSuggestions &&
             !hasTrackingPanel &&
@@ -1737,7 +2039,7 @@ class _HomepagesState extends State<Homepages> {
                 },
                 onCameraMove: handleCameraMove,
                 onCameraIdle: adjustTiltForCurrentZoom,
-                onTap: (_) => resetStationSelection(),
+                onTap: (_) => hideSearchOverlay(resetLineWhenEmpty: true),
                 zoomControlsEnabled: false,
                 minMaxZoomPreference: const MinMaxZoomPreference(13.8, 19),
                 mapToolbarEnabled: false,
@@ -1748,20 +2050,22 @@ class _HomepagesState extends State<Homepages> {
                 polylines: {
                   if (showAllLines) ...{
                     Polyline(
-                      polylineId: const PolylineId("line1"),
-                      points: route1.isNotEmpty
-                          ? route1
-                          : getLineLatLngs(line1),
-                      color: lineColor("line1"),
-                      width: 4,
-                    ),
-                    Polyline(
                       polylineId: const PolylineId("line2"),
                       points: route2.isNotEmpty
                           ? route2
                           : getLineLatLngs(line2),
                       color: lineColor("line2"),
                       width: 4,
+                      zIndex: 1,
+                    ),
+                    Polyline(
+                      polylineId: const PolylineId("line1"),
+                      points: route1.isNotEmpty
+                          ? route1
+                          : getLineLatLngs(line1),
+                      color: lineColor("line1"),
+                      width: 4,
+                      zIndex: 2,
                     ),
                   } else if (selectedLinePoints.length > 1)
                     Polyline(
@@ -1769,6 +2073,7 @@ class _HomepagesState extends State<Homepages> {
                       points: selectedLinePoints,
                       color: activeLineColor,
                       width: 5,
+                      zIndex: 3,
                     ),
                   if (selectedTripPoints.length > 1)
                     Polyline(
@@ -1776,6 +2081,7 @@ class _HomepagesState extends State<Homepages> {
                       points: selectedTripPoints,
                       color: const Color(0xFF1A73E8),
                       width: 5,
+                      zIndex: 4,
                     ),
                 },
                 markers: {
@@ -1912,21 +2218,12 @@ class _HomepagesState extends State<Homepages> {
                                     en: "From station",
                                     th: "สถานีต้นทาง",
                                   ),
-                                  icon: Icons.my_location,
                                   onTap: () => searchStations(
                                     fromSearchController.text,
                                     "from",
                                   ),
                                   onChanged: (value) =>
                                       searchStations(value, "from"),
-                                  onClear: () {
-                                    fromSearchController.clear();
-                                    setState(() {
-                                      selectedFromStation = null;
-                                      showStationSuggestions = false;
-                                      filteredStations.clear();
-                                    });
-                                  },
                                   textInputAction: TextInputAction.next,
                                 ),
                                 const SizedBox(height: 8),
@@ -1936,25 +2233,28 @@ class _HomepagesState extends State<Homepages> {
                                     en: "To station",
                                     th: "สถานีปลายทาง",
                                   ),
-                                  icon: Icons.location_on_outlined,
                                   onTap: () => searchStations(
                                     searchController.text,
                                     "to",
                                   ),
                                   onChanged: (value) =>
                                       searchStations(value, "to"),
-                                  onClear: () {
-                                    searchController.clear();
-                                    setState(() {
-                                      selectedStation = null;
-                                      showStationSuggestions = false;
-                                      filteredStations.clear();
-                                    });
-                                  },
                                   textInputAction: TextInputAction.search,
                                 ),
                               ],
                             ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _searchActionButton(
+                                icon: Icons.import_export_rounded,
+                                onTap: hasTripSearchValues
+                                    ? swapTripStations
+                                    : null,
+                              ),
+                            ],
                           ),
                         ],
                       ),
