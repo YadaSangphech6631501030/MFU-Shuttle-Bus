@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { api } from './services/api';
+import BusesPage from './page/Buses.vue';
+import DashboardPage from './page/Dashboard.vue';
+import ReportsPage from './page/Reports.vue';
+import RouteEditorPage from './page/RouteEditor.vue';
+import StationCCTVPage from './page/StationCCTV.vue';
+import StationsPage from './page/Stations.vue';
+import UsersPage from './page/Users.vue';
 import type { Bus, DetectorStatus, Report, Station, User } from './types';
 
 type Lang = 'en' | 'th';
@@ -276,6 +283,28 @@ const roiDraft = ref<Array<[number, number]>>([]);
 const isEditingRoi = ref(false);
 const draggingRoiPointIndex = ref<number | null>(null);
 let detectorFrameTimer: number | undefined;
+
+function setStationMapElement(element: HTMLElement | null) {
+  if (stationMapEl.value !== element) {
+    stationMap.value = null;
+    stationMarker.value = null;
+  }
+  stationMapEl.value = element;
+  if (element) {
+    void nextTick(initStationMap);
+  }
+}
+
+function setRouteMapElement(element: HTMLElement | null) {
+  if (routeMapEl.value !== element) {
+    routeMap.value = null;
+    routePolyline.value = null;
+  }
+  routeMapEl.value = element;
+  if (element) {
+    void nextTick(initRouteMap);
+  }
+}
 
 const onlineBuses = computed(() => buses.value.filter((bus) => bus.status?.toLowerCase() !== 'offline').length);
 const pendingReports = computed(() => reports.value.filter((report) => report.status !== 'resolved').length);
@@ -1155,448 +1184,111 @@ watch(selectedCameraStationId, () => {
 
       <p v-if="error" class="error-banner">{{ error }}</p>
 
-      <section v-if="activeTab === 'dashboard'" class="grid dashboard-grid">
-        <article class="stat-card">
-          <span>{{ text.totalStations }}</span>
-          <strong>{{ stations.length }}</strong>
-          <small>{{ text.activeStops }}</small>
-        </article>
-        <article class="stat-card">
-          <span>{{ text.onlineBuses }}</span>
-          <strong>{{ onlineBuses }}</strong>
-          <small>{{ fillTemplate(text.fromTotalBuses, { count: buses.length }) }}</small>
-        </article>
-        <article class="stat-card">
-          <span>{{ text.pendingReports }}</span>
-          <strong>{{ pendingReports }}</strong>
-          <small>{{ text.unresolvedItems }}</small>
-        </article>
-        <article class="stat-card">
-          <span>{{ text.usersCount }}</span>
-          <strong>{{ users.length }}</strong>
-          <small>{{ text.systemAccounts }}</small>
-        </article>
-      </section>
+      <DashboardPage
+        v-if="activeTab === 'dashboard'"
+        :buses="buses"
+        :online-buses="onlineBuses"
+        :pending-reports="pendingReports"
+        :reports="reports"
+        :stations="stations"
+        :text="text"
+        :users="users"
+      />
 
-      <section v-if="activeTab === 'stations'" class="two-column">
-        <article class="panel">
-          <div class="panel-heading">
-            <h2>{{ text.stationList }}</h2>
-            <span>{{ stations.length }} stations</span>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>{{ text.stationName }}</th>
-                  <th>{{ text.line }}</th>
-                  <th>{{ text.coordinates }}</th>
-                  <th>{{ text.status }}</th>
-                  <th>Camera</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="station in stations" :key="station._id || station.id">
-                  <td>{{ station.id }}</td>
-                  <td>{{ station.name }}</td>
-                  <td>{{ station.lines.join(', ') }}</td>
-                  <td>{{ station.lat }}, {{ station.lng }}</td>
-                  <td><span class="chip">{{ station.status || 'LOW' }}</span></td>
-                  <td>
-                    <span class="chip" :class="{ 'chip-muted': !hasCamera(station) }">
-                      {{ hasCamera(station) ? 'Configured' : 'Empty' }}
-                    </span>
-                  </td>
-                  <td class="actions">
-                    <button class="link-btn" @click="openCameraStation(station)">Camera</button>
-                    <button class="link-btn" @click="editStation(station)">{{ text.edit }}</button>
-                    <button class="danger-link" @click="deleteStation(station)">{{ text.delete }}</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </article>
+      <StationsPage
+        v-if="activeTab === 'stations'"
+        :editing-station-key="editingStationKey"
+        :has-camera="hasCamera"
+        :loading="loading"
+        :station-form="stationForm"
+        :station-map-error="stationMapError"
+        :station-map-loading="stationMapLoading"
+        :station-roi-text="stationRoiText"
+        :stations="stations"
+        :text="text"
+        @delete-station="deleteStation"
+        @edit-station="editStation"
+        @open-camera-station="openCameraStation"
+        @reset-station-form="resetStationForm"
+        @save-station="saveStation"
+        @station-map-ready="setStationMapElement"
+        @update-station-roi-text="stationRoiText = $event"
+        @use-current-location="useCurrentLocation"
+      />
 
-        <article class="panel form-panel">
-          <div class="panel-heading">
-            <h2>{{ editingStationKey ? text.editStation : text.addStation }}</h2>
-            <button v-if="editingStationKey" class="link-btn" @click="resetStationForm">{{ text.cancel }}</button>
-          </div>
-          <form class="station-form" @submit.prevent="saveStation">
-            <label>ID <input v-model="stationForm.id" required :placeholder="text.stationIdPlaceholder" /></label>
-            <label>{{ text.stationName }} <input v-model="stationForm.name" required :placeholder="text.stationNamePlaceholder" /></label>
-            <div class="split">
-              <label>Latitude <input v-model.number="stationForm.lat" required type="number" step="any" /></label>
-              <label>Longitude <input v-model.number="stationForm.lng" required type="number" step="any" /></label>
-            </div>
-            <div class="map-picker">
-              <div class="map-picker-header">
-                <div>
-                  <strong>{{ text.mapPicker }}</strong>
-                  <p>{{ text.mapHint }}</p>
-                </div>
-                <button class="secondary-btn compact-btn" type="button" @click="useCurrentLocation">
-                  {{ text.useCurrentLocation }}
-                </button>
-              </div>
-              <div ref="stationMapEl" class="station-map"></div>
-              <div v-if="stationMapLoading" class="map-overlay">{{ text.mapLoading }}</div>
-              <p v-if="stationMapError" class="map-error">{{ stationMapError }}</p>
-            </div>
-            <div class="checkbox-row">
-              <label><input v-model="stationForm.lines" type="checkbox" value="line1" /> Line 1</label>
-              <label><input v-model="stationForm.lines" type="checkbox" value="line2" /> Line 2</label>
-            </div>
-            <label>Camera URL <input v-model="stationForm.cameraUrl" placeholder="rtsp://... or https://..." /></label>
-            <label>
-              Detection ROI
-              <textarea
-                v-model="stationRoiText"
-                placeholder="[[0.1,0.2],[0.9,0.2],[0.9,0.8],[0.1,0.8]]"
-                rows="3"
-              ></textarea>
-            </label>
-            <button class="primary-btn" type="submit" :disabled="loading">
-              {{ editingStationKey ? text.saveChanges : text.addStation }}
-            </button>
-          </form>
+      <RouteEditorPage
+        v-if="activeTab === 'routes'"
+        :route-draft="routeDraft"
+        :route-editor-line="routeEditorLine"
+        :route-editor-line-label="routeEditorLineLabel"
+        :route-editor-message="routeEditorMessage"
+        :route-geo-json-text="routeGeoJsonText"
+        :route-map-error="routeMapError"
+        :route-map-loading="routeMapLoading"
+        :route-point-count="routePointCount"
+        :text="text"
+        @clear-route-draft="clearRouteDraft"
+        @clear-temporary-route-draft="clearTemporaryRouteDraft"
+        @copy-route-geo-json="copyRouteGeoJson"
+        @download-route-geo-json="downloadRouteGeoJson"
+        @import-route-file="importRouteFile"
+        @load-route-from-geo-json-text="loadRouteFromGeoJsonText"
+        @load-route-from-stations="loadRouteFromStations"
+        @route-map-ready="setRouteMapElement"
+        @save-route-draft-temporary="saveRouteDraftTemporary"
+        @set-route-editor-line="setRouteEditorLine"
+        @undo-route-point="undoRoutePoint"
+        @update-route-geo-json-text="routeGeoJsonText = $event"
+      />
 
-        </article>
-      </section>
+      <StationCCTVPage
+        v-if="activeTab === 'cctv'"
+        :detector-busy="detectorBusy"
+        :detector-status="detectorStatus"
+        :detector-stream-url="detectorStreamUrl"
+        :has-camera="hasCamera"
+        :is-editing-roi="isEditingRoi"
+        :roi-draft="roiDraft"
+        :selected-camera-preview-kind="selectedCameraPreviewKind"
+        :selected-camera-station="selectedCameraStation"
+        :selected-camera-url="selectedCameraUrl"
+        :stations="stations"
+        @cancel-roi-editor="cancelRoiEditor"
+        @clear-roi-draft="clearRoiDraft"
+        @copy-camera-url="copyCameraUrl"
+        @drag-roi-point="dragRoiPoint"
+        @handle-roi-canvas-pointer-down="handleRoiCanvasPointerDown"
+        @save-selected-roi="saveSelectedRoi"
+        @select-camera-station="selectCameraStation"
+        @set-roi-preset="setRoiPreset"
+        @start-drag-roi-point="startDragRoiPoint"
+        @start-roi-editor="startRoiEditor"
+        @start-selected-detector="startSelectedDetector"
+        @stop-drag-roi-point="stopDragRoiPoint"
+        @stop-selected-detector="stopSelectedDetector"
+      />
+      <BusesPage
+        v-if="activeTab === 'buses'"
+        :buses="buses"
+        :text="text"
+      />
 
-      <section v-if="activeTab === 'routes'" class="route-editor-layout">
-        <article class="panel route-map-panel">
-          <div class="panel-heading">
-            <div>
-              <h2>{{ routeEditorLineLabel }} temporary polyline</h2>
-              <span>Click map to add points. Drag line vertices to adjust. Right-click a vertex to remove it.</span>
-            </div>
-            <span>{{ routePointCount }} points</span>
-          </div>
-          <div class="route-line-switcher" aria-label="Route line selector">
-            <button
-              type="button"
-              :class="{ active: routeEditorLine === 'line1' }"
-              @click="setRouteEditorLine('line1')"
-            >
-              Line 1
-            </button>
-            <button
-              type="button"
-              :class="{ active: routeEditorLine === 'line2' }"
-              @click="setRouteEditorLine('line2')"
-            >
-              Line 2
-            </button>
-          </div>
-          <div class="route-map-shell">
-            <div ref="routeMapEl" class="route-map"></div>
-            <div v-if="routeMapLoading" class="map-overlay">{{ text.mapLoading }}</div>
-          </div>
-          <p v-if="routeMapError" class="map-error">{{ routeMapError }}</p>
-          <p v-if="routeEditorMessage" class="route-editor-message">{{ routeEditorMessage }}</p>
-        </article>
+      <ReportsPage
+        v-if="activeTab === 'reports'"
+        :reports="reports"
+        :text="text"
+        @update-report-status="updateReportStatus"
+      />
 
-        <article class="panel route-tools-panel">
-          <div class="panel-heading">
-            <h2>Tools</h2>
-            <span>Temporary</span>
-          </div>
-
-          <div class="route-tool-group">
-            <button class="secondary-btn compact-btn" type="button" @click="loadRouteFromStations">
-              Start from {{ routeEditorLineLabel }} stations
-            </button>
-            <label class="file-btn">
-              Import GeoJSON
-              <input accept=".geojson,.json,application/geo+json,application/json" type="file" @change="importRouteFile" />
-            </label>
-            <button class="secondary-btn compact-btn" type="button" @click="undoRoutePoint">
-              Undo last point
-            </button>
-            <button class="secondary-btn compact-btn" type="button" @click="clearRouteDraft">
-              Clear map
-            </button>
-          </div>
-
-          <div class="route-tool-group">
-            <button class="primary-btn compact-btn" type="button" @click="saveRouteDraftTemporary">
-              Save temporary
-            </button>
-            <button class="secondary-btn compact-btn" type="button" @click="clearTemporaryRouteDraft">
-              Clear saved draft
-            </button>
-          </div>
-
-          <label>
-            GeoJSON
-            <textarea v-model="routeGeoJsonText" class="route-geojson-textarea" spellcheck="false"></textarea>
-          </label>
-
-          <div class="route-tool-group">
-            <button class="secondary-btn compact-btn" type="button" @click="loadRouteFromGeoJsonText">
-              Load text
-            </button>
-            <button class="secondary-btn compact-btn" type="button" @click="copyRouteGeoJson">
-              Copy GeoJSON
-            </button>
-            <button class="secondary-btn compact-btn" type="button" @click="downloadRouteGeoJson">
-              Download
-            </button>
-          </div>
-        </article>
-      </section>
-
-      <section v-if="activeTab === 'cctv'" class="cctv-layout">
-        <article class="panel cctv-list-panel">
-          <div class="panel-heading">
-            <h2>Station CCTV</h2>
-            <span>{{ stations.filter(hasCamera).length }} cameras</span>
-          </div>
-          <div class="cctv-station-list">
-            <button
-              v-for="station in stations"
-              :key="station._id || station.id"
-              class="cctv-station-item"
-              :class="{ active: selectedCameraStation?.id === station.id }"
-              type="button"
-              @click="selectCameraStation(station)"
-            >
-              <span>
-                <strong>{{ station.name }}</strong>
-                <small>{{ station.id }} · {{ station.lines.join(', ') }}</small>
-              </span>
-              <span class="chip" :class="{ 'chip-muted': !hasCamera(station) }">
-                {{ hasCamera(station) ? 'Ready' : 'No camera' }}
-              </span>
-            </button>
-          </div>
-        </article>
-
-        <article class="panel cctv-view-panel">
-          <section class="camera-panel camera-panel-standalone">
-            <div class="camera-panel-header">
-              <div>
-                <h3>Station camera</h3>
-                <p v-if="selectedCameraStation">{{ selectedCameraStation.name }} · {{ selectedCameraStation.id }}</p>
-              </div>
-              <span class="chip" :class="{ 'chip-muted': !hasCamera(selectedCameraStation) }">
-                {{ hasCamera(selectedCameraStation) ? 'Configured' : 'No camera' }}
-              </span>
-            </div>
-
-            <div
-              class="camera-preview-shell cctv-preview"
-              :class="{ 'roi-editing': isEditingRoi }"
-              @pointerdown="handleRoiCanvasPointerDown"
-              @pointermove="dragRoiPoint"
-              @pointerup="stopDragRoiPoint"
-              @pointerleave="stopDragRoiPoint"
-            >
-              <img
-                v-if="detectorStreamUrl"
-                class="camera-preview-media"
-                :src="detectorStreamUrl"
-                :alt="selectedCameraStation?.name || 'YOLO detector frame'"
-              />
-              <img
-                v-else-if="selectedCameraPreviewKind === 'image' && selectedCameraUrl"
-                class="camera-preview-media"
-                :src="selectedCameraUrl"
-                :alt="selectedCameraStation?.name || 'Station camera'"
-              />
-              <video
-                v-else-if="selectedCameraPreviewKind === 'video' && selectedCameraUrl"
-                class="camera-preview-media"
-                :src="selectedCameraUrl"
-                controls
-                muted
-                playsinline
-              ></video>
-              <div v-else class="camera-preview-empty">
-                <strong v-if="selectedCameraPreviewKind === 'rtsp'">
-                  {{ detectorStatus?.running ? 'YOLO is starting' : 'RTSP camera saved' }}
-                </strong>
-                <strong v-else-if="selectedCameraPreviewKind === 'none'">No camera source</strong>
-                <strong v-else>Preview unavailable</strong>
-                <p v-if="selectedCameraPreviewKind === 'rtsp'">
-                  {{ detectorStatus?.running ? 'Waiting for the first detected frame...' : 'Press Start YOLO to read RTSP on the backend and show detected frames here.' }}
-                </p>
-                <p v-else-if="selectedCameraPreviewKind === 'none'">
-                  Edit this station and save a Camera URL first.
-                </p>
-                <p v-else>
-                  This link is saved, but it is not a browser-playable stream.
-                </p>
-              </div>
-              <svg
-                v-if="roiDraft.length"
-                class="roi-overlay"
-                viewBox="0 0 1 1"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <polygon class="roi-polygon" :points="roiDraft.map((point) => point.join(',')).join(' ')" />
-                <circle
-                  v-for="(point, index) in roiDraft"
-                  :key="index"
-                  class="roi-handle"
-                  :cx="point[0]"
-                  :cy="point[1]"
-                  r="0.018"
-                  @pointerdown="startDragRoiPoint(index, $event)"
-                />
-              </svg>
-            </div>
-
-            <label v-if="selectedCameraStation">
-              Camera source
-              <input :value="selectedCameraUrl" readonly />
-            </label>
-
-            <div class="roi-toolbar">
-              <button v-if="!isEditingRoi" class="secondary-btn compact-btn" type="button" @click="startRoiEditor">
-                Draw Detection Area
-              </button>
-              <template v-else>
-                <button class="primary-btn compact-btn" type="button" @click="saveSelectedRoi">Save Area</button>
-                <button class="secondary-btn compact-btn" type="button" @click="cancelRoiEditor">Cancel</button>
-                <button class="secondary-btn compact-btn" type="button" @click="clearRoiDraft">Clear</button>
-                <button class="secondary-btn compact-btn" type="button" @click="setRoiPreset('full')">Full</button>
-                <button class="secondary-btn compact-btn" type="button" @click="setRoiPreset('right')">Right half</button>
-                <button class="secondary-btn compact-btn" type="button" @click="setRoiPreset('left')">Left half</button>
-                <button class="secondary-btn compact-btn" type="button" @click="setRoiPreset('bottom')">Bottom</button>
-                <button class="secondary-btn compact-btn" type="button" @click="setRoiPreset('center')">Center</button>
-              </template>
-            </div>
-
-            <div v-if="selectedCameraUrl" class="camera-actions">
-              <button
-                v-if="!detectorStatus?.running"
-                class="primary-btn compact-btn"
-                type="button"
-                :disabled="detectorBusy"
-                @click="startSelectedDetector"
-              >
-                {{ detectorBusy ? 'Starting...' : 'Start YOLO' }}
-              </button>
-              <button
-                v-else
-                class="secondary-btn compact-btn"
-                type="button"
-                :disabled="detectorBusy"
-                @click="stopSelectedDetector"
-              >
-                {{ detectorBusy ? 'Stopping...' : 'Stop YOLO' }}
-              </button>
-              <button class="secondary-btn compact-btn" type="button" @click="copyCameraUrl">
-                Copy URL
-              </button>
-              <a
-                v-if="selectedCameraPreviewKind !== 'rtsp'"
-                class="secondary-btn compact-btn camera-link"
-                :href="selectedCameraUrl"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open
-              </a>
-            </div>
-
-            <div v-if="detectorStatus" class="detector-status">
-              <span :class="{ live: detectorStatus.running }"></span>
-              {{ detectorStatus.running ? 'Detector running' : 'Detector stopped' }}
-              <small v-if="detectorStatus.lastError">{{ detectorStatus.lastError }}</small>
-              <small v-else-if="detectorStatus.lastLog">{{ detectorStatus.lastLog }}</small>
-            </div>
-          </section>
-        </article>
-      </section>
-
-      <section v-if="activeTab === 'buses'" class="panel">
-        <div class="panel-heading">
-          <h2>{{ text.allBuses }}</h2>
-          <span>{{ buses.length }} buses</span>
-        </div>
-        <div class="card-list">
-          <article v-for="bus in buses" :key="bus._id || bus.busId" class="list-card">
-            <div>
-              <strong>{{ bus.busId || bus.licensePlate || text.unknownBus }}</strong>
-              <p>{{ bus.driverName || text.noDriver }} · {{ bus.line || text.noLine }}</p>
-            </div>
-            <span class="chip">{{ bus.status || 'unknown' }}</span>
-          </article>
-        </div>
-      </section>
-
-      <section v-if="activeTab === 'reports'" class="panel">
-        <div class="panel-heading">
-          <h2>{{ text.issueReports }}</h2>
-          <span>{{ reports.length }} reports</span>
-        </div>
-        <div class="card-list">
-          <article v-for="report in reports" :key="report._id" class="list-card report-card">
-            <div>
-              <strong>{{ report.title || report.category || report.type || text.issueReport }}</strong>
-              <p>{{ report.description || report.detail || report.location || '-' }}</p>
-              <small>{{ report.username || report.user?.username || report.userId || report.UserId || text.anonymous }} · {{ report.createdAt || report.time || '-' }}</small>
-            </div>
-            <select :value="report.status || 'pending'" @change="updateReportStatus(report, selectValue($event))">
-              <option value="pending">pending</option>
-              <option value="in_progress">in_progress</option>
-              <option value="resolved">resolved</option>
-            </select>
-          </article>
-        </div>
-      </section>
-
-      <section v-if="activeTab === 'users'" class="panel">
-        <div class="panel-heading">
-          <h2>{{ text.systemUsers }}</h2>
-          <span>{{ users.length }} users</span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="user in users" :key="user._id || user.username">
-                <td>{{ user.username }}</td>
-                <td>{{ user.email || '-' }}</td>
-                <td>
-                  <div class="role-menu">
-                    <button
-                      class="role-select"
-                      type="button"
-                      :aria-label="text.changeRole"
-                      @click="toggleRoleMenu(user)"
-                    >
-                      {{ user.role || 'user' }}
-                      <span aria-hidden="true">⌄</span>
-                    </button>
-                    <div v-if="openRoleMenu === user.username" class="role-options">
-                      <button type="button" @click="updateUserRole(user, 'user')">user</button>
-                      <button type="button" @click="updateUserRole(user, 'admin')">admin</button>
-                    </div>
-                  </div>
-                </td>
-                <td class="actions">
-                  <button class="danger-link" @click="deleteUser(user)">{{ text.delete }}</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <UsersPage
+        v-if="activeTab === 'users'"
+        :open-role-menu="openRoleMenu"
+        :text="text"
+        :users="users"
+        @delete-user="deleteUser"
+        @toggle-role-menu="toggleRoleMenu"
+        @update-user-role="updateUserRole"
+      />
     </section>
   </div>
 </template>
