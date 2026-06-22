@@ -19,7 +19,8 @@ defineProps<{
           <strong>{{ bus.busId || bus.licensePlate || text.unknownBus }}</strong>
           <p>{{ bus.driverName || text.noDriver }} &middot; {{ bus.line || text.noLine }}</p>
         </div>
-        <span class="chip">{{ bus.status || 'unknown' }}</span>
+        
+        <span class="chip">{{ ['offline', 'stopped'].includes(bus.status?.toLowerCase() || '') ? 'offline' : 'online' }}</span>
       </article>
     </div>
   </section>
