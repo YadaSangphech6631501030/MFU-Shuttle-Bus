@@ -1,0 +1,68 @@
+export type LoginResponse = {
+  token: string;
+  role: string;
+  userId: string;
+};
+
+export type Station = {
+  _id?: string;
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  lines: string[];
+  waiting?: number;
+  status?: 'LOW' | 'MEDIUM' | 'HIGH';
+  cameraUrl?: string;
+  detectionRoi?: Array<[number, number]>;
+};
+
+export type Bus = {
+  _id?: string;
+  busId?: string;
+  licensePlate?: string;
+  line?: string;
+  status?: string;
+  lat?: number;
+  lng?: number;
+  driverName?: string;
+};
+
+export type Report = {
+  _id: string;
+  userId?: string;
+  UserId?: string;
+  username?: string;
+  user?: {
+    username?: string;
+    email?: string;
+  };
+  title?: string;
+  description?: string;
+  category?: string;
+  type?: string;
+  detail?: string;
+  location?: string;
+  status?: string;
+  createdAt?: string;
+  time?: string;
+};
+
+export type User = {
+  _id?: string;
+  username: string;
+  email?: string;
+  role?: 'admin' | 'user';
+};
+
+export type DetectorStatus = {
+  stationId: string;
+  running: boolean;
+  startedAt?: string;
+  exitedAt?: string;
+  exitCode?: number | null;
+  signal?: string | null;
+  lastLog: string;
+  lastError: string;
+  hasFrame: boolean;
+};

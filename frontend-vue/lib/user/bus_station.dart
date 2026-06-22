@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
+import 'homepages.dart';
 
 class BusStationPage extends StatefulWidget {
   const BusStationPage({super.key});
@@ -9,8 +12,9 @@ class BusStationPage extends StatefulWidget {
 }
 
 class _BusStationPageState extends State<BusStationPage> {
-  List<String> line1Stations = [];
-  List<String> line2Stations = [];
+  List<_StationInfo> line1Stations = [];
+  List<_StationInfo> line2Stations = [];
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -28,257 +32,417 @@ class _BusStationPageState extends State<BusStationPage> {
       if (!mounted) return;
 
       setState(() {
-        line1Stations = _stationNames(results[0]);
-        line2Stations = _stationNames(results[1]);
+        line1Stations = _stationOptions(results[0]);
+        line2Stations = _stationOptions(results[1]);
+        isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to load stations")),
-      );
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Failed to load stations")));
     }
   }
 
-  List<String> _stationNames(List<dynamic> stations) {
+  List<_StationInfo> _stationOptions(List<dynamic> stations) {
     final sortedStations = List<dynamic>.from(stations);
     sortedStations.sort(
       (a, b) => _stationNumber(a["id"]).compareTo(_stationNumber(b["id"])),
     );
 
     return sortedStations
-        .map<String>((station) => station["name"]?.toString().trim() ?? "")
-        .where((name) => name.isNotEmpty)
+        .map<_StationInfo?>((station) {
+          final name = _cleanStationName(station["name"]);
+          final lat = _coordinate(station["lat"]);
+          final lng = _coordinate(station["lng"]);
+
+          if (name.isEmpty || lat == null || lng == null) return null;
+
+          return _StationInfo(name: name, lat: lat, lng: lng);
+        })
+        .whereType<_StationInfo>()
         .toList();
+  }
+
+  double? _coordinate(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? "");
   }
 
   int _stationNumber(dynamic id) {
     final number = RegExp(r'\d+').firstMatch(id?.toString() ?? "")?.group(0);
     return int.tryParse(number ?? "") ?? 9999;
   }
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: Colors.white,
-    appBar: AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      leadingWidth: 70,
-      leading: IconButton(
-        icon: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios,
-            color: Colors.black,
-            size: 20,
-          ),
-        ),
-        onPressed: () {
-          Navigator.pop(context);
-        },
-      ),
-      title: const Text(
-        'MFU TRANSIT',
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      centerTitle: true,
-      bottom: const PreferredSize(
-        preferredSize: Size.fromHeight(1),
-        child: Divider(height: 1),
-      ),
-    ),
-    body: SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
 
-            LineSection(
-              title: "สาย 1",
-              stations: line1Stations,
-            ),
-
-            const SizedBox(height: 16),
-
-            LineSection(
-              title: "สาย 2 (โรงพยาบาลแม่ฟ้าหลวง)",
-              stations: line2Stations,
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-}
-
-class LineSection extends StatefulWidget {
-  final String title;
-  final List<String> stations;
-
-  const LineSection({super.key, required this.title, required this.stations});
-
-  @override
-  State<LineSection> createState() => _LineSectionState();
-}
-
-class _LineSectionState extends State<LineSection> {
-  String search = "";
-  bool isOpen = false;
-
-  Color _getLineColor() {
-    if (widget.title.contains("สาย 1")) {
-      return const Color(0xFFD4AF37);
-    } else if (widget.title.contains("สาย 2")) {
-      return Colors.grey.shade700;
-    }
-    return Colors.grey;
+  String _cleanStationName(dynamic name) {
+    final raw = name?.toString().trim() ?? "";
+    return raw
+        .replaceFirst(
+          RegExp(r'^station\s*0*\d+\s*[:\-.]?\s*', caseSensitive: false),
+          '',
+        )
+        .trim();
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = widget.stations
-        .where((s) => s.toLowerCase().contains(search.toLowerCase()))
-        .toList();
+    final topPadding = MediaQuery.of(context).padding.top;
+    const homeAppBarHeight = 88.0;
+    const backButtonSize = 44.0;
+    final backButtonTop =
+        (topPadding + ((homeAppBarHeight - topPadding - backButtonSize) / 2))
+            .clamp(0.0, homeAppBarHeight - backButtonSize);
 
-    final lineColor = _getLineColor();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              isOpen = !isOpen;
-            });
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-            decoration: BoxDecoration(
-              color: lineColor,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                if (isOpen)
-                  const BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 6,
-                    offset: Offset(0, 3),
-                  ),
-              ],
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(homeAppBarHeight),
+        child: Material(
+          color: Colors.white,
+          elevation: 0,
+          child: Container(
+            height: homeAppBarHeight,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+            child: Stack(
               children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                Positioned.fill(
+                  top: topPadding,
+                  child: Center(
+                    child: Text(
+                      'Bus Stations',
+                      style: GoogleFonts.kanit(
+                        color: Colors.black,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                  child: isOpen
-                      ? const Icon(
-                          Icons.remove,
-                          color: Colors.white,
-                          size: 16,
-                        )
-                      : const Icon(
-                          Icons.add,
-                          color: Colors.white,
-                          size: 16,
-                        ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  widget.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                Positioned(
+                  left: 16,
+                  top: backButtonTop,
+                  child: SizedBox(
+                    width: backButtonSize,
+                    height: backButtonSize,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.black,
+                          size: 18,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 200),
-          crossFadeState: isOpen
-              ? CrossFadeState.showFirst
-              : CrossFadeState.showSecond,
-          firstChild: Column(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 4),
-                  ],
+      ),
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFD2232A)),
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+              children: [
+                _LineSection(
+                  title: "Line 1",
+                  subtitle: "Main campus route",
+                  stations: line1Stations,
+                  color: const Color(0xFFBC9945),
                 ),
-                child: TextField(
-                  onChanged: (value) {
-                    setState(() {
-                      search = value;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    hintText: "Find Station...",
-                    prefixIcon: Icon(Icons.search),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 14),
-                  ),
+                const SizedBox(height: 14),
+                _LineSection(
+                  title: "Line 2",
+                  subtitle: "MFU Medical Center route",
+                  stations: line2Stations,
+                  color: Colors.grey.shade700,
                 ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xffEDEDED),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 4),
-                  ],
-                ),
-                child: Column(
-                  children: filtered.isEmpty
-                      ? [
-                          const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text("ไม่พบสถานี"),
-                          ),
-                        ]
-                      : filtered.map((station) {
-                          return Column(
-                            children: [
-                              ListTile(
-                                title: Text(station),
-                              ),
-                              const Divider(height: 1),
-                            ],
-                          );
-                        }).toList(),
-                ),
-              ),
-            ],
-          ),
-          secondChild: const SizedBox.shrink(),
-        ),
-      ],
+              ],
+            ),
     );
   }
+}
+
+class _LineSection extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final List<_StationInfo> stations;
+  final Color color;
+
+  const _LineSection({
+    required this.title,
+    required this.subtitle,
+    required this.stations,
+    required this.color,
+  });
+
+  @override
+  State<_LineSection> createState() => _LineSectionState();
+}
+
+class _LineSectionState extends State<_LineSection> {
+  String search = "";
+  bool isOpen = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = widget.stations
+        .where(
+          (station) =>
+              station.name.toLowerCase().contains(search.toLowerCase()),
+        )
+        .toList();
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE8E8E8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () {
+              setState(() {
+                isOpen = !isOpen;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 15, 14, 15),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: widget.color.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.directions_bus_rounded,
+                      color: widget.color,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.title,
+                          style: GoogleFonts.kanit(
+                            color: Colors.black,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "${widget.subtitle} • ${widget.stations.length} stations",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.kanit(
+                            color: Colors.black54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    isOpen
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: Colors.black54,
+                    size: 26,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 200),
+            crossFadeState: isOpen
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            firstChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F8F8),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE9E9E9)),
+                    ),
+                    child: TextField(
+                      onChanged: (value) {
+                        setState(() {
+                          search = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: "Find station",
+                        hintStyle: GoogleFonts.kanit(
+                          fontSize: 14,
+                          color: Colors.black45,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: Colors.black54,
+                          size: 20,
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 13,
+                        ),
+                      ),
+                      style: GoogleFonts.kanit(fontSize: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (filtered.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Text(
+                        "No stations found",
+                        style: GoogleFonts.kanit(
+                          color: Colors.black45,
+                          fontSize: 14,
+                        ),
+                      ),
+                    )
+                  else
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 218),
+                      child: RawScrollbar(
+                        thumbVisibility: filtered.length > 5,
+                        thickness: 3,
+                        radius: const Radius.circular(999),
+                        thumbColor: widget.color.withValues(alpha: 0.55),
+                        child: ListView.separated(
+                          padding: const EdgeInsets.only(right: 10),
+                          shrinkWrap: true,
+                          physics: const ClampingScrollPhysics(),
+                          itemCount: filtered.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final station = filtered[index];
+
+                            return Row(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: widget.color.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.location_on_outlined,
+                                    color: widget.color,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    station.name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.kanit(
+                                      color: Colors.black87,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 32,
+                                    minHeight: 32,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => Homepages(
+                                          initialMapTarget: LatLng(
+                                            station.lat,
+                                            station.lng,
+                                          ),
+                                          initialMapZoom: 18,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    color: Colors.black54,
+                                    size: 16,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            secondChild: const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StationInfo {
+  final String name;
+  final double lat;
+  final double lng;
+
+  const _StationInfo({
+    required this.name,
+    required this.lat,
+    required this.lng,
+  });
 }

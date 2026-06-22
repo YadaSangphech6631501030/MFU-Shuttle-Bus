@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'admin_bottom_bar.dart';
 import 'admin_setting.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
+import 'package:shuttle_bus_fronted/services/route_asset_service.dart';
 import '../user/bus_controller.dart';
 import '../user/bus_page.dart';
 
@@ -36,6 +37,13 @@ class _AdminHomepageState extends State<AdminHomepage> {
   List<Map<String, dynamic>> dbLine2Stations = [];
   Map<String, LatLng> busPositions = {};
   BitmapDescriptor stationMarkerIcon = BitmapDescriptor.defaultMarker;
+  final Map<String, BitmapDescriptor> busMarkerIcons = {};
+  static const Map<String, String> _busMarkerAssets = {
+    "left": "assets/gemcar_left.png",
+    "right": "assets/gemcar_right.png",
+    "turnLeft": "assets/gemcar_turnleft.png",
+    "turnRight": "assets/gemcar_turnright.png",
+  };
 
   // statuses for bus
   Map<String, double> busProgress =
@@ -185,6 +193,13 @@ class _AdminHomepageState extends State<AdminHomepage> {
     );
   }
 
+  BitmapDescriptor busIconFor(String id) {
+    final sprite = BusController.instance.busSprites[id] ?? "right";
+    return busMarkerIcons[sprite] ??
+        busMarkerIcons["right"] ??
+        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+  }
+
   List<Map<String, dynamic>> getSelectedLine() {
     return selectedLine == "line1" ? dbLine1Stations : dbLine2Stations;
   }
@@ -291,18 +306,49 @@ class _AdminHomepageState extends State<AdminHomepage> {
     }
   }
 
+  Future<List<LatLng>> fetchRouteForLine(
+    String line,
+    List<Map<String, dynamic>> points,
+  ) async {
+    final assetRoute = await RouteAssetService.loadRouteForLine(line);
+    if (assetRoute.isNotEmpty) return assetRoute;
+
+    return fetchRouteForPoints(points);
+  }
+
   Future<void> loadStationMarkerIcon() async {
     final icon = await BitmapDescriptor.asset(
       const ImageConfiguration(),
       "assets/bus_stop_2.png",
-      width: 60,
-      height: 60,
+      width: 54,
+      height: 54,
     );
 
     if (!mounted) return;
 
     setState(() {
       stationMarkerIcon = icon;
+    });
+  }
+
+  Future<void> loadBusMarkerIcons() async {
+    final icons = <String, BitmapDescriptor>{};
+
+    for (final entry in _busMarkerAssets.entries) {
+      icons[entry.key] = await BitmapDescriptor.asset(
+        const ImageConfiguration(),
+        entry.value,
+        width: 53,
+        height: 53,
+      );
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      busMarkerIcons
+        ..clear()
+        ..addAll(icons);
     });
   }
 
@@ -320,6 +366,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
   void initState() {
     super.initState();
     loadStationMarkerIcon();
+    loadBusMarkerIcons();
     updateAllRoutes();
     fetchStations();
     fetchBuses();
@@ -574,6 +621,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
         if (idx >= route.length - 1) {
           BusController.instance.busProgress[id] = 0;
           BusController.instance.busPositions[id] = route[0];
+          BusController.instance.updateBusVisualState(id, route, 0);
           continue;
         }
 
@@ -590,6 +638,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
         );
 
         BusController.instance.busPositions[id] = newPos;
+        BusController.instance.updateBusVisualState(id, route, idx);
 
         // ✅ STOP AT STATION
         for (var station in getSelectedLine()) {
@@ -615,8 +664,8 @@ class _AdminHomepageState extends State<AdminHomepage> {
   }
 
   Future<void> updateAllRoutes() async {
-    final newRoute1 = await fetchRouteForPoints(dbLine1Stations);
-    final newRoute2 = await fetchRouteForPoints(dbLine2Stations);
+    final newRoute1 = await fetchRouteForLine("line1", dbLine1Stations);
+    final newRoute2 = await fetchRouteForLine("line2", dbLine2Stations);
 
     setState(() {
       route1 = newRoute1.isNotEmpty
@@ -631,7 +680,7 @@ class _AdminHomepageState extends State<AdminHomepage> {
   }
 
   void updateRoute() async {
-    final newRoute = await fetchRealRoute();
+    final newRoute = await fetchRouteForLine(selectedLine, getSelectedLine());
 
     setState(() {
       route = densifyRoadRoute(newRoute);
@@ -830,10 +879,9 @@ class _AdminHomepageState extends State<AdminHomepage> {
                     return Marker(
                       markerId: MarkerId("bus-$id"),
                       position: pos,
+                      anchor: const Offset(0.5, 0.5),
                       zIndexInt: 10,
-                      icon: BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueBlue,
-                      ),
+                      icon: busIconFor(id),
                       infoWindow: InfoWindow(title: "Bus $id"),
                     );
                   }),
