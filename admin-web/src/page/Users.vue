@@ -35,21 +35,9 @@ defineEmits<{
             <td>{{ user.username }}</td>
             <td>{{ user.email || '-' }}</td>
             <td>
-              <div class="role-menu">
-                <button
-                  class="role-select"
-                  type="button"
-                  :aria-label="text.changeRole"
-                  @click="$emit('toggleRoleMenu', user)"
-                >
-                  {{ user.role || 'user' }}
-                  <span aria-hidden="true">⌄</span>
-                </button>
-                <div v-if="openRoleMenu === user.username" class="role-options">
-                  <button type="button" @click="$emit('updateUserRole', user, 'user')">user</button>
-                  <button type="button" @click="$emit('updateUserRole', user, 'admin')">admin</button>
-                </div>
-              </div>
+              <span class="role-select role-static">
+                {{ user.role || 'user' }}
+              </span>
             </td>
             <td class="actions">
               <button class="danger-link" @click="$emit('deleteUser', user)">{{ text.delete }}</button>
@@ -60,3 +48,11 @@ defineEmits<{
     </div>
   </section>
 </template>
+
+<style scoped>
+.role-static {
+  justify-content: center;
+  cursor: default;
+  pointer-events: none;
+}
+</style>
