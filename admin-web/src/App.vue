@@ -9,6 +9,7 @@ import StationCCTVPage from './page/StationCCTV.vue';
 import StationsPage from './page/Stations.vue';
 import UsersPage from './page/Users.vue';
 import type { Bus, DetectorStatus, Report, Station, User } from './types';
+import mfuLogoUrl from './assets/mfu_logo.png';
 
 type Lang = 'en' | 'th';
 type TabKey = 'dashboard' | 'stations' | 'routes' | 'cctv' | 'buses' | 'reports' | 'users';
@@ -82,6 +83,7 @@ declare global {
 }
 
 const LANGUAGE_KEY = 'mfu_admin_language';
+const USERNAME_KEY = 'mfu_admin_username';
 const ROUTE_EDITOR_STORAGE_PREFIX = 'mfu_route_editor_';
 const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -98,6 +100,7 @@ const tabs: Array<{ key: TabKey }> = [
   { key: 'reports' },
   { key: 'users' },
 ];
+const sidebarTabs = computed(() => tabs.filter((tab) => tab.key !== 'users'));
 const activeTab = ref<TabKey>('dashboard');
 
 const dictionary = {
@@ -111,7 +114,7 @@ const dictionary = {
       reports: 'Reports',
       users: 'Users',
     },
-    language: 'TH',
+    language: 'EN',
     loginSubtitle: '',
     username: 'Username',
     password: 'Password',
@@ -120,10 +123,13 @@ const dictionary = {
     signIn: 'Sign in',
     signingIn: 'Signing in...',
     logout: 'Log out',
+    profileInformation: 'Profile Information',
+    signedInUser: 'Admin user',
     refresh: 'Refresh data',
     loading: 'Loading...',
     genericError: 'Something went wrong',
     adminOnlyError: 'This account is not an administrator.',
+    sessionExpired: 'Your session expired. Please sign in again.',
     totalStations: 'Total stations',
     activeStops: 'Active pickup points',
     onlineBuses: 'Online buses',
@@ -174,7 +180,7 @@ const dictionary = {
       reports: 'รายงาน',
       users: 'ผู้ใช้',
     },
-    language: 'EN',
+    language: 'TH',
     loginSubtitle: '',
     username: 'ชื่อผู้ใช้',
     password: 'รหัสผ่าน',
@@ -183,10 +189,13 @@ const dictionary = {
     signIn: 'เข้าสู่ระบบ',
     signingIn: 'กำลังเข้าสู่ระบบ...',
     logout: 'ออกจากระบบ',
+    profileInformation: 'ข้อมูลโปรไฟล์',
+    signedInUser: 'ผู้ดูแลระบบ',
     refresh: 'รีเฟรชข้อมูล',
     loading: 'กำลังโหลด...',
     genericError: 'เกิดข้อผิดพลาด',
     adminOnlyError: 'บัญชีนี้ไม่ใช่ผู้ดูแลระบบ',
+    sessionExpired: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
     totalStations: 'สถานีทั้งหมด',
     activeStops: 'จุดจอดที่เปิดให้บริการ',
     onlineBuses: 'รถออนไลน์',
@@ -230,11 +239,15 @@ const dictionary = {
 } as const;
 
 const text = computed(() => dictionary[lang.value]);
-const activeTitle = computed(() => text.value.tabs[activeTab.value]);
 
 const loading = ref(false);
 const error = ref('');
 const isLoggedIn = ref(Boolean(api.token));
+const isSidebarCollapsed = ref(false);
+const isUserMenuOpen = ref(false);
+const currentUsername = ref(localStorage.getItem(USERNAME_KEY) || '');
+const displayUsername = computed(() => currentUsername.value || text.value.signedInUser);
+const userInitials = computed(() => displayUsername.value.trim().slice(0, 2).toUpperCase());
 
 const loginForm = reactive({
   username: '',
@@ -452,6 +465,39 @@ function toggleLanguage() {
 
 function setActiveTab(tab: TabKey) {
   activeTab.value = tab;
+  isUserMenuOpen.value = false;
+}
+
+function toggleUserMenu() {
+  isUserMenuOpen.value = !isUserMenuOpen.value;
+}
+
+function closeUserMenu() {
+  isUserMenuOpen.value = false;
+}
+
+function toggleSidebar() {
+  isSidebarCollapsed.value = !isSidebarCollapsed.value;
+}
+
+function isAuthTokenError(err: unknown) {
+  if (!(err instanceof Error)) return false;
+  const message = err.message.toLowerCase();
+  return (
+    message.includes('invalid token') ||
+    message.includes('jwt expired') ||
+    message.includes('token expired') ||
+    message.includes('request failed with status 401')
+  );
+}
+
+function resetSession() {
+  api.clearSession();
+  localStorage.removeItem(USERNAME_KEY);
+  currentUsername.value = '';
+  isUserMenuOpen.value = false;
+  isLoggedIn.value = false;
+  loginForm.password = '';
 }
 
 function setRouteEditorLine(line: RouteLine) {
@@ -805,7 +851,7 @@ async function initRouteMap() {
     routePolyline.value = new maps.Polyline({
       map: routeMap.value,
       path: routeDraft.value,
-      strokeColor: '#bc9945',
+      strokeColor: '#fec260',
       strokeOpacity: 0.95,
       strokeWeight: 5,
       editable: true,
@@ -944,6 +990,11 @@ async function withLoading(task: () => Promise<void>) {
   try {
     await task();
   } catch (err) {
+    if (isLoggedIn.value && isAuthTokenError(err)) {
+      resetSession();
+      error.value = text.value.sessionExpired;
+      return;
+    }
     error.value = err instanceof Error ? err.message : text.value.genericError;
   } finally {
     loading.value = false;
@@ -969,20 +1020,21 @@ async function loadData() {
 
 async function login() {
   await withLoading(async () => {
-    const result = await api.login(loginForm.username.trim(), loginForm.password);
+    const username = loginForm.username.trim();
+    const result = await api.login(username, loginForm.password);
     if (result.role !== 'admin') {
       api.clearSession();
       throw new Error(text.value.adminOnlyError);
     }
+    currentUsername.value = username;
+    localStorage.setItem(USERNAME_KEY, username);
     isLoggedIn.value = true;
     await loadData();
   });
 }
 
 function logout() {
-  api.clearSession();
-  isLoggedIn.value = false;
-  loginForm.password = '';
+  resetSession();
 }
 
 function editStation(station: Station) {
@@ -1064,6 +1116,7 @@ async function deleteUser(user: User) {
 }
 
 onMounted(() => {
+  document.addEventListener('click', closeUserMenu);
   if (isLoggedIn.value) {
     void loadData();
   }
@@ -1074,6 +1127,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  document.removeEventListener('click', closeUserMenu);
   if (detectorFrameTimer) {
     window.clearInterval(detectorFrameTimer);
   }
@@ -1118,7 +1172,9 @@ watch(selectedCameraStationId, () => {
     </button>
 
     <section class="login-card">
-      <div class="brand-mark">MFU</div>
+      <div class="brand-mark logo-mark">
+        <img :src="mfuLogoUrl" alt="MFU" />
+      </div>
       <p class="eyebrow">Admin Dashboard</p>
       <h1>MFU Shuttle Bus</h1>
       <p class="muted">{{ text.loginSubtitle }}</p>
@@ -1142,19 +1198,21 @@ watch(selectedCameraStationId, () => {
     </section>
   </main>
 
-  <div v-else class="shell">
+  <div v-else class="shell" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <div class="brand-mark small">MFU</div>
+        <div class="brand-mark small logo-mark">
+          <img :src="mfuLogoUrl" alt="MFU" />
+        </div>
         <div>
-          <strong>Shuttle Admin</strong>
-          <span>Mae Fah Luang</span>
+          <strong>MFU</strong>
+          <span>SHUTTLE BUS ADMIN</span>
         </div>
       </div>
 
       <nav>
         <button
-          v-for="tab in tabs"
+          v-for="tab in sidebarTabs"
           :key="tab.key"
           :class="{ active: activeTab === tab.key }"
           @click="setActiveTab(tab.key)"
@@ -1162,23 +1220,40 @@ watch(selectedCameraStationId, () => {
           {{ text.tabs[tab.key] }}
         </button>
       </nav>
-
-      <button class="ghost-btn logout" @click="logout">{{ text.logout }}</button>
     </aside>
 
     <section class="content">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">MFU Shuttle Bus</p>
-          <h1>{{ activeTitle }}</h1>
-        </div>
+        <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar" @click="toggleSidebar">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
         <div class="topbar-actions">
           <button class="language-toggle" type="button" @click="toggleLanguage">
             {{ text.language }}
           </button>
-          <button class="secondary-btn" :disabled="loading" @click="loadData">
-            {{ loading ? text.loading : text.refresh }}
-          </button>
+          <div class="user-menu" @click.stop>
+            <button class="user-menu-trigger" type="button" @click="toggleUserMenu">
+              <span v-if="currentUsername" class="admin-display-name">{{ currentUsername }}</span>
+              <span class="user-avatar">{{ userInitials }}</span>
+            </button>
+            <div v-if="isUserMenuOpen" class="user-menu-panel">
+              <button type="button" @click="setActiveTab('users')">
+                <span class="menu-icon person-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M20 21a8 8 0 0 0-16 0" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </span>
+                {{ text.profileInformation }}
+              </button>
+              <button type="button" @click="logout">
+                <span class="menu-icon">x</span>
+                {{ text.logout }}
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
