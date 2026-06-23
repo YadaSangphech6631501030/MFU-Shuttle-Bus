@@ -1,6 +1,6 @@
 import type { Bus, DetectorStatus, LoginResponse, Report, Station, User } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://172.25.8.209:5001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.110.150:5001';
 const TOKEN_KEY = 'mfu_admin_token';
 const ROLE_KEY = 'mfu_admin_role';
 

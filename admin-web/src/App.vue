@@ -2,9 +2,9 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { api } from './services/api';
 import BusesPage from './page/Buses.vue';
+import CrowdMonitorPage from './page/CrowdMonitor.vue';
 import DashboardPage from './page/Dashboard.vue';
 import ReportsPage from './page/Reports.vue';
-import RouteEditorPage from './page/RouteEditor.vue';
 import StationCCTVPage from './page/StationCCTV.vue';
 import StationsPage from './page/Stations.vue';
 import UsersPage from './page/Users.vue';
@@ -12,10 +12,10 @@ import type { Bus, DetectorStatus, Report, Station, User } from './types';
 import mfuLogoUrl from './assets/mfu_logo.png';
 
 type Lang = 'en' | 'th';
-type TabKey = 'dashboard' | 'stations' | 'routes' | 'cctv' | 'buses' | 'reports' | 'users';
+type TabKey = 'dashboard' | 'crowd' | 'stations' | 'cctv' | 'buses' | 'reports' | 'users';
 type LatLng = { lat: number; lng: number };
 type CameraPreviewKind = 'none' | 'rtsp' | 'image' | 'video' | 'link';
-type RouteLine = 'line1' | 'line2';
+type DensityLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
 type GoogleLatLngValue = {
   lat: () => number;
@@ -30,10 +30,6 @@ type GoogleMapEventListener = {
   remove: () => void;
 };
 
-type GooglePolylineMouseEvent = GoogleMapMouseEvent & {
-  vertex?: number;
-};
-
 type GoogleMap = {
   addListener: (eventName: string, handler: (event: GoogleMapMouseEvent) => void) => GoogleMapEventListener;
   setCenter: (position: LatLng) => void;
@@ -43,23 +39,14 @@ type GoogleMap = {
 type GoogleMarker = {
   addListener: (eventName: string, handler: () => void) => void;
   getPosition: () => GoogleLatLngValue | undefined;
+  setMap: (map: GoogleMap | null) => void;
   setPosition: (position: LatLng) => void;
 };
 
-type GoogleMapPath = {
-  addListener: (eventName: string, handler: () => void) => GoogleMapEventListener;
-  clear: () => void;
-  getArray: () => GoogleLatLngValue[];
-  getLength: () => number;
-  push: (position: LatLng) => number;
-  removeAt: (index: number) => GoogleLatLngValue;
-};
-
-type GooglePolyline = {
-  addListener: (eventName: string, handler: (event: GooglePolylineMouseEvent) => void) => GoogleMapEventListener;
-  getPath: () => GoogleMapPath;
-  setMap: (map: GoogleMap | null) => void;
-  setPath: (path: LatLng[]) => void;
+type GoogleInfoWindow = {
+  close: () => void;
+  open: (options: { anchor: GoogleMarker; map: GoogleMap }) => void;
+  setContent: (content: HTMLElement | string) => void;
 };
 
 type GoogleLatLngBounds = {
@@ -69,8 +56,11 @@ type GoogleLatLngBounds = {
 type GoogleMapsApi = {
   Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMap;
   Marker: new (options: Record<string, unknown>) => GoogleMarker;
-  Polyline: new (options: Record<string, unknown>) => GooglePolyline;
+  InfoWindow: new (options?: Record<string, unknown>) => GoogleInfoWindow;
   LatLngBounds: new () => GoogleLatLngBounds;
+  SymbolPath: {
+    CIRCLE: number;
+  };
 };
 
 declare global {
@@ -78,23 +68,45 @@ declare global {
     google?: {
       maps: GoogleMapsApi;
     };
+    gm_authFailure?: () => void;
     initMfuStationMap?: () => void;
   }
 }
 
 const LANGUAGE_KEY = 'mfu_admin_language';
 const USERNAME_KEY = 'mfu_admin_username';
-const ROUTE_EDITOR_STORAGE_PREFIX = 'mfu_route_editor_';
 const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 const MFU_CENTER: LatLng = { lat: 20.0446, lng: 99.8957 };
+const GOOGLE_MAPS_AUTH_ERROR = 'Google Maps API key is invalid or blocked. Check billing, Maps JavaScript API, and HTTP referrer settings in Google Cloud.';
+const ADMIN_MAP_STYLES = [
+  { featureType: 'all', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#eef4ea' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#e3ecd9' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#5f6f61' }] },
+  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#cfd8dc' }, { weight: 0.7 }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#52616b' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#b9d7e8' }] },
+] as const;
+const ADMIN_MAP_OPTIONS = {
+  clickableIcons: false,
+  fullscreenControl: true,
+  mapTypeControl: false,
+  streetViewControl: false,
+  styles: ADMIN_MAP_STYLES,
+};
 let googleMapsPromise: Promise<void> | null = null;
 
 const lang = ref<Lang>(savedLanguage === 'th' ? 'th' : 'en');
 const tabs: Array<{ key: TabKey }> = [
   { key: 'dashboard' },
+  { key: 'crowd' },
   { key: 'stations' },
-  { key: 'routes' },
   { key: 'cctv' },
   { key: 'buses' },
   { key: 'reports' },
@@ -107,8 +119,8 @@ const dictionary = {
   en: {
     tabs: {
       dashboard: 'Dashboard',
+      crowd: 'Shuttle Bus Monitor',
       stations: 'Stations',
-      routes: 'Route Editor',
       cctv: 'Station CCTV',
       buses: 'Buses',
       reports: 'Reports',
@@ -153,6 +165,7 @@ const dictionary = {
     mapPicker: 'Map location picker',
     mapHint: 'Click the map or drag the marker to update latitude and longitude.',
     mapMissingKey: 'Add VITE_GOOGLE_MAPS_API_KEY in admin-web/.env to enable Google Map picker.',
+    mapAuthFailed: GOOGLE_MAPS_AUTH_ERROR,
     mapLoadFailed: 'Google Map could not be loaded.',
     mapLoading: 'Loading map...',
     useCurrentLocation: 'Use current location',
@@ -173,8 +186,8 @@ const dictionary = {
   th: {
     tabs: {
       dashboard: 'ภาพรวม',
+      crowd: 'Shuttle Bus Monitor',
       stations: 'สถานี',
-      routes: 'แก้เส้นทาง',
       cctv: 'Station CCTV',
       buses: 'รถทั้งหมด',
       reports: 'รายงาน',
@@ -219,6 +232,7 @@ const dictionary = {
     mapPicker: 'เลือกตำแหน่งจากแผนที่',
     mapHint: 'คลิกบนแผนที่หรือลากหมุดเพื่ออัปเดต latitude และ longitude',
     mapMissingKey: 'เพิ่ม VITE_GOOGLE_MAPS_API_KEY ใน admin-web/.env เพื่อเปิดใช้ Google Map',
+    mapAuthFailed: 'Google Maps API key ใช้งานไม่ได้หรือถูกบล็อก กรุณาตรวจสอบ Billing, Maps JavaScript API และ HTTP referrer ใน Google Cloud',
     mapLoadFailed: 'โหลด Google Map ไม่สำเร็จ',
     mapLoading: 'กำลังโหลดแผนที่...',
     useCurrentLocation: 'ใช้ตำแหน่งปัจจุบัน',
@@ -244,6 +258,7 @@ const loading = ref(false);
 const error = ref('');
 const isLoggedIn = ref(Boolean(api.token));
 const isSidebarCollapsed = ref(false);
+const isAlertMenuOpen = ref(false);
 const isUserMenuOpen = ref(false);
 const currentUsername = ref(localStorage.getItem(USERNAME_KEY) || '');
 const displayUsername = computed(() => currentUsername.value || text.value.signedInUser);
@@ -279,15 +294,13 @@ const stationMap = ref<GoogleMap | null>(null);
 const stationMarker = ref<GoogleMarker | null>(null);
 const stationMapLoading = ref(false);
 const stationMapError = ref('');
-const routeMapEl = ref<HTMLElement | null>(null);
-const routeMap = ref<GoogleMap | null>(null);
-const routePolyline = ref<GooglePolyline | null>(null);
-const routeEditorLine = ref<RouteLine>('line1');
-const routeDraft = ref<LatLng[]>([]);
-const routeGeoJsonText = ref('');
-const routeMapLoading = ref(false);
-const routeMapError = ref('');
-const routeEditorMessage = ref('');
+const crowdMapEl = ref<HTMLElement | null>(null);
+const crowdMap = ref<GoogleMap | null>(null);
+const crowdMarkers = ref<GoogleMarker[]>([]);
+const crowdInfoWindow = ref<GoogleInfoWindow | null>(null);
+const crowdMapLoading = ref(false);
+const crowdMapError = ref('');
+const selectedCrowdStationId = ref<string | null>(null);
 const openRoleMenu = ref<string | null>(null);
 const selectedCameraStationId = ref<string | null>(null);
 const detectorStatus = ref<DetectorStatus | null>(null);
@@ -296,6 +309,7 @@ const roiDraft = ref<Array<[number, number]>>([]);
 const isEditingRoi = ref(false);
 const draggingRoiPointIndex = ref<number | null>(null);
 let detectorFrameTimer: number | undefined;
+let crowdRefreshTimer: number | undefined;
 
 function setStationMapElement(element: HTMLElement | null) {
   if (stationMapEl.value !== element) {
@@ -308,19 +322,31 @@ function setStationMapElement(element: HTMLElement | null) {
   }
 }
 
-function setRouteMapElement(element: HTMLElement | null) {
-  if (routeMapEl.value !== element) {
-    routeMap.value = null;
-    routePolyline.value = null;
+function setCrowdMapElement(element: HTMLElement | null) {
+  if (crowdMapEl.value !== element) {
+    clearCrowdMarkers();
+    crowdMap.value = null;
+    crowdInfoWindow.value = null;
   }
-  routeMapEl.value = element;
+  crowdMapEl.value = element;
   if (element) {
-    void nextTick(initRouteMap);
+    void nextTick(initCrowdMap);
   }
 }
 
 const onlineBuses = computed(() => buses.value.filter((bus) => bus.status?.toLowerCase() !== 'offline').length);
 const pendingReports = computed(() => reports.value.filter((report) => report.status !== 'resolved').length);
+const crowdAlertStations = computed(() => stations.value
+  .map((station) => ({
+    station,
+    waiting: stationWaiting(station),
+    level: stationDensityLevel(station),
+  }))
+  .filter((item) => item.level === 'HIGH' || item.level === 'MEDIUM')
+  .sort((a, b) => {
+    const severity = { HIGH: 2, MEDIUM: 1, LOW: 0 };
+    return severity[b.level] - severity[a.level] || b.waiting - a.waiting;
+  }));
 const selectedCameraStation = computed(() => {
   if (stations.value.length === 0) return null;
   return stations.value.find((station) => station.id === selectedCameraStationId.value) ?? stations.value[0];
@@ -332,130 +358,201 @@ const detectorStreamUrl = computed(() => (
     ? api.getDetectorStreamUrl(selectedCameraStation.value.id)
     : ''
 ));
-const routePointCount = computed(() => routeDraft.value.length);
-const routeEditorLineLabel = computed(() => (routeEditorLine.value === 'line1' ? 'Line 1' : 'Line 2'));
 
 function fillTemplate(template: string, values: Record<string, string | number>) {
   return template.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ''));
 }
 
-function googleLatLngToLiteral(value: GoogleLatLngValue): LatLng {
+function stationWaiting(station: Station) {
+  const waiting = Number(station.waiting ?? 0);
+  return Number.isFinite(waiting) ? waiting : 0;
+}
+
+function stationDensityLevel(station: Station): DensityLevel {
+  const waiting = stationWaiting(station);
+  const status = String(station.status ?? 'LOW').toUpperCase();
+
+  if (status === 'HIGH' || waiting >= 20) return 'HIGH';
+  if (status === 'MEDIUM' || waiting >= 10) return 'MEDIUM';
+  return 'LOW';
+}
+
+function stationDensityLabel(station: Station) {
+  const level = stationDensityLevel(station);
+  if (level === 'HIGH') return 'Crowded';
+  if (level === 'MEDIUM') return 'Busy';
+  return 'Normal';
+}
+
+function stationHasValidPosition(station: Station) {
+  const lat = Number(station.lat);
+  const lng = Number(station.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+}
+
+function stationPosition(station: Station): LatLng {
   return {
-    lat: Number(value.lat().toFixed(6)),
-    lng: Number(value.lng().toFixed(6)),
+    lat: Number(station.lat),
+    lng: Number(station.lng),
   };
 }
 
-function routeEditorStorageKey() {
-  return `${ROUTE_EDITOR_STORAGE_PREFIX}${routeEditorLine.value}`;
+function crowdMarkerColor(level: DensityLevel) {
+  if (level === 'HIGH') return '#dc3545';
+  if (level === 'MEDIUM') return '#c77f28';
+  return '#2eb85c';
 }
 
-function buildRouteGeoJson(points: LatLng[], line: RouteLine = routeEditorLine.value) {
-  return {
-    type: 'FeatureCollection',
-    features: [
-      {
-        type: 'Feature',
-        properties: {
-          routeId: line,
-          source: 'admin-web-route-editor',
-        },
-        geometry: {
-          type: 'LineString',
-          coordinates: points.map((point) => [
-            Number(point.lng.toFixed(6)),
-            Number(point.lat.toFixed(6)),
-          ]),
-        },
-      },
-    ],
-  };
+function clearCrowdMarkers() {
+  crowdMarkers.value.forEach((marker) => marker.setMap(null));
+  crowdMarkers.value = [];
 }
 
-function extractGeoJsonLineCoordinates(value: unknown): unknown[] {
-  if (!value || typeof value !== 'object') return [];
+function createCrowdInfoContent(station: Station) {
+  const content = document.createElement('div');
+  content.className = 'crowd-info-window';
 
-  const geoJson = value as Record<string, unknown>;
-  if (geoJson.type === 'FeatureCollection') {
-    const features = Array.isArray(geoJson.features) ? geoJson.features : [];
-    return features.length ? extractGeoJsonLineCoordinates(features[0]) : [];
-  }
+  const title = document.createElement('strong');
+  title.textContent = station.name || station.id;
 
-  if (geoJson.type === 'Feature') {
-    return extractGeoJsonLineCoordinates(geoJson.geometry);
-  }
+  const waiting = document.createElement('p');
+  waiting.textContent = `${stationWaiting(station)} passengers waiting`;
 
-  if (geoJson.type === 'LineString') {
-    return Array.isArray(geoJson.coordinates) ? geoJson.coordinates : [];
-  }
+  const meta = document.createElement('small');
+  meta.textContent = `${station.lines.join(', ') || 'No line'} - ${stationDensityLabel(station)}`;
 
-  return [];
+  content.append(title, waiting, meta);
+  return content;
 }
 
-function parseGeoJsonRoute(raw: string) {
-  const parsed = JSON.parse(raw);
-  const coordinates = extractGeoJsonLineCoordinates(parsed);
-  const points = coordinates
-    .filter((point): point is unknown[] => Array.isArray(point) && point.length >= 2)
-    .map((point) => ({
-      lat: Number(point[1]),
-      lng: Number(point[0]),
-    }))
-    .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
-
-  if (points.length < 2) {
-    throw new Error('GeoJSON route must contain at least 2 coordinates.');
-  }
-
-  return points;
-}
-
-function syncRouteGeoJsonText() {
-  routeGeoJsonText.value = JSON.stringify(buildRouteGeoJson(routeDraft.value), null, 2);
-}
-
-function syncRouteDraftFromPolyline() {
-  const path = routePolyline.value?.getPath();
-  if (!path) return;
-
-  routeDraft.value = path.getArray().map(googleLatLngToLiteral);
-  syncRouteGeoJsonText();
-}
-
-function setRouteDraft(points: LatLng[], message = '') {
-  routeDraft.value = points.map((point) => ({
-    lat: Number(point.lat.toFixed(6)),
-    lng: Number(point.lng.toFixed(6)),
-  }));
-  routePolyline.value?.setPath(routeDraft.value);
-  attachRoutePathListeners();
-  syncRouteGeoJsonText();
-  focusRouteDraft();
-  routeEditorMessage.value = message;
-}
-
-function attachRoutePathListeners() {
-  const path = routePolyline.value?.getPath();
-  if (!path) return;
-
-  path.addListener('set_at', syncRouteDraftFromPolyline);
-  path.addListener('insert_at', syncRouteDraftFromPolyline);
-  path.addListener('remove_at', syncRouteDraftFromPolyline);
-}
-
-function focusRouteDraft() {
+function openCrowdStationInfo(station: Station, marker: GoogleMarker) {
+  const map = crowdMap.value;
   const maps = window.google?.maps;
-  const map = routeMap.value;
-  if (!maps || !map || routeDraft.value.length === 0) return;
+  if (!map || !maps) return;
 
-  if (routeDraft.value.length === 1) {
-    map.setCenter(routeDraft.value[0]);
+  selectedCrowdStationId.value = station.id;
+  if (!crowdInfoWindow.value) {
+    crowdInfoWindow.value = new maps.InfoWindow();
+  }
+
+  crowdInfoWindow.value.setContent(createCrowdInfoContent(station));
+  crowdInfoWindow.value.open({ anchor: marker, map });
+}
+
+function fitCrowdMapToStations() {
+  const map = crowdMap.value;
+  const maps = window.google?.maps;
+  const visibleStations = stations.value.filter(stationHasValidPosition);
+  if (!map || !maps || visibleStations.length === 0) return;
+
+  if (visibleStations.length === 1) {
+    map.setCenter(stationPosition(visibleStations[0]));
     return;
   }
 
   const bounds = new maps.LatLngBounds();
-  routeDraft.value.forEach((point) => bounds.extend(point));
+  visibleStations.forEach((station) => bounds.extend(stationPosition(station)));
   map.fitBounds(bounds);
+}
+
+function renderCrowdMarkers() {
+  const map = crowdMap.value;
+  const maps = window.google?.maps;
+  if (!map || !maps) return;
+
+  clearCrowdMarkers();
+
+  crowdMarkers.value = stations.value
+    .filter(stationHasValidPosition)
+    .map((station) => {
+      const level = stationDensityLevel(station);
+      const waiting = stationWaiting(station);
+      const marker = new maps.Marker({
+        position: stationPosition(station),
+        map,
+        title: `${station.name} - ${waiting} passengers`,
+        label: {
+          text: String(waiting),
+          color: '#ffffff',
+          fontSize: '12px',
+          fontWeight: '800',
+        },
+        icon: {
+          path: maps.SymbolPath.CIRCLE,
+          scale: level === 'HIGH' ? 18 : level === 'MEDIUM' ? 15 : 12,
+          fillColor: crowdMarkerColor(level),
+          fillOpacity: 0.94,
+          strokeColor: '#ffffff',
+          strokeWeight: 3,
+        },
+        zIndex: level === 'HIGH' ? 30 : level === 'MEDIUM' ? 20 : 10,
+      });
+
+      marker.addListener('click', () => {
+        openCrowdStationInfo(station, marker);
+      });
+
+      return marker;
+    });
+
+  fitCrowdMapToStations();
+}
+
+async function initCrowdMap() {
+  if (activeTab.value !== 'crowd' || !crowdMapEl.value) return;
+
+  if (crowdMap.value) {
+    renderCrowdMarkers();
+    return;
+  }
+
+  crowdMapLoading.value = true;
+  crowdMapError.value = '';
+
+  try {
+    await loadGoogleMaps();
+
+    const maps = window.google?.maps;
+    if (!maps || !crowdMapEl.value) {
+      throw new Error(text.value.mapLoadFailed);
+    }
+
+    crowdMap.value = new maps.Map(crowdMapEl.value, {
+      ...ADMIN_MAP_OPTIONS,
+      center: MFU_CENTER,
+      zoom: 16,
+    });
+
+    renderCrowdMarkers();
+  } catch (err) {
+    crowdMapError.value = err instanceof Error ? err.message : text.value.mapLoadFailed;
+  } finally {
+    crowdMapLoading.value = false;
+  }
+}
+
+function focusCrowdStation(station: Station) {
+  selectedCrowdStationId.value = station.id;
+
+  if (!crowdMap.value || !window.google?.maps) {
+    void nextTick(initCrowdMap);
+    return;
+  }
+
+  crowdMap.value.setCenter(stationPosition(station));
+  const markerIndex = stations.value
+    .filter(stationHasValidPosition)
+    .findIndex((item) => item.id === station.id);
+  const marker = markerIndex >= 0 ? crowdMarkers.value[markerIndex] : null;
+  if (marker) {
+    openCrowdStationInfo(station, marker);
+  }
+}
+
+function openCrowdAlertStation(station: Station) {
+  isAlertMenuOpen.value = false;
+  activeTab.value = 'crowd';
+  void nextTick(() => focusCrowdStation(station));
 }
 
 function toggleLanguage() {
@@ -465,14 +562,26 @@ function toggleLanguage() {
 
 function setActiveTab(tab: TabKey) {
   activeTab.value = tab;
+  isAlertMenuOpen.value = false;
   isUserMenuOpen.value = false;
 }
 
 function toggleUserMenu() {
   isUserMenuOpen.value = !isUserMenuOpen.value;
+  if (isUserMenuOpen.value) {
+    isAlertMenuOpen.value = false;
+  }
+}
+
+function toggleAlertMenu() {
+  isAlertMenuOpen.value = !isAlertMenuOpen.value;
+  if (isAlertMenuOpen.value) {
+    isUserMenuOpen.value = false;
+  }
 }
 
 function closeUserMenu() {
+  isAlertMenuOpen.value = false;
   isUserMenuOpen.value = false;
 }
 
@@ -498,10 +607,6 @@ function resetSession() {
   isUserMenuOpen.value = false;
   isLoggedIn.value = false;
   loginForm.password = '';
-}
-
-function setRouteEditorLine(line: RouteLine) {
-  routeEditorLine.value = line;
 }
 
 function selectValue(event: Event) {
@@ -739,13 +844,31 @@ function loadGoogleMaps() {
       return;
     }
 
-    window.initMfuStationMap = () => resolve();
+    let settled = false;
+    const fail = (message: string) => {
+      if (settled) return;
+      settled = true;
+      googleMapsPromise = null;
+      reject(new Error(message));
+    };
+
+    window.gm_authFailure = () => {
+      fail(text.value.mapAuthFailed);
+    };
+
+    window.initMfuStationMap = () => {
+      window.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      }, 0);
+    };
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&callback=initMfuStationMap`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&callback=initMfuStationMap&loading=async`;
     script.async = true;
     script.defer = true;
-    script.onerror = () => reject(new Error(text.value.mapLoadFailed));
+    script.onerror = () => fail(text.value.mapLoadFailed);
     document.head.appendChild(script);
   });
 
@@ -773,11 +896,9 @@ async function initStationMap() {
 
     const position = getStationPosition();
     stationMap.value = new maps.Map(stationMapEl.value, {
+      ...ADMIN_MAP_OPTIONS,
       center: position,
       zoom: 17,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: true,
     });
 
     stationMarker.value = new maps.Marker({
@@ -802,161 +923,6 @@ async function initStationMap() {
   } finally {
     stationMapLoading.value = false;
   }
-}
-
-function loadSavedRouteDraft() {
-  const savedRoute = localStorage.getItem(routeEditorStorageKey());
-  if (!savedRoute) {
-    setRouteDraft([], '');
-    syncRouteGeoJsonText();
-    return;
-  }
-
-  try {
-    setRouteDraft(parseGeoJsonRoute(savedRoute), `Loaded temporary ${routeEditorLineLabel.value} draft.`);
-  } catch {
-    localStorage.removeItem(routeEditorStorageKey());
-    setRouteDraft([], '');
-    syncRouteGeoJsonText();
-  }
-}
-
-async function initRouteMap() {
-  if (activeTab.value !== 'routes' || !routeMapEl.value) return;
-
-  if (routeMap.value && routePolyline.value) {
-    focusRouteDraft();
-    return;
-  }
-
-  routeMapLoading.value = true;
-  routeMapError.value = '';
-
-  try {
-    await loadGoogleMaps();
-
-    const maps = window.google?.maps;
-    if (!maps || !routeMapEl.value) {
-      throw new Error(text.value.mapLoadFailed);
-    }
-
-    routeMap.value = new maps.Map(routeMapEl.value, {
-      center: MFU_CENTER,
-      zoom: 16,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: true,
-    });
-
-    routePolyline.value = new maps.Polyline({
-      map: routeMap.value,
-      path: routeDraft.value,
-      strokeColor: '#fec260',
-      strokeOpacity: 0.95,
-      strokeWeight: 5,
-      editable: true,
-      draggable: false,
-      zIndex: 30,
-    });
-
-    attachRoutePathListeners();
-
-    routeMap.value.addListener('click', (event) => {
-      if (!event.latLng) return;
-      routePolyline.value?.getPath().push(googleLatLngToLiteral(event.latLng));
-      syncRouteDraftFromPolyline();
-      routeEditorMessage.value = 'Point added.';
-    });
-
-    routePolyline.value.addListener('rightclick', (event) => {
-      if (typeof event.vertex !== 'number') return;
-      routePolyline.value?.getPath().removeAt(event.vertex);
-      syncRouteDraftFromPolyline();
-      routeEditorMessage.value = 'Point removed.';
-    });
-
-    loadSavedRouteDraft();
-    focusRouteDraft();
-  } catch (err) {
-    routeMapError.value = err instanceof Error ? err.message : text.value.mapLoadFailed;
-  } finally {
-    routeMapLoading.value = false;
-  }
-}
-
-function loadRouteFromStations() {
-  const line1Stations = stations.value
-    .filter((station) => station.lines.includes(routeEditorLine.value))
-    .map((station) => ({ lat: Number(station.lat), lng: Number(station.lng) }))
-    .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
-
-  if (line1Stations.length < 2) {
-    routeEditorMessage.value = `${routeEditorLineLabel.value} needs at least 2 stations.`;
-    return;
-  }
-
-  setRouteDraft(line1Stations, `Loaded ${routeEditorLineLabel.value} station points.`);
-}
-
-function loadRouteFromGeoJsonText() {
-  try {
-    setRouteDraft(parseGeoJsonRoute(routeGeoJsonText.value), 'GeoJSON loaded.');
-    routeMapError.value = '';
-  } catch (err) {
-    routeMapError.value = err instanceof Error ? err.message : 'Invalid GeoJSON.';
-  }
-}
-
-async function importRouteFile(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-
-  routeGeoJsonText.value = await file.text();
-  loadRouteFromGeoJsonText();
-  input.value = '';
-}
-
-function undoRoutePoint() {
-  const path = routePolyline.value?.getPath();
-  if (!path || path.getLength() === 0) return;
-
-  path.removeAt(path.getLength() - 1);
-  syncRouteDraftFromPolyline();
-  routeEditorMessage.value = 'Last point removed.';
-}
-
-function clearRouteDraft() {
-  setRouteDraft([], 'Route cleared.');
-}
-
-function saveRouteDraftTemporary() {
-  const geoJson = JSON.stringify(buildRouteGeoJson(routeDraft.value));
-  localStorage.setItem(routeEditorStorageKey(), geoJson);
-  routeEditorMessage.value = `Saved ${routeEditorLineLabel.value} temporarily in this browser.`;
-}
-
-function clearTemporaryRouteDraft() {
-  localStorage.removeItem(routeEditorStorageKey());
-  routeEditorMessage.value = `Temporary ${routeEditorLineLabel.value} draft cleared.`;
-}
-
-async function copyRouteGeoJson() {
-  syncRouteGeoJsonText();
-  await navigator.clipboard.writeText(routeGeoJsonText.value);
-  routeEditorMessage.value = 'GeoJSON copied.';
-}
-
-function downloadRouteGeoJson() {
-  syncRouteGeoJsonText();
-  const blob = new Blob([routeGeoJsonText.value], { type: 'application/geo+json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `polyline_${routeEditorLine.value}_mfu.geojson`;
-  link.click();
-  URL.revokeObjectURL(url);
-  routeEditorMessage.value = 'GeoJSON downloaded.';
 }
 
 function useCurrentLocation() {
@@ -1124,6 +1090,12 @@ onMounted(() => {
   detectorFrameTimer = window.setInterval(() => {
     void loadDetectorStatus();
   }, 2000);
+
+  crowdRefreshTimer = window.setInterval(() => {
+    if (activeTab.value === 'crowd' && isLoggedIn.value && !loading.value) {
+      void loadData();
+    }
+  }, 15000);
 });
 
 onUnmounted(() => {
@@ -1131,24 +1103,18 @@ onUnmounted(() => {
   if (detectorFrameTimer) {
     window.clearInterval(detectorFrameTimer);
   }
+  if (crowdRefreshTimer) {
+    window.clearInterval(crowdRefreshTimer);
+  }
 });
 
 watch(activeTab, (tab) => {
+  if (tab === 'crowd') {
+    void nextTick(initCrowdMap);
+  }
   if (tab === 'stations') {
     void nextTick(initStationMap);
   }
-  if (tab === 'routes') {
-    void nextTick(initRouteMap);
-  }
-});
-
-watch(routeEditorLine, () => {
-  if (activeTab.value !== 'routes') {
-    syncRouteGeoJsonText();
-    return;
-  }
-
-  loadSavedRouteDraft();
 });
 
 watch(
@@ -1157,6 +1123,12 @@ watch(
     syncMarkerFromForm();
   },
 );
+
+watch(stations, () => {
+  if (activeTab.value === 'crowd') {
+    renderCrowdMarkers();
+  }
+});
 
 watch(selectedCameraStationId, () => {
   detectorStatus.value = null;
@@ -1233,6 +1205,52 @@ watch(selectedCameraStationId, () => {
           <button class="language-toggle" type="button" @click="toggleLanguage">
             {{ text.language }}
           </button>
+          <div class="notification-menu" @click.stop>
+            <button
+              class="notification-trigger"
+              :class="{ active: isAlertMenuOpen, urgent: crowdAlertStations.length > 0 }"
+              type="button"
+              aria-label="Crowd alerts"
+              @click="toggleAlertMenu"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+                <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+              </svg>
+              <span v-if="crowdAlertStations.length" class="notification-badge">
+                {{ crowdAlertStations.length }}
+              </span>
+            </button>
+            <div v-if="isAlertMenuOpen" class="notification-panel">
+              <div class="notification-panel-header">
+                <div>
+                  <strong>{{ crowdAlertStations.length ? 'Crowd alerts' : 'Notifications' }}</strong>
+                  <span v-if="crowdAlertStations.length">{{ crowdAlertStations.length }} stations need attention</span>
+                </div>
+              </div>
+
+              <div v-if="crowdAlertStations.length" class="notification-list">
+                <button
+                  v-for="item in crowdAlertStations"
+                  :key="item.station._id || item.station.id"
+                  class="notification-item"
+                  :class="`level-${item.level.toLowerCase()}`"
+                  type="button"
+                  @click="openCrowdAlertStation(item.station)"
+                >
+                  <span class="notification-dot" aria-hidden="true"></span>
+                  <div>
+                    <strong>{{ item.station.name }}</strong>
+                    <p>{{ stationDensityLabel(item.station) }} · {{ item.waiting }} passengers waiting at {{ item.station.lines.join(', ') || 'No line' }}</p>
+                  </div>
+                </button>
+              </div>
+
+              <div v-else class="notification-empty">
+                <strong>No notifications</strong>
+              </div>
+            </div>
+          </div>
           <div class="user-menu" @click.stop>
             <button class="user-menu-trigger" type="button" @click="toggleUserMenu">
               <span v-if="currentUsername" class="admin-display-name">{{ currentUsername }}</span>
@@ -1270,6 +1288,21 @@ watch(selectedCameraStationId, () => {
         :users="users"
       />
 
+      <CrowdMonitorPage
+        v-if="activeTab === 'crowd'"
+        :buses="buses"
+        :crowd-map-error="crowdMapError"
+        :crowd-map-loading="crowdMapLoading"
+        :loading="loading"
+        :selected-station-id="selectedCrowdStationId"
+        :stations="stations"
+        :text="text"
+        @crowd-map-ready="setCrowdMapElement"
+        @focus-station="focusCrowdStation"
+        @open-camera-station="openCameraStation"
+        @refresh="loadData"
+      />
+
       <StationsPage
         v-if="activeTab === 'stations'"
         :editing-station-key="editingStationKey"
@@ -1289,31 +1322,6 @@ watch(selectedCameraStationId, () => {
         @station-map-ready="setStationMapElement"
         @update-station-roi-text="stationRoiText = $event"
         @use-current-location="useCurrentLocation"
-      />
-
-      <RouteEditorPage
-        v-if="activeTab === 'routes'"
-        :route-draft="routeDraft"
-        :route-editor-line="routeEditorLine"
-        :route-editor-line-label="routeEditorLineLabel"
-        :route-editor-message="routeEditorMessage"
-        :route-geo-json-text="routeGeoJsonText"
-        :route-map-error="routeMapError"
-        :route-map-loading="routeMapLoading"
-        :route-point-count="routePointCount"
-        :text="text"
-        @clear-route-draft="clearRouteDraft"
-        @clear-temporary-route-draft="clearTemporaryRouteDraft"
-        @copy-route-geo-json="copyRouteGeoJson"
-        @download-route-geo-json="downloadRouteGeoJson"
-        @import-route-file="importRouteFile"
-        @load-route-from-geo-json-text="loadRouteFromGeoJsonText"
-        @load-route-from-stations="loadRouteFromStations"
-        @route-map-ready="setRouteMapElement"
-        @save-route-draft-temporary="saveRouteDraftTemporary"
-        @set-route-editor-line="setRouteEditorLine"
-        @undo-route-point="undoRoutePoint"
-        @update-route-geo-json-text="routeGeoJsonText = $event"
       />
 
       <StationCCTVPage

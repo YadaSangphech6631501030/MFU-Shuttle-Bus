@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/language_service.dart';
-import '../admin/report_pages.dart';
 import 'bus_station.dart';
 import 'favorite_station.dart';
+import 'report_page.dart';
 import 'setting.dart';
 
 class UserSetting extends StatefulWidget {
