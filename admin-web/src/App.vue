@@ -8,7 +8,7 @@ import ReportsPage from './page/Reports.vue';
 import StationCCTVPage from './page/StationCCTV.vue';
 import StationsPage from './page/Stations.vue';
 import UsersPage from './page/Users.vue';
-import type { Bus, DetectorStatus, Report, Station, User } from './types';
+import type { AdminUserPayload, Bus, CrowdThresholds, DetectorStatus, Report, Station, User } from './types';
 import mfuLogoUrl from './assets/mfu_logo.png';
 
 type Lang = 'en' | 'th';
@@ -102,6 +102,11 @@ const ADMIN_MAP_OPTIONS = {
 };
 let googleMapsPromise: Promise<void> | null = null;
 
+const DEFAULT_CROWD_THRESHOLDS: CrowdThresholds = {
+  medium: 6,
+  high: 10,
+};
+
 const lang = ref<Lang>(savedLanguage === 'th' ? 'th' : 'en');
 const tabs: Array<{ key: TabKey }> = [
   { key: 'dashboard' },
@@ -120,7 +125,7 @@ const dictionary = {
     tabs: {
       dashboard: 'Dashboard',
       crowd: 'Shuttle Bus Monitor',
-      stations: 'Stations',
+      stations: 'Station Setting',
       cctv: 'Station CCTV',
       buses: 'Buses',
       reports: 'Reports',
@@ -171,6 +176,8 @@ const dictionary = {
     useCurrentLocation: 'Use current location',
     locateFailed: 'Could not get your current location.',
     saveChanges: 'Save changes',
+    addStationConfirm: 'Add station "{name}"?',
+    editStationConfirm: 'Save changes to station "{name}"?',
     allBuses: 'All buses',
     unknownBus: 'Unknown bus',
     noDriver: 'No driver name',
@@ -182,12 +189,80 @@ const dictionary = {
     changeRole: 'Change role',
     deleteStationConfirm: 'Delete station "{name}"?',
     deleteUserConfirm: 'Delete user "{name}"?',
+    adminDashboard: 'Admin Dashboard',
+    crowdStatus: 'Crowd status',
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low',
+    waitingNow: 'Waiting now',
+    passengersAcrossStations: 'passengers across all stations',
+    liveStationMap: 'Live station map',
+    markerColorHint: 'Marker color follows station crowd level.',
+    dispatchGuide: 'Dispatch guide',
+    highAdvice: 'Consider dispatching an extra shuttle.',
+    mediumAdvice: 'Keep watching this station.',
+    lowAdvice: 'Passenger flow is normal.',
+    crowdAlerts: 'Crowd alerts',
+    notifications: 'Notifications',
+    stationsNeedAttention: '{count} stations need attention',
+    passengersWaitingAt: '{level} · {count} passengers waiting at {line}',
+    noNotifications: 'No notifications',
+    busesDescription: 'Monitor shuttle availability by online and offline status.',
+    online: 'Online',
+    offline: 'Offline',
+    total: 'Total',
+    busesUnit: 'buses',
+    busPrefix: 'Bus',
+    reportsUnit: 'reports',
+    pendingStatus: 'pending',
+    inProgressStatus: 'in progress',
+    resolvedStatus: 'resolved',
+    usernameLabel: 'Username',
+    emailLabel: 'Email',
+    roleLabel: 'Role',
+    userRole: 'user',
+    adminRole: 'admin',
+    stationsUnit: 'stations',
+    camera: 'Camera',
+    connect: 'Connect',
+    noConnect: 'No Connect',
+    latitude: 'Latitude',
+    longitude: 'Longitude',
+    line1: 'Line 1',
+    line2: 'Line 2',
+    cameraUrl: 'Camera URL',
+    detectionRoi: 'Detection ROI',
+    camerasUnit: 'cameras',
+    ready: 'Ready',
+    noCamera: 'No camera',
+    configured: 'Configured',
+    stationCamera: 'Station camera',
+    yoloStarting: 'Detection is starting',
+    rtspCameraSaved: 'RTSP camera saved',
+    noCameraSource: 'No camera source',
+    previewUnavailable: 'Preview unavailable',
+    waitingFirstFrame: 'Waiting for the first detected frame...',
+    startRtspHint: 'Press Start Detection to read RTSP on the backend and show detected frames here.',
+    editCameraFirst: 'Edit this station and save a Camera URL first.',
+    browserPreviewUnavailable: 'This link is saved, but it is not a browser-playable stream.',
+    cameraSource: 'Camera source',
+    drawDetectionArea: 'Draw Detection Area',
+    saveArea: 'Save Area',
+    clear: 'Clear',
+    fullFrame: 'Full frame',
+    startDetection: 'Start Detection',
+    stopDetection: 'Stop Detection',
+    starting: 'Starting...',
+    stopping: 'Stopping...',
+    detectorRunning: 'Detector running',
+    detectorStopped: 'Detector stopped',
+    detectionRoiInvalid: 'Detection ROI must be JSON like [[0.1,0.2],[0.9,0.2],[0.9,0.8],[0.1,0.8]]',
   },
   th: {
     tabs: {
       dashboard: 'ภาพรวม',
       crowd: 'Shuttle Bus Monitor',
-      stations: 'สถานี',
+      stations: 'Station Setting',
       cctv: 'Station CCTV',
       buses: 'รถทั้งหมด',
       reports: 'รายงาน',
@@ -238,6 +313,8 @@ const dictionary = {
     useCurrentLocation: 'ใช้ตำแหน่งปัจจุบัน',
     locateFailed: 'ไม่สามารถอ่านตำแหน่งปัจจุบันได้',
     saveChanges: 'บันทึกการแก้ไข',
+    addStationConfirm: 'เพิ่มสถานี "{name}" ใช่ไหม?',
+    editStationConfirm: 'บันทึกการแก้ไขสถานี "{name}" ใช่ไหม?',
     allBuses: 'รถทั้งหมด',
     unknownBus: 'ไม่ระบุรถ',
     noDriver: 'ไม่มีชื่อคนขับ',
@@ -249,6 +326,74 @@ const dictionary = {
     changeRole: 'เปลี่ยนสิทธิ์',
     deleteStationConfirm: 'ลบสถานี "{name}" ใช่ไหม?',
     deleteUserConfirm: 'ลบผู้ใช้ "{name}" ใช่ไหม?',
+    adminDashboard: 'แดชบอร์ดผู้ดูแล',
+    crowdStatus: 'สถานะความหนาแน่น',
+    high: 'สูง',
+    medium: 'ปานกลาง',
+    low: 'ต่ำ',
+    waitingNow: 'ผู้โดยสารรออยู่',
+    passengersAcrossStations: 'ผู้โดยสารที่รออยู่ทุกสถานี',
+    liveStationMap: 'แผนที่สถานีแบบสด',
+    markerColorHint: 'สีหมุดแสดงระดับความหนาแน่นของสถานี',
+    dispatchGuide: 'คำแนะนำการจัดรถ',
+    highAdvice: 'ควรพิจารณาเพิ่มรถรับส่ง',
+    mediumAdvice: 'ควรติดตามสถานีนี้ต่อ',
+    lowAdvice: 'การไหลของผู้โดยสารอยู่ในระดับปกติ',
+    crowdAlerts: 'แจ้งเตือนความหนาแน่น',
+    notifications: 'การแจ้งเตือน',
+    stationsNeedAttention: '{count} สถานีต้องตรวจสอบ',
+    passengersWaitingAt: '{level} · ผู้โดยสาร {count} คนรออยู่ที่ {line}',
+    noNotifications: 'ไม่มีการแจ้งเตือน',
+    busesDescription: 'ตรวจสอบความพร้อมใช้งานของรถตามสถานะออนไลน์และออฟไลน์',
+    online: 'ออนไลน์',
+    offline: 'ออฟไลน์',
+    total: 'ทั้งหมด',
+    busesUnit: 'คัน',
+    busPrefix: 'รถ',
+    reportsUnit: 'รายการ',
+    pendingStatus: 'รอดำเนินการ',
+    inProgressStatus: 'กำลังดำเนินการ',
+    resolvedStatus: 'แก้ไขแล้ว',
+    usernameLabel: 'ชื่อผู้ใช้',
+    emailLabel: 'อีเมล',
+    roleLabel: 'สิทธิ์',
+    userRole: 'ผู้ใช้',
+    adminRole: 'ผู้ดูแล',
+    stationsUnit: 'สถานี',
+    camera: 'กล้อง',
+    connect: 'เชื่อมต่อ',
+    noConnect: 'ไม่เชื่อมต่อ',
+    latitude: 'ละติจูด',
+    longitude: 'ลองจิจูด',
+    line1: 'สาย 1',
+    line2: 'สาย 2',
+    cameraUrl: 'URL กล้อง',
+    detectionRoi: 'พื้นที่ตรวจจับ',
+    camerasUnit: 'กล้อง',
+    ready: 'พร้อม',
+    noCamera: 'ไม่มีกล้อง',
+    configured: 'ตั้งค่าแล้ว',
+    stationCamera: 'กล้องสถานี',
+    yoloStarting: 'กำลังเริ่มระบบตรวจจับ',
+    rtspCameraSaved: 'บันทึกกล้อง RTSP แล้ว',
+    noCameraSource: 'ไม่มีแหล่งสัญญาณกล้อง',
+    previewUnavailable: 'ไม่สามารถแสดงตัวอย่างได้',
+    waitingFirstFrame: 'กำลังรอภาพตรวจจับแรก...',
+    startRtspHint: 'กด Start Detection เพื่ออ่าน RTSP ที่ backend และแสดงภาพตรวจจับที่นี่',
+    editCameraFirst: 'แก้ไขสถานีและบันทึก Camera URL ก่อน',
+    browserPreviewUnavailable: 'ลิงก์นี้ถูกบันทึกแล้ว แต่เบราว์เซอร์ไม่สามารถเปิดเป็นสตรีมได้',
+    cameraSource: 'แหล่งสัญญาณกล้อง',
+    drawDetectionArea: 'วาดพื้นที่ตรวจจับ',
+    saveArea: 'บันทึกพื้นที่',
+    clear: 'ล้าง',
+    fullFrame: 'เต็มภาพ',
+    startDetection: 'เริ่มตรวจจับ',
+    stopDetection: 'หยุดตรวจจับ',
+    starting: 'กำลังเริ่ม...',
+    stopping: 'กำลังหยุด...',
+    detectorRunning: 'ระบบตรวจจับกำลังทำงาน',
+    detectorStopped: 'ระบบตรวจจับหยุดแล้ว',
+    detectionRoiInvalid: 'พื้นที่ตรวจจับต้องเป็น JSON เช่น [[0.1,0.2],[0.9,0.2],[0.9,0.8],[0.1,0.8]]',
   },
 } as const;
 
@@ -258,6 +403,7 @@ const loading = ref(false);
 const error = ref('');
 const isLoggedIn = ref(Boolean(api.token));
 const isSidebarCollapsed = ref(false);
+const crowdThresholds = ref<CrowdThresholds>(DEFAULT_CROWD_THRESHOLDS);
 const isAlertMenuOpen = ref(false);
 const isUserMenuOpen = ref(false);
 const currentUsername = ref(localStorage.getItem(USERNAME_KEY) || '');
@@ -307,8 +453,10 @@ const detectorStatus = ref<DetectorStatus | null>(null);
 const detectorBusy = ref(false);
 const roiDraft = ref<Array<[number, number]>>([]);
 const isEditingRoi = ref(false);
-const draggingRoiPointIndex = ref<number | null>(null);
+const roiDragStart = ref<[number, number] | null>(null);
+const detectorFrameUrl = ref('');
 let detectorFrameTimer: number | undefined;
+let detectorStatusTimer: number | undefined;
 let crowdRefreshTimer: number | undefined;
 
 function setStationMapElement(element: HTMLElement | null) {
@@ -353,11 +501,6 @@ const selectedCameraStation = computed(() => {
 });
 const selectedCameraUrl = computed(() => normalizeCameraUrl(selectedCameraStation.value?.cameraUrl));
 const selectedCameraPreviewKind = computed(() => getCameraPreviewKind(selectedCameraUrl.value));
-const detectorStreamUrl = computed(() => (
-  selectedCameraStation.value && detectorStatus.value?.running
-    ? api.getDetectorStreamUrl(selectedCameraStation.value.id)
-    : ''
-));
 
 function fillTemplate(template: string, values: Record<string, string | number>) {
   return template.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ''));
@@ -370,18 +513,17 @@ function stationWaiting(station: Station) {
 
 function stationDensityLevel(station: Station): DensityLevel {
   const waiting = stationWaiting(station);
-  const status = String(station.status ?? 'LOW').toUpperCase();
 
-  if (status === 'HIGH' || waiting >= 20) return 'HIGH';
-  if (status === 'MEDIUM' || waiting >= 10) return 'MEDIUM';
+  if (waiting >= crowdThresholds.value.high) return 'HIGH';
+  if (waiting >= crowdThresholds.value.medium) return 'MEDIUM';
   return 'LOW';
 }
 
 function stationDensityLabel(station: Station) {
   const level = stationDensityLevel(station);
-  if (level === 'HIGH') return 'Crowded';
-  if (level === 'MEDIUM') return 'Busy';
-  return 'Normal';
+  if (level === 'HIGH') return text.value.high;
+  if (level === 'MEDIUM') return text.value.medium;
+  return text.value.low;
 }
 
 function stationHasValidPosition(station: Station) {
@@ -416,10 +558,14 @@ function createCrowdInfoContent(station: Station) {
   title.textContent = station.name || station.id;
 
   const waiting = document.createElement('p');
-  waiting.textContent = `${stationWaiting(station)} passengers waiting`;
+  waiting.textContent = fillTemplate(text.value.passengersWaitingAt, {
+    level: stationDensityLabel(station),
+    count: stationWaiting(station),
+    line: station.lines.join(', ') || text.value.noLine,
+  });
 
   const meta = document.createElement('small');
-  meta.textContent = `${station.lines.join(', ') || 'No line'} - ${stationDensityLabel(station)}`;
+  meta.textContent = `${station.lines.join(', ') || text.value.noLine} - ${stationDensityLabel(station)}`;
 
   content.append(title, waiting, meta);
   return content;
@@ -664,6 +810,13 @@ function syncRoiDraftFromStation() {
     : [];
 }
 
+function revokeDetectorFrameUrl() {
+  if (detectorFrameUrl.value) {
+    URL.revokeObjectURL(detectorFrameUrl.value);
+    detectorFrameUrl.value = '';
+  }
+}
+
 async function loadDetectorStatus() {
   const station = selectedCameraStation.value;
   if (!station) return;
@@ -672,6 +825,23 @@ async function loadDetectorStatus() {
     detectorStatus.value = await api.getDetectorStatus(station.id);
   } catch {
     detectorStatus.value = null;
+  }
+}
+
+async function refreshDetectorFrame() {
+  const station = selectedCameraStation.value;
+  if (!station || !detectorStatus.value?.running) {
+    revokeDetectorFrameUrl();
+    return;
+  }
+
+  try {
+    const frame = await api.getDetectorFrame(station.id);
+    const nextUrl = URL.createObjectURL(frame);
+    revokeDetectorFrameUrl();
+    detectorFrameUrl.value = nextUrl;
+  } catch {
+    revokeDetectorFrameUrl();
   }
 }
 
@@ -684,6 +854,7 @@ async function startSelectedDetector() {
     detectorStatus.value = await api.startDetector(station.id);
     window.setTimeout(() => {
       void loadDetectorStatus();
+      void refreshDetectorFrame();
     }, 2500);
   } finally {
     detectorBusy.value = false;
@@ -697,6 +868,7 @@ async function stopSelectedDetector() {
   detectorBusy.value = true;
   try {
     detectorStatus.value = await api.stopDetector(station.id);
+    revokeDetectorFrameUrl();
   } finally {
     detectorBusy.value = false;
   }
@@ -709,14 +881,36 @@ function getPointerInRoi(event: PointerEvent) {
   return [Number(x.toFixed(4)), Number(y.toFixed(4))] as [number, number];
 }
 
+function makeRectangleRoi(start: [number, number], end: [number, number]) {
+  const left = Math.min(start[0], end[0]);
+  const right = Math.max(start[0], end[0]);
+  const top = Math.min(start[1], end[1]);
+  const bottom = Math.max(start[1], end[1]);
+
+  return [
+    [left, top],
+    [right, top],
+    [right, bottom],
+    [left, bottom],
+  ].map(([x, y]) => [Number(x.toFixed(4)), Number(y.toFixed(4))]) as Array<[number, number]>;
+}
+
 function startRoiEditor() {
   syncRoiDraftFromStation();
+  if (roiDraft.value.length) {
+    const xs = roiDraft.value.map((point) => point[0]);
+    const ys = roiDraft.value.map((point) => point[1]);
+    roiDraft.value = makeRectangleRoi(
+      [Math.min(...xs), Math.min(...ys)],
+      [Math.max(...xs), Math.max(...ys)],
+    );
+  }
   isEditingRoi.value = true;
 }
 
 function cancelRoiEditor() {
   isEditingRoi.value = false;
-  draggingRoiPointIndex.value = null;
+  roiDragStart.value = null;
   syncRoiDraftFromStation();
 }
 
@@ -733,28 +927,26 @@ function setRoiPreset(preset: 'full' | 'right' | 'left' | 'bottom' | 'center') {
 
 function clearRoiDraft() {
   roiDraft.value = [];
+  roiDragStart.value = null;
 }
 
 function handleRoiCanvasPointerDown(event: PointerEvent) {
-  if (!isEditingRoi.value || roiDraft.value.length >= 8) return;
-  roiDraft.value = [...roiDraft.value, getPointerInRoi(event)];
-}
-
-function startDragRoiPoint(index: number, event: PointerEvent) {
-  event.stopPropagation();
-  draggingRoiPointIndex.value = index;
+  if (!isEditingRoi.value) return;
+  const start = getPointerInRoi(event);
+  roiDragStart.value = start;
+  roiDraft.value = makeRectangleRoi(start, start);
 }
 
 function dragRoiPoint(event: PointerEvent) {
-  if (draggingRoiPointIndex.value === null) return;
+  const currentPoint = getPointerInRoi(event);
 
-  const nextPoints = [...roiDraft.value];
-  nextPoints[draggingRoiPointIndex.value] = getPointerInRoi(event);
-  roiDraft.value = nextPoints;
+  if (roiDragStart.value) {
+    roiDraft.value = makeRectangleRoi(roiDragStart.value, currentPoint);
+  }
 }
 
 function stopDragRoiPoint() {
-  draggingRoiPointIndex.value = null;
+  roiDragStart.value = null;
 }
 
 async function saveSelectedRoi() {
@@ -763,14 +955,24 @@ async function saveSelectedRoi() {
 
   const payload: Station = {
     ...station,
-    detectionRoi: roiDraft.value,
+    detectionRoi: roiDraft.value.length === 4 ? roiDraft.value : [],
   };
+  const shouldRestartDetector = Boolean(detectorStatus.value?.running);
 
   await withLoading(async () => {
     await api.updateStation(station.id, payload);
+    if (shouldRestartDetector) {
+      await api.stopDetector(station.id);
+      detectorStatus.value = await api.startDetector(station.id);
+      revokeDetectorFrameUrl();
+      window.setTimeout(() => {
+        void refreshDetectorFrame();
+      }, 2500);
+    }
     stations.value = await api.getStations();
     syncSelectedCameraStation(stations.value);
     isEditingRoi.value = false;
+    roiDragStart.value = null;
   });
 }
 
@@ -802,7 +1004,7 @@ function parseRoiText() {
   ));
 
   if (!isValid) {
-    throw new Error('Detection ROI must be JSON like [[0.1,0.2],[0.9,0.2],[0.9,0.8],[0.1,0.8]]');
+    throw new Error(text.value.detectionRoiInvalid);
   }
 
   return parsed.map((point) => [Number(point[0]), Number(point[1])]) as Array<[number, number]>;
@@ -1027,6 +1229,9 @@ async function saveStation() {
       lines: stationForm.lines.length ? stationForm.lines : ['line1'],
       detectionRoi: parseRoiText(),
     };
+    const confirmTemplate = editingStationKey.value ? text.value.editStationConfirm : text.value.addStationConfirm;
+    const confirmMessage = fillTemplate(confirmTemplate, { name: payload.name || payload.id });
+    if (!confirm(confirmMessage)) return;
 
     if (editingStationKey.value) {
       await api.updateStation(editingStationKey.value, payload);
@@ -1059,6 +1264,13 @@ async function updateReportStatus(report: Report, status: string) {
   });
 }
 
+async function createAdminUser(payload: AdminUserPayload) {
+  await withLoading(async () => {
+    await api.createAdminUser(payload);
+    users.value = await api.getUsers();
+  });
+}
+
 async function updateUserRole(user: User, role: 'admin' | 'user') {
   openRoleMenu.value = null;
   await withLoading(async () => {
@@ -1087,9 +1299,13 @@ onMounted(() => {
     void loadData();
   }
 
-  detectorFrameTimer = window.setInterval(() => {
+  detectorStatusTimer = window.setInterval(() => {
     void loadDetectorStatus();
   }, 2000);
+
+  detectorFrameTimer = window.setInterval(() => {
+    void refreshDetectorFrame();
+  }, 5000);
 
   crowdRefreshTimer = window.setInterval(() => {
     if (activeTab.value === 'crowd' && isLoggedIn.value && !loading.value) {
@@ -1100,12 +1316,16 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', closeUserMenu);
+  if (detectorStatusTimer) {
+    window.clearInterval(detectorStatusTimer);
+  }
   if (detectorFrameTimer) {
     window.clearInterval(detectorFrameTimer);
   }
   if (crowdRefreshTimer) {
     window.clearInterval(crowdRefreshTimer);
   }
+  revokeDetectorFrameUrl();
 });
 
 watch(activeTab, (tab) => {
@@ -1132,8 +1352,10 @@ watch(stations, () => {
 
 watch(selectedCameraStationId, () => {
   detectorStatus.value = null;
+  revokeDetectorFrameUrl();
   syncRoiDraftFromStation();
   void loadDetectorStatus();
+  void refreshDetectorFrame();
 });
 </script>
 
@@ -1147,7 +1369,7 @@ watch(selectedCameraStationId, () => {
       <div class="brand-mark logo-mark">
         <img :src="mfuLogoUrl" alt="MFU" />
       </div>
-      <p class="eyebrow">Admin Dashboard</p>
+      <p class="eyebrow">{{ text.adminDashboard }}</p>
       <h1>MFU Shuttle Bus</h1>
       <p class="muted">{{ text.loginSubtitle }}</p>
 
@@ -1210,7 +1432,7 @@ watch(selectedCameraStationId, () => {
               class="notification-trigger"
               :class="{ active: isAlertMenuOpen, urgent: crowdAlertStations.length > 0 }"
               type="button"
-              aria-label="Crowd alerts"
+              :aria-label="text.crowdAlerts"
               @click="toggleAlertMenu"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1224,8 +1446,10 @@ watch(selectedCameraStationId, () => {
             <div v-if="isAlertMenuOpen" class="notification-panel">
               <div class="notification-panel-header">
                 <div>
-                  <strong>{{ crowdAlertStations.length ? 'Crowd alerts' : 'Notifications' }}</strong>
-                  <span v-if="crowdAlertStations.length">{{ crowdAlertStations.length }} stations need attention</span>
+                  <strong>{{ crowdAlertStations.length ? text.crowdAlerts : text.notifications }}</strong>
+                  <span v-if="crowdAlertStations.length">
+                    {{ fillTemplate(text.stationsNeedAttention, { count: crowdAlertStations.length }) }}
+                  </span>
                 </div>
               </div>
 
@@ -1241,13 +1465,21 @@ watch(selectedCameraStationId, () => {
                   <span class="notification-dot" aria-hidden="true"></span>
                   <div>
                     <strong>{{ item.station.name }}</strong>
-                    <p>{{ stationDensityLabel(item.station) }} · {{ item.waiting }} passengers waiting at {{ item.station.lines.join(', ') || 'No line' }}</p>
+                    <p>
+                      {{
+                        fillTemplate(text.passengersWaitingAt, {
+                          level: stationDensityLabel(item.station),
+                          count: item.waiting,
+                          line: item.station.lines.join(', ') || text.noLine,
+                        })
+                      }}
+                    </p>
                   </div>
                 </button>
               </div>
 
               <div v-else class="notification-empty">
-                <strong>No notifications</strong>
+                <strong>{{ text.noNotifications }}</strong>
               </div>
             </div>
           </div>
@@ -1280,6 +1512,7 @@ watch(selectedCameraStationId, () => {
       <DashboardPage
         v-if="activeTab === 'dashboard'"
         :buses="buses"
+        :crowd-thresholds="crowdThresholds"
         :online-buses="onlineBuses"
         :pending-reports="pendingReports"
         :reports="reports"
@@ -1293,6 +1526,7 @@ watch(selectedCameraStationId, () => {
         :buses="buses"
         :crowd-map-error="crowdMapError"
         :crowd-map-loading="crowdMapLoading"
+        :crowd-thresholds="crowdThresholds"
         :loading="loading"
         :selected-station-id="selectedCrowdStationId"
         :stations="stations"
@@ -1306,7 +1540,6 @@ watch(selectedCameraStationId, () => {
       <StationsPage
         v-if="activeTab === 'stations'"
         :editing-station-key="editingStationKey"
-        :has-camera="hasCamera"
         :loading="loading"
         :station-form="stationForm"
         :station-map-error="stationMapError"
@@ -1316,7 +1549,6 @@ watch(selectedCameraStationId, () => {
         :text="text"
         @delete-station="deleteStation"
         @edit-station="editStation"
-        @open-camera-station="openCameraStation"
         @reset-station-form="resetStationForm"
         @save-station="saveStation"
         @station-map-ready="setStationMapElement"
@@ -1327,8 +1559,8 @@ watch(selectedCameraStationId, () => {
       <StationCCTVPage
         v-if="activeTab === 'cctv'"
         :detector-busy="detectorBusy"
+        :detector-frame-url="detectorFrameUrl"
         :detector-status="detectorStatus"
-        :detector-stream-url="detectorStreamUrl"
         :has-camera="hasCamera"
         :is-editing-roi="isEditingRoi"
         :roi-draft="roiDraft"
@@ -1336,15 +1568,14 @@ watch(selectedCameraStationId, () => {
         :selected-camera-station="selectedCameraStation"
         :selected-camera-url="selectedCameraUrl"
         :stations="stations"
+        :text="text"
         @cancel-roi-editor="cancelRoiEditor"
         @clear-roi-draft="clearRoiDraft"
-        @copy-camera-url="copyCameraUrl"
         @drag-roi-point="dragRoiPoint"
         @handle-roi-canvas-pointer-down="handleRoiCanvasPointerDown"
         @save-selected-roi="saveSelectedRoi"
         @select-camera-station="selectCameraStation"
         @set-roi-preset="setRoiPreset"
-        @start-drag-roi-point="startDragRoiPoint"
         @start-roi-editor="startRoiEditor"
         @start-selected-detector="startSelectedDetector"
         @stop-drag-roi-point="stopDragRoiPoint"
@@ -1365,9 +1596,11 @@ watch(selectedCameraStationId, () => {
 
       <UsersPage
         v-if="activeTab === 'users'"
+        :loading="loading"
         :open-role-menu="openRoleMenu"
         :text="text"
         :users="users"
+        @create-admin-user="createAdminUser"
         @delete-user="deleteUser"
         @toggle-role-menu="toggleRoleMenu"
         @update-user-role="updateUserRole"

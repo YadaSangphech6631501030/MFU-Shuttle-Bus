@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument("--model", default=os.path.join(os.path.dirname(__file__), "yolov8s.pt"))
     parser.add_argument("--frame-dir", default=os.path.join(os.path.dirname(__file__), "..", "runtime", "frames"))
     parser.add_argument("--save-interval", type=float, default=5.0)
-    parser.add_argument("--frame-interval", type=float, default=0.25)
+    parser.add_argument("--frame-interval", type=float, default=5.0)
     parser.add_argument("--roi", default="[]")
     return parser.parse_args()
 
@@ -36,6 +36,7 @@ def get_status(count):
 def connect_camera(camera_url):
     print(f"[detector] Connecting camera: {camera_url}", flush=True)
     cap = cv2.VideoCapture(camera_url, cv2.CAP_FFMPEG)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     time.sleep(1)
 
     if not cap.isOpened():
@@ -91,6 +92,15 @@ def roi_to_pixels(roi, width, height):
     )
 
 
+def apply_roi_mask(frame, roi_pixels):
+    if roi_pixels is None:
+        return frame
+
+    mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+    cv2.fillPoly(mask, [roi_pixels], 255)
+    return cv2.bitwise_and(frame, frame, mask=mask)
+
+
 def is_center_inside_roi(box, roi_pixels):
     if roi_pixels is None:
         return True
@@ -128,10 +138,10 @@ def main():
               time.sleep(3)
           continue
 
-      results = model.track(frame, persist=True, classes=[0], conf=0.3, verbose=False)[0]
-
       height, width = frame.shape[:2]
       roi_pixels = roi_to_pixels(roi, width, height)
+      detection_frame = apply_roi_mask(frame, roi_pixels)
+      results = model.track(detection_frame, persist=True, classes=[0], conf=0.3, verbose=False)[0]
       visible_boxes = []
       visible_ids = set()
 

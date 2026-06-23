@@ -17,14 +17,26 @@ export type Station = {
   detectionRoi?: Array<[number, number]>;
 };
 
+export type CrowdThresholds = {
+  medium: number;
+  high: number;
+};
+
 export type Bus = {
   _id?: string;
   busId?: string;
+  busNumber?: string;
   licensePlate?: string;
   line?: string;
   status?: string;
+  currentStationIndex?: number;
   lat?: number;
   lng?: number;
+  speedKph?: number;
+  heading?: number;
+  accuracy?: number;
+  lastGpsAt?: string;
+  updatedAt?: string;
   driverName?: string;
 };
 
@@ -53,6 +65,12 @@ export type User = {
   username: string;
   email?: string;
   role?: 'admin' | 'user';
+};
+
+export type AdminUserPayload = {
+  username: string;
+  email: string;
+  password: string;
 };
 
 export type DetectorStatus = {

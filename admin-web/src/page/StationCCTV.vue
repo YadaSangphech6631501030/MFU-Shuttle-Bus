@@ -1,12 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { DetectorStatus, Station } from '../types';
 
 type CameraPreviewKind = 'none' | 'rtsp' | 'image' | 'video' | 'link';
 
-defineProps<{
+const props = defineProps<{
   detectorBusy: boolean;
+  detectorFrameUrl: string;
   detectorStatus: DetectorStatus | null;
-  detectorStreamUrl: string;
   hasCamera: (station?: Station | null) => boolean;
   isEditingRoi: boolean;
   roiDraft: Array<[number, number]>;
@@ -14,31 +15,44 @@ defineProps<{
   selectedCameraStation: Station | null;
   selectedCameraUrl: string;
   stations: Station[];
+  text: Record<string, any>;
 }>();
 
 defineEmits<{
   cancelRoiEditor: [];
   clearRoiDraft: [];
-  copyCameraUrl: [];
   dragRoiPoint: [event: PointerEvent];
   handleRoiCanvasPointerDown: [event: PointerEvent];
   saveSelectedRoi: [];
   selectCameraStation: [station: Station];
   setRoiPreset: [preset: 'full' | 'right' | 'left' | 'bottom' | 'center'];
-  startDragRoiPoint: [index: number, event: PointerEvent];
   startRoiEditor: [];
   startSelectedDetector: [];
   stopDragRoiPoint: [];
   stopSelectedDetector: [];
 }>();
+
+const roiBox = computed(() => {
+  if (!props.roiDraft.length) return null;
+  const xs = props.roiDraft.map((point) => point[0]);
+  const ys = props.roiDraft.map((point) => point[1]);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return {
+    x,
+    y,
+    width: Math.max(...xs) - x,
+    height: Math.max(...ys) - y,
+  };
+});
 </script>
 
 <template>
   <section class="cctv-layout">
     <article class="panel cctv-list-panel">
       <div class="panel-heading">
-        <h2>Station CCTV</h2>
-        <span>{{ stations.filter(hasCamera).length }} cameras</span>
+        <h2>{{ text.tabs.cctv }}</h2>
+        <span>{{ stations.filter(hasCamera).length }} {{ text.camerasUnit }}</span>
       </div>
       <div class="cctv-station-list">
         <button
@@ -49,12 +63,12 @@ defineEmits<{
           type="button"
           @click="$emit('selectCameraStation', station)"
         >
-          <span>
+          <span class="cctv-station-meta">
             <strong>{{ station.name }}</strong>
             <small>{{ station.id }} &middot; {{ station.lines.join(', ') }}</small>
           </span>
           <span class="chip" :class="{ 'chip-muted': !hasCamera(station) }">
-            {{ hasCamera(station) ? 'Ready' : 'No camera' }}
+            {{ hasCamera(station) ? text.ready : text.noCamera }}
           </span>
         </button>
       </div>
@@ -64,11 +78,11 @@ defineEmits<{
       <section class="camera-panel camera-panel-standalone">
         <div class="camera-panel-header">
           <div>
-            <h3>Station camera</h3>
+            <h3>{{ text.stationCamera }}</h3>
             <p v-if="selectedCameraStation">{{ selectedCameraStation.name }} &middot; {{ selectedCameraStation.id }}</p>
           </div>
           <span class="chip" :class="{ 'chip-muted': !hasCamera(selectedCameraStation) }">
-            {{ hasCamera(selectedCameraStation) ? 'Configured' : 'No camera' }}
+            {{ hasCamera(selectedCameraStation) ? text.configured : text.noCamera }}
           </span>
         </div>
 
@@ -81,9 +95,9 @@ defineEmits<{
           @pointerleave="$emit('stopDragRoiPoint')"
         >
           <img
-            v-if="detectorStreamUrl"
+            v-if="detectorFrameUrl"
             class="camera-preview-media"
-            :src="detectorStreamUrl"
+            :src="detectorFrameUrl"
             :alt="selectedCameraStation?.name || 'YOLO detector frame'"
           />
           <img
@@ -102,62 +116,56 @@ defineEmits<{
           ></video>
           <div v-else class="camera-preview-empty">
             <strong v-if="selectedCameraPreviewKind === 'rtsp'">
-              {{ detectorStatus?.running ? 'YOLO is starting' : 'RTSP camera saved' }}
+              {{ detectorStatus?.running ? text.yoloStarting : text.rtspCameraSaved }}
             </strong>
-            <strong v-else-if="selectedCameraPreviewKind === 'none'">No camera source</strong>
-            <strong v-else>Preview unavailable</strong>
+            <strong v-else-if="selectedCameraPreviewKind === 'none'">{{ text.noCameraSource }}</strong>
+            <strong v-else>{{ text.previewUnavailable }}</strong>
             <p v-if="selectedCameraPreviewKind === 'rtsp'">
-              {{ detectorStatus?.running ? 'Waiting for the first detected frame...' : 'Press Start YOLO to read RTSP on the backend and show detected frames here.' }}
+              {{ detectorStatus?.running ? text.waitingFirstFrame : text.startRtspHint }}
             </p>
             <p v-else-if="selectedCameraPreviewKind === 'none'">
-              Edit this station and save a Camera URL first.
+              {{ text.editCameraFirst }}
             </p>
             <p v-else>
-              This link is saved, but it is not a browser-playable stream.
+              {{ text.browserPreviewUnavailable }}
             </p>
           </div>
           <svg
-            v-if="roiDraft.length"
+            v-if="roiBox"
             class="roi-overlay"
             viewBox="0 0 1 1"
             preserveAspectRatio="none"
             aria-hidden="true"
           >
-            <polygon class="roi-polygon" :points="roiDraft.map((point) => point.join(',')).join(' ')" />
-            <circle
-              v-for="(point, index) in roiDraft"
-              :key="index"
-              class="roi-handle"
-              :cx="point[0]"
-              :cy="point[1]"
-              r="0.018"
-              @pointerdown="$emit('startDragRoiPoint', index, $event)"
+            <rect
+              class="roi-rect"
+              :x="roiBox.x"
+              :y="roiBox.y"
+              :width="roiBox.width"
+              :height="roiBox.height"
             />
           </svg>
         </div>
 
-        <label v-if="selectedCameraStation">
-          Camera source
+        <label v-if="selectedCameraUrl" class="camera-source-field">
+          <span>{{ text.cameraSource }}</span>
           <input :value="selectedCameraUrl" readonly />
         </label>
 
-        <div class="roi-toolbar">
+        <div class="camera-control-row">
+          <div class="roi-toolbar">
           <button v-if="!isEditingRoi" class="secondary-btn compact-btn" type="button" @click="$emit('startRoiEditor')">
-            Draw Detection Area
+            {{ text.drawDetectionArea }}
           </button>
           <template v-else>
-            <button class="primary-btn compact-btn" type="button" @click="$emit('saveSelectedRoi')">Save Area</button>
-            <button class="secondary-btn compact-btn" type="button" @click="$emit('cancelRoiEditor')">Cancel</button>
-            <button class="secondary-btn compact-btn" type="button" @click="$emit('clearRoiDraft')">Clear</button>
-            <button class="secondary-btn compact-btn" type="button" @click="$emit('setRoiPreset', 'full')">Full</button>
-            <button class="secondary-btn compact-btn" type="button" @click="$emit('setRoiPreset', 'right')">Right half</button>
-            <button class="secondary-btn compact-btn" type="button" @click="$emit('setRoiPreset', 'left')">Left half</button>
-            <button class="secondary-btn compact-btn" type="button" @click="$emit('setRoiPreset', 'bottom')">Bottom</button>
-            <button class="secondary-btn compact-btn" type="button" @click="$emit('setRoiPreset', 'center')">Center</button>
+            <button class="primary-btn compact-btn" type="button" @click="$emit('saveSelectedRoi')">{{ text.saveArea }}</button>
+            <button class="secondary-btn compact-btn" type="button" @click="$emit('cancelRoiEditor')">{{ text.cancel }}</button>
+            <button class="secondary-btn compact-btn" type="button" @click="$emit('clearRoiDraft')">{{ text.clear }}</button>
+            <button class="secondary-btn compact-btn" type="button" @click="$emit('setRoiPreset', 'full')">{{ text.fullFrame }}</button>
           </template>
-        </div>
+          </div>
 
-        <div v-if="selectedCameraUrl" class="camera-actions">
+          <div v-if="selectedCameraUrl" class="camera-actions">
           <button
             v-if="!detectorStatus?.running"
             class="primary-btn compact-btn"
@@ -165,7 +173,7 @@ defineEmits<{
             :disabled="detectorBusy"
             @click="$emit('startSelectedDetector')"
           >
-            {{ detectorBusy ? 'Starting...' : 'Start YOLO' }}
+            {{ detectorBusy ? text.starting : text.startDetection }}
           </button>
           <button
             v-else
@@ -174,25 +182,14 @@ defineEmits<{
             :disabled="detectorBusy"
             @click="$emit('stopSelectedDetector')"
           >
-            {{ detectorBusy ? 'Stopping...' : 'Stop YOLO' }}
+            {{ detectorBusy ? text.stopping : text.stopDetection }}
           </button>
-          <button class="secondary-btn compact-btn" type="button" @click="$emit('copyCameraUrl')">
-            Copy URL
-          </button>
-          <a
-            v-if="selectedCameraPreviewKind !== 'rtsp'"
-            class="secondary-btn compact-btn camera-link"
-            :href="selectedCameraUrl"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open
-          </a>
+          </div>
         </div>
 
         <div v-if="detectorStatus" class="detector-status">
           <span :class="{ live: detectorStatus.running }"></span>
-          {{ detectorStatus.running ? 'Detector running' : 'Detector stopped' }}
+          <strong>{{ detectorStatus.running ? text.detectorRunning : text.detectorStopped }}</strong>
           <small v-if="detectorStatus.lastError">{{ detectorStatus.lastError }}</small>
           <small v-else-if="detectorStatus.lastLog">{{ detectorStatus.lastLog }}</small>
         </div>

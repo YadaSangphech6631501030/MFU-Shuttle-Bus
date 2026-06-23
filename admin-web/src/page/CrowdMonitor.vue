@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import type { Bus, Station } from '../types';
+import type { Bus, CrowdThresholds, Station } from '../types';
 
 type DensityLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -8,6 +8,7 @@ const props = defineProps<{
   buses: Bus[];
   crowdMapError: string;
   crowdMapLoading: boolean;
+  crowdThresholds: CrowdThresholds;
   loading: boolean;
   selectedStationId: string | null;
   stations: Station[];
@@ -30,27 +31,26 @@ function stationWaiting(station: Station) {
 
 function densityLevel(station: Station): DensityLevel {
   const waiting = stationWaiting(station);
-  const status = String(station.status ?? 'LOW').toUpperCase();
 
-  if (status === 'HIGH' || waiting >= 20) return 'HIGH';
-  if (status === 'MEDIUM' || waiting >= 10) return 'MEDIUM';
+  if (waiting >= props.crowdThresholds.high) return 'HIGH';
+  if (waiting >= props.crowdThresholds.medium) return 'MEDIUM';
   return 'LOW';
 }
 
 function densityLabel(level: DensityLevel) {
-  if (level === 'HIGH') return 'Crowded';
-  if (level === 'MEDIUM') return 'Busy';
-  return 'Normal';
+  if (level === 'HIGH') return props.text.high;
+  if (level === 'MEDIUM') return props.text.medium;
+  return props.text.low;
 }
 
 function densityAdvice(level: DensityLevel) {
-  if (level === 'HIGH') return 'Consider dispatching an extra shuttle.';
-  if (level === 'MEDIUM') return 'Keep watching this station.';
-  return 'Passenger flow is normal.';
+  if (level === 'HIGH') return props.text.highAdvice;
+  if (level === 'MEDIUM') return props.text.mediumAdvice;
+  return props.text.lowAdvice;
 }
 
 function stationLineLabel(station: Station) {
-  return station.lines?.length ? station.lines.join(', ') : 'No line';
+  return station.lines?.length ? station.lines.join(', ') : props.text.noLine;
 }
 
 function hasCamera(station: Station) {
@@ -82,8 +82,8 @@ onUnmounted(() => {
   <section class="crowd-monitor">
     <div class="crowd-header">
       <div>
-        <p class="eyebrow">Shuttle Bus Monitor</p>
-        <h1>Shuttle Bus Monitor</h1>
+        <p class="eyebrow">{{ text.tabs.crowd }}</p>
+        <h1>{{ text.tabs.crowd }}</h1>
       </div>
       <button class="secondary-btn compact-btn" type="button" :disabled="loading" @click="$emit('refresh')">
         {{ loading ? text.loading : text.refresh }}
@@ -92,27 +92,27 @@ onUnmounted(() => {
 
     <section class="grid crowd-stat-grid">
       <article class="stat-card">
-        <span>Waiting now</span>
+        <span>{{ text.waitingNow }}</span>
         <strong>{{ totalWaiting }}</strong>
-        <small>passengers across all stations</small>
+        <small>{{ text.passengersAcrossStations }}</small>
       </article>
       <article class="stat-card split-stat-card crowd-status-card">
-        <span>Crowd status</span>
+        <span>{{ text.crowdStatus }}</span>
         <div class="split-stat">
           <div>
             <strong>{{ highStations.length }}</strong>
-            <small>High</small>
+            <small>{{ text.high }}</small>
           </div>
           <div>
             <strong>{{ mediumStations.length }}</strong>
-            <small>Medium</small>
+            <small>{{ text.medium }}</small>
           </div>
         </div>
       </article>
       <article class="stat-card">
-        <span>Online buses</span>
+        <span>{{ text.onlineBuses }}</span>
         <strong>{{ onlineBuses }}</strong>
-        <small>from {{ buses.length }} buses</small>
+        <small>{{ buses.length }} {{ text.busesUnit }}</small>
       </article>
     </section>
 
@@ -120,8 +120,8 @@ onUnmounted(() => {
       <article class="panel crowd-map-panel">
         <div class="panel-heading">
           <div>
-            <h2>Live station map</h2>
-            <span>Marker color follows station crowd level.</span>
+            <h2>{{ text.liveStationMap }}</h2>
+            <span>{{ text.markerColorHint }}</span>
           </div>
         </div>
         <div class="crowd-map-shell">
@@ -133,12 +133,6 @@ onUnmounted(() => {
 
       <aside class="crowd-side">
         <article class="panel station-load-panel">
-          <div class="panel-heading">
-            <div>
-              <h2>Station load</h2>
-              <span>{{ stations.length }} stations</span>
-            </div>
-          </div>
           <div class="station-load-list">
             <div
               v-for="item in stationSummaries"
@@ -173,11 +167,11 @@ onUnmounted(() => {
         </article>
 
         <article class="panel crowd-guide-panel">
-          <h2>Dispatch guide</h2>
+          <h2>{{ text.dispatchGuide }}</h2>
           <div class="crowd-guide-list">
-            <p><span class="guide-dot high"></span><strong>Crowded</strong> {{ densityAdvice('HIGH') }}</p>
-            <p><span class="guide-dot medium"></span><strong>Busy</strong> {{ densityAdvice('MEDIUM') }}</p>
-            <p><span class="guide-dot low"></span><strong>Normal</strong> {{ densityAdvice('LOW') }}</p>
+            <p><span class="guide-dot high"></span><strong>{{ text.high }}</strong> {{ densityAdvice('HIGH') }}</p>
+            <p><span class="guide-dot medium"></span><strong>{{ text.medium }}</strong> {{ densityAdvice('MEDIUM') }}</p>
+            <p><span class="guide-dot low"></span><strong>{{ text.low }}</strong> {{ densityAdvice('LOW') }}</p>
           </div>
         </article>
       </aside>
