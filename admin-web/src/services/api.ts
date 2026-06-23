@@ -1,4 +1,4 @@
-import type { Bus, DetectorStatus, LoginResponse, Report, Station, User } from '../types';
+import type { AdminUserPayload, Bus, DetectorStatus, LoginResponse, Report, Station, User } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.110.150:5001';
 const TOKEN_KEY = 'mfu_admin_token';
@@ -129,6 +129,14 @@ export const api = {
 
   getUsers() {
     return request<User[]>('/auth/admin/users', { auth: true });
+  },
+
+  createAdminUser(payload: AdminUserPayload) {
+    return request<{ message: string }>('/auth/admin/users', {
+      method: 'POST',
+      auth: true,
+      body: JSON.stringify(payload),
+    });
   },
 
   updateUserRole(username: string, role: 'admin' | 'user') {

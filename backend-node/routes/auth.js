@@ -172,6 +172,51 @@ router.get("/admin/users", tokenRequired, adminOnly, async (req, res) => {
   }
 });
 
+router.post("/admin/users", tokenRequired, adminOnly, async (req, res) => {
+  try {
+    const username = String(req.body.username || "").trim();
+    const email = String(req.body.email || "").trim();
+    const password = String(req.body.password || "");
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: "Username, email, and password are required" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    const db = getDB();
+    const users = db.collection("users");
+
+    const existingUser = await users.findOne({
+      $or: [
+        { username },
+        { email },
+      ],
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: "Username or email already exists" });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    await users.insertOne({
+      username,
+      email,
+      password: hashed,
+      role: "admin",
+      createdAt: new Date(),
+    });
+
+    res.json({ message: "Admin created" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // update user role only admin
 router.put("/admin/user/:username/role", tokenRequired, adminOnly, async (req, res) => {
   try {

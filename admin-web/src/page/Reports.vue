@@ -19,7 +19,7 @@ function selectValue(event: Event) {
   <section class="panel">
     <div class="panel-heading">
       <h2>{{ text.issueReports }}</h2>
-      <span>{{ reports.length }} reports</span>
+      <span>{{ reports.length }} {{ text.reportsUnit }}</span>
     </div>
     <div class="card-list">
       <article v-for="report in reports" :key="report._id" class="list-card report-card">
@@ -33,9 +33,9 @@ function selectValue(event: Event) {
           </small>
         </div>
         <select :value="report.status || 'pending'" @change="$emit('updateReportStatus', report, selectValue($event))">
-          <option value="pending">pending</option>
-          <option value="in_progress">in_progress</option>
-          <option value="resolved">resolved</option>
+          <option value="pending">{{ text.pendingStatus }}</option>
+          <option value="in_progress">{{ text.inProgressStatus }}</option>
+          <option value="resolved">{{ text.resolvedStatus }}</option>
         </select>
       </article>
     </div>

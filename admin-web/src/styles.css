@@ -127,6 +127,14 @@ small {
   gap: 14px;
 }
 
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
 label {
   display: grid;
   gap: 7px;
@@ -723,9 +731,14 @@ nav button.active {
 
 .cctv-layout {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 18px;
   align-items: start;
+}
+
+.cctv-list-panel,
+.cctv-view-panel {
+  min-width: 0;
 }
 
 .cctv-station-list {
@@ -737,14 +750,14 @@ nav button.active {
 }
 
 .cctv-station-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 13px;
+  border-radius: 14px;
+  padding: 12px;
   color: var(--ink);
   background: #ffffff;
   text-align: left;
@@ -757,14 +770,29 @@ nav button.active {
   box-shadow: 0 10px 22px rgba(140, 21, 21, 0.08);
 }
 
+.cctv-station-meta,
 .cctv-station-item strong,
 .cctv-station-item small {
   display: block;
+  min-width: 0;
+}
+
+.cctv-station-meta {
+  overflow: hidden;
+}
+
+.cctv-station-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cctv-station-item small {
   margin-top: 4px;
+  overflow: hidden;
   color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel {
@@ -783,6 +811,11 @@ nav button.active {
   margin-bottom: 0;
 }
 
+.panel-title-group {
+  display: grid;
+  gap: 4px;
+}
+
 .panel-heading span {
   color: var(--muted);
   font-weight: 800;
@@ -792,6 +825,29 @@ nav button.active {
   width: 100%;
   overflow-x: auto;
   overflow-y: visible;
+}
+
+.station-setting-page {
+  display: grid;
+  gap: 18px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(6px);
+}
+
+.station-modal {
+  width: min(780px, 100%);
+  max-height: min(92vh, 860px);
+  overflow-y: auto;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
 }
 
 table {
@@ -836,13 +892,17 @@ th {
 .chip {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  max-width: 100%;
   border-radius: 999px;
   padding: 7px 11px;
   color: #5d0f12;
   background: linear-gradient(180deg, rgba(254, 194, 96, 0.42), rgba(254, 194, 96, 0.22));
   font-size: 12px;
   font-weight: 900;
+  line-height: 1;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .chip-muted {
@@ -1006,7 +1066,7 @@ th {
 
 .camera-panel {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid var(--line);
@@ -1019,31 +1079,41 @@ th {
 }
 
 .camera-panel-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 12px;
+}
+
+.camera-panel-header > div {
+  min-width: 0;
 }
 
 .camera-panel-header h3 {
   margin: 0 0 5px;
-  font-size: 17px;
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1.2;
 }
 
 .camera-panel-header p {
   margin: 0;
+  overflow: hidden;
   color: var(--muted);
   font-size: 13px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .camera-preview-shell {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 220px;
+  min-height: 260px;
   overflow: hidden;
   border: 1px solid rgba(95, 111, 134, 0.22);
-  border-radius: 20px;
+  border-radius: 16px;
   background:
     linear-gradient(135deg, rgba(93, 15, 18, 0.76), rgba(140, 21, 21, 0.64)),
     #233247;
@@ -1054,14 +1124,15 @@ th {
 }
 
 .cctv-preview {
-  min-height: 460px;
+  aspect-ratio: 16 / 9;
+  min-height: 360px;
 }
 
 .camera-preview-media {
   width: 100%;
   height: 100%;
   min-height: inherit;
-  object-fit: cover;
+  object-fit: fill;
 }
 
 .roi-overlay {
@@ -1073,26 +1144,17 @@ th {
   touch-action: none;
 }
 
+.roi-rect,
 .roi-polygon {
-  fill: rgba(254, 194, 96, 0.24);
-  stroke: #fec260;
-  stroke-width: 0.008;
+  fill: transparent;
+  stroke: #006b35;
+  stroke-width: 4px;
   vector-effect: non-scaling-stroke;
-}
-
-.roi-handle {
-  fill: #8c1515;
-  stroke: #ffffff;
-  stroke-width: 0.008;
-  cursor: grab;
-  vector-effect: non-scaling-stroke;
-}
-
-.roi-handle:active {
-  cursor: grabbing;
+  shape-rendering: crispEdges;
 }
 
 .camera-preview-empty {
+  max-width: 520px;
   padding: 22px;
   color: #ffffff;
   text-align: center;
@@ -1110,16 +1172,46 @@ th {
   line-height: 1.45;
 }
 
-.camera-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.camera-source-field {
+  min-width: 0;
 }
 
+.camera-source-field span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.camera-source-field input {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--muted-strong);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
+.camera-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+}
+
+.camera-actions,
 .roi-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+}
+
+.camera-actions .compact-btn,
+.roi-toolbar .compact-btn {
+  min-height: 38px;
+  white-space: nowrap;
 }
 
 .camera-link {
@@ -1131,10 +1223,16 @@ th {
 }
 
 .detector-status {
-  display: flex;
+  display: grid;
+  grid-template-columns: 10px auto minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 8px 10px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 11px 13px;
   color: var(--muted);
+  background: #fbfcfe;
   font-size: 13px;
   font-weight: 800;
 }
@@ -1149,6 +1247,11 @@ th {
 .detector-status span.live {
   background: var(--success);
   box-shadow: 0 0 0 4px rgba(46, 184, 92, 0.16);
+}
+
+.detector-status strong {
+  color: var(--ink);
+  white-space: nowrap;
 }
 
 .detector-status small {
@@ -1175,6 +1278,229 @@ th {
 .list-card p {
   margin: 5px 0 0;
   color: var(--muted);
+}
+
+.bus-page {
+  display: grid;
+  gap: 18px;
+}
+
+.bus-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.bus-header h2 {
+  margin: 0 0 6px;
+}
+
+.bus-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.bus-header > span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.bus-stat-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.bus-mini-stat {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: #fbfcfe;
+}
+
+.bus-mini-stat span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.bus-mini-stat strong {
+  color: var(--ink);
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.bus-mini-stat.online {
+  border-color: rgba(140, 21, 21, 0.24);
+  background: linear-gradient(180deg, rgba(140, 21, 21, 0.08), #ffffff);
+}
+
+.bus-mini-stat.offline {
+  border-color: rgba(95, 111, 134, 0.22);
+  background: linear-gradient(180deg, rgba(95, 111, 134, 0.08), #ffffff);
+}
+
+.bus-mini-stat.total {
+  border-color: rgba(254, 194, 96, 0.42);
+  background: linear-gradient(180deg, rgba(254, 194, 96, 0.18), #ffffff);
+}
+
+.bus-list {
+  display: grid;
+  gap: 12px;
+}
+
+.bus-list.simple {
+  margin-top: 4px;
+}
+
+.bus-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.4fr) auto;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.bus-card.simple {
+  grid-template-columns: minmax(240px, 1fr) auto;
+  border-color: rgba(254, 194, 96, 0.34);
+  border-radius: 20px;
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff, rgba(254, 194, 96, 0.06));
+  box-shadow: 0 10px 24px rgba(140, 21, 21, 0.05);
+}
+
+.bus-card.simple.offline {
+  border-color: rgba(95, 111, 134, 0.22);
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.bus-card-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.bus-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--mfu-red), var(--mfu-red-dark));
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.bus-icon.muted {
+  background: linear-gradient(135deg, #8a94a6, #64748b);
+}
+
+.bus-card-title {
+  min-width: 0;
+}
+
+.bus-card-title strong,
+.bus-card-title small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bus-card-title small {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.bus-card-meta {
+  display: grid;
+  grid-template-columns: 0.7fr 1.2fr 1.1fr;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bus-card-meta span {
+  min-width: 0;
+}
+
+.bus-card-meta strong,
+.bus-card-meta small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bus-card-meta strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.bus-card-meta small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.bus-card-details {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bus-card-details span {
+  overflow: hidden;
+  max-width: 220px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bus-card-details small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bus-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  border-radius: 999px;
+  padding: 9px 13px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.bus-status-pill.online {
+  color: #5d0f12;
+  background: linear-gradient(180deg, rgba(254, 194, 96, 0.42), rgba(254, 194, 96, 0.22));
+}
+
+.bus-status-pill.offline {
+  color: #64748b;
+  background: linear-gradient(180deg, #f8fafc, #eef2f7);
 }
 
 .report-card {
@@ -1396,6 +1722,15 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .bus-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bus-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
   .crowd-map {
     min-height: 430px;
   }
@@ -1410,6 +1745,16 @@ th {
 
   .cctv-preview {
     min-height: 320px;
+  }
+
+  .camera-control-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .camera-actions,
+  .roi-toolbar {
+    width: 100%;
   }
 }
 
@@ -1430,6 +1775,44 @@ th {
   .list-card {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .bus-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bus-card.simple {
+    grid-template-columns: 1fr;
+  }
+
+  .bus-card-details {
+    justify-items: start;
+  }
+
+  .camera-panel-header {
+    grid-template-columns: 1fr;
+  }
+
+  .camera-panel-header p {
+    white-space: normal;
+  }
+
+  .cctv-station-item {
+    grid-template-columns: 1fr;
+  }
+
+  .cctv-station-item .chip {
+    justify-self: start;
+  }
+
+  .detector-status {
+    grid-template-columns: 10px minmax(0, 1fr);
+  }
+
+  .detector-status small {
+    grid-column: 2;
+    white-space: normal;
   }
 
   .topbar {
@@ -1462,6 +1845,7 @@ th {
   }
 
   .dashboard-grid,
+  .bus-stat-grid,
   .crowd-stat-grid,
   .split {
     grid-template-columns: 1fr;
@@ -1478,5 +1862,9 @@ th {
 
   .map-picker-header {
     flex-direction: column;
+  }
+
+  .bus-card-meta {
+    grid-template-columns: 1fr;
   }
 }

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Bus, Report, Station, User } from '../types';
+import type { Bus, CrowdThresholds, Report, Station, User } from '../types';
 
 const props = defineProps<{
   buses: Bus[];
+  crowdThresholds: CrowdThresholds;
   onlineBuses: number;
   pendingReports: number;
   reports: Report[];
@@ -23,10 +24,9 @@ function stationWaiting(station: Station) {
 
 function stationDensityLevel(station: Station) {
   const waiting = stationWaiting(station);
-  const status = String(station.status ?? 'LOW').toUpperCase();
 
-  if (status === 'HIGH' || waiting >= 20) return 'HIGH';
-  if (status === 'MEDIUM' || waiting >= 10) return 'MEDIUM';
+  if (waiting >= props.crowdThresholds.high) return 'HIGH';
+  if (waiting >= props.crowdThresholds.medium) return 'MEDIUM';
   return 'LOW';
 }
 
@@ -43,22 +43,22 @@ const busyStations = computed(() => stationSummaries.value.filter((item) => item
 <template>
   <section class="grid dashboard-grid">
     <article class="stat-card split-stat-card">
-      <span>Crowd status</span>
+      <span>{{ text.crowdStatus }}</span>
       <div class="split-stat">
         <div>
           <strong>{{ highCrowdStations }}</strong>
-          <small>High</small>
+          <small>{{ text.high }}</small>
         </div>
         <div>
           <strong>{{ busyStations }}</strong>
-          <small>Medium</small>
+          <small>{{ text.medium }}</small>
         </div>
       </div>
     </article>
     <article class="stat-card">
-      <span>Waiting now</span>
+      <span>{{ text.waitingNow }}</span>
       <strong>{{ totalWaiting }}</strong>
-      <small>passengers across all stations</small>
+      <small>{{ text.passengersAcrossStations }}</small>
     </article>
     <article class="stat-card">
       <span>{{ text.onlineBuses }}</span>
