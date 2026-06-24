@@ -34,31 +34,70 @@ const offlineBuses = computed(() => props.buses.length - onlineBuses.value);
 </script>
 
 <template>
-  <section class="bus-page">
-    <article class="panel">
-      <div class="bus-header">
-        <div>
-          <h2>{{ text.allBuses }}</h2>
-          <p>{{ text.busesDescription }}</p>
-        </div>
-        <span>{{ buses.length }} {{ text.busesUnit }}</span>
+  <section class="bus-page dashboard-page">
+    <header class="dashboard-page-header bus-page-header">
+      <div>
+        <p class="eyebrow">{{ text.tabs.buses }}</p>
+        <h1>{{ text.allBuses }}</h1>
       </div>
+      <span class="bus-total-chip">{{ buses.length }} {{ text.busesUnit }}</span>
+    </header>
 
-      <section class="grid bus-stat-grid">
-        <article class="bus-mini-stat online">
+    <section class="dashboard-metric-grid bus-stat-grid">
+      <article class="dashboard-metric-card">
+        <div>
           <span>{{ text.online }}</span>
           <strong>{{ onlineBuses }}</strong>
-        </article>
-        <article class="bus-mini-stat offline">
+          <small>{{ text.onlineBuses }}</small>
+        </div>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 16h.01" />
+          <path d="M17 16h.01" />
+          <path d="M7 20v-2" />
+          <path d="M17 20v-2" />
+          <path d="M5 11h14" />
+          <path d="M6 18h12a2 2 0 0 0 2-2V8a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v8a2 2 0 0 0 2 2" />
+        </svg>
+      </article>
+      <article class="dashboard-metric-card">
+        <div>
           <span>{{ text.offline }}</span>
           <strong>{{ offlineBuses }}</strong>
-        </article>
-        <article class="bus-mini-stat total">
+          <small>{{ text.busesDescription }}</small>
+        </div>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 3l18 18" />
+          <path d="M7 16h.01" />
+          <path d="M17 16h.01" />
+          <path d="M7 20v-2" />
+          <path d="M17 20v-2" />
+          <path d="M5 11h6" />
+          <path d="M14 11h5" />
+          <path d="M6 18h12a2 2 0 0 0 2-2V8a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v8a2 2 0 0 0 2 2" />
+        </svg>
+      </article>
+      <article class="dashboard-metric-card">
+        <div>
           <span>{{ text.total }}</span>
           <strong>{{ buses.length }}</strong>
-        </article>
-      </section>
+          <small>{{ text.busesUnit }}</small>
+        </div>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 12h6" />
+          <path d="M9 16h6" />
+          <path d="M9 8h2" />
+          <path d="M9 3h6l1 2h3v16H5V5h3l1-2Z" />
+        </svg>
+      </article>
+    </section>
 
+    <article class="dashboard-chart-panel bus-list-panel">
+      <div class="dashboard-panel-heading bus-list-heading">
+        <div>
+          <h2>{{ text.allBuses }}</h2>
+          <span>{{ text.busesDescription }}</span>
+        </div>
+      </div>
       <div class="bus-list simple">
         <article
           v-for="bus in buses"
@@ -68,7 +107,15 @@ const offlineBuses = computed(() => props.buses.length - onlineBuses.value);
         >
           <div class="bus-card-main">
             <span class="bus-icon" :class="{ muted: isOffline(bus) }">
-              {{ busName(bus).slice(0, 2).toUpperCase() }}
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 16h.01" />
+                <path d="M17 16h.01" />
+                <path d="M7 20v-2" />
+                <path d="M17 20v-2" />
+                <path d="M5 11h14" />
+                <path d="M8 6h8" />
+                <path d="M6 18h12a2 2 0 0 0 2-2V8a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v8a2 2 0 0 0 2 2" />
+              </svg>
             </span>
             <div class="bus-card-title">
               <strong>{{ text.busPrefix }} {{ busName(bus) }}</strong>
