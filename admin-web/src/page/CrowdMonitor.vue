@@ -79,46 +79,70 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="crowd-monitor">
-    <div class="crowd-header">
+  <section class="crowd-monitor dashboard-page">
+    <div class="crowd-header dashboard-page-header">
       <div>
         <p class="eyebrow">{{ text.tabs.crowd }}</p>
         <h1>{{ text.tabs.crowd }}</h1>
       </div>
-      <button class="secondary-btn compact-btn" type="button" :disabled="loading" @click="$emit('refresh')">
+      <button class="secondary-btn compact-btn refresh-data-btn" type="button" :disabled="loading" @click="$emit('refresh')">
+        <svg class="refresh-btn-icon" :class="{ spinning: loading }" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 12a9 9 0 0 1-15.5 6.2" />
+          <path d="M3 12A9 9 0 0 1 18.5 5.8" />
+          <path d="M18 2v4h4" />
+          <path d="M6 22v-4H2" />
+        </svg>
         {{ loading ? text.loading : text.refresh }}
       </button>
     </div>
 
-    <section class="grid crowd-stat-grid">
-      <article class="stat-card">
-        <span>{{ text.waitingNow }}</span>
-        <strong>{{ totalWaiting }}</strong>
-        <small>{{ text.passengersAcrossStations }}</small>
+    <section class="dashboard-metric-grid crowd-stat-grid">
+      <article class="dashboard-metric-card">
+        <div>
+          <span>{{ text.waitingNow }}</span>
+          <strong>{{ totalWaiting }}</strong>
+          <small>{{ text.passengersAcrossStations }}</small>
+        </div>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 19V5" />
+          <path d="M4 19h16" />
+          <path d="m7 15 4-4 3 3 5-7" />
+        </svg>
       </article>
-      <article class="stat-card split-stat-card crowd-status-card">
-        <span>{{ text.crowdStatus }}</span>
-        <div class="split-stat">
-          <div>
-            <strong>{{ highStations.length }}</strong>
-            <small>{{ text.high }}</small>
-          </div>
-          <div>
-            <strong>{{ mediumStations.length }}</strong>
-            <small>{{ text.medium }}</small>
+      <article class="dashboard-metric-card crowd-status-card">
+        <div>
+          <span>{{ text.crowdStatus }}</span>
+          <strong>{{ highStations.length + mediumStations.length }}</strong>
+          <div class="metric-status-pills">
+            <small class="summary-high">{{ highStations.length }} {{ text.high }}</small>
+            <small class="summary-medium">{{ mediumStations.length }} {{ text.medium }}</small>
           </div>
         </div>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 22s7-5.02 7-12a7 7 0 1 0-14 0c0 6.98 7 12 7 12" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg>
       </article>
-      <article class="stat-card">
-        <span>{{ text.onlineBuses }}</span>
-        <strong>{{ onlineBuses }}</strong>
-        <small>{{ buses.length }} {{ text.busesUnit }}</small>
+      <article class="dashboard-metric-card">
+        <div>
+          <span>{{ text.onlineBuses }}</span>
+          <strong>{{ onlineBuses }}</strong>
+          <small>{{ buses.length }} {{ text.busesUnit }}</small>
+        </div>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 16h.01" />
+          <path d="M17 16h.01" />
+          <path d="M7 20v-2" />
+          <path d="M17 20v-2" />
+          <path d="M5 11h14" />
+          <path d="M6 18h12a2 2 0 0 0 2-2V8a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v8a2 2 0 0 0 2 2" />
+        </svg>
       </article>
     </section>
 
     <section class="crowd-layout">
-      <article class="panel crowd-map-panel">
-        <div class="panel-heading">
+      <article class="dashboard-chart-panel crowd-map-panel">
+        <div class="dashboard-panel-heading">
           <div>
             <h2>{{ text.liveStationMap }}</h2>
             <span>{{ text.markerColorHint }}</span>
@@ -132,7 +156,13 @@ onUnmounted(() => {
       </article>
 
       <aside class="crowd-side">
-        <article class="panel station-load-panel">
+        <article class="dashboard-chart-panel station-load-panel">
+          <div class="dashboard-panel-heading">
+            <div>
+              <h2>{{ text.crowdAlerts }}</h2>
+              <span>{{ text.dispatchGuide }}</span>
+            </div>
+          </div>
           <div class="station-load-list">
             <div
               v-for="item in stationSummaries"
@@ -166,7 +196,7 @@ onUnmounted(() => {
           </div>
         </article>
 
-        <article class="panel crowd-guide-panel">
+        <article class="dashboard-chart-panel crowd-guide-panel">
           <h2>{{ text.dispatchGuide }}</h2>
           <div class="crowd-guide-list">
             <p><span class="guide-dot high"></span><strong>{{ text.high }}</strong> {{ densityAdvice('HIGH') }}</p>

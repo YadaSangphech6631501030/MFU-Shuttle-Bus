@@ -16,6 +16,11 @@ type TabKey = 'dashboard' | 'crowd' | 'stations' | 'cctv' | 'buses' | 'reports' 
 type LatLng = { lat: number; lng: number };
 type CameraPreviewKind = 'none' | 'rtsp' | 'image' | 'video' | 'link';
 type DensityLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+type NavIcon = {
+  paths?: string[];
+  circles?: Array<{ cx: number; cy: number; r: number }>;
+  rects?: Array<{ x: number; y: number; width: number; height: number; rx?: number }>;
+};
 
 type GoogleLatLngValue = {
   lat: () => number;
@@ -117,6 +122,60 @@ const tabs: Array<{ key: TabKey }> = [
   { key: 'reports' },
   { key: 'users' },
 ];
+const tabIcons: Record<TabKey, NavIcon> = {
+  dashboard: {
+    rects: [
+      { x: 3, y: 3, width: 7, height: 7, rx: 1.5 },
+      { x: 14, y: 3, width: 7, height: 7, rx: 1.5 },
+      { x: 3, y: 14, width: 7, height: 7, rx: 1.5 },
+      { x: 14, y: 14, width: 7, height: 7, rx: 1.5 },
+    ],
+  },
+  crowd: {
+    rects: [{ x: 3, y: 4, width: 18, height: 12, rx: 2 }],
+    paths: [
+      'M8 20h8',
+      'M12 16v4',
+    ],
+  },
+  stations: {
+    paths: [
+      'M12 22s7-5.02 7-12a7 7 0 1 0-14 0c0 6.98 7 12 7 12',
+    ],
+    circles: [{ cx: 12, cy: 10, r: 2.5 }],
+  },
+  cctv: {
+    paths: [
+      'M15 10l4.55-2.28A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.9L15 14',
+    ],
+    rects: [{ x: 3, y: 6, width: 12, height: 12, rx: 2 }],
+  },
+  buses: {
+    paths: [
+      'M7 16h.01',
+      'M17 16h.01',
+      'M7 20v-2',
+      'M17 20v-2',
+      'M5 11h14',
+      'M8 6h8',
+      'M6 18h12a2 2 0 0 0 2-2V8a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v8a2 2 0 0 0 2 2',
+    ],
+  },
+  reports: {
+    paths: [
+      'M9 12h6',
+      'M9 16h6',
+      'M9 8h2',
+      'M9 3h6l1 2h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3l1-2Z',
+    ],
+  },
+  users: {
+    paths: [
+      'M20 21a8 8 0 0 0-16 0',
+      'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8',
+    ],
+  },
+};
 const sidebarTabs = computed(() => tabs.filter((tab) => tab.key !== 'users'));
 const activeTab = ref<TabKey>('dashboard');
 
@@ -1411,7 +1470,30 @@ watch(selectedCameraStationId, () => {
           :class="{ active: activeTab === tab.key }"
           @click="setActiveTab(tab.key)"
         >
-          {{ text.tabs[tab.key] }}
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect
+              v-for="rect in tabIcons[tab.key].rects"
+              :key="`rect-${rect.x}-${rect.y}`"
+              :x="rect.x"
+              :y="rect.y"
+              :width="rect.width"
+              :height="rect.height"
+              :rx="rect.rx"
+            />
+            <circle
+              v-for="circle in tabIcons[tab.key].circles"
+              :key="`circle-${circle.cx}-${circle.cy}`"
+              :cx="circle.cx"
+              :cy="circle.cy"
+              :r="circle.r"
+            />
+            <path
+              v-for="path in tabIcons[tab.key].paths"
+              :key="path"
+              :d="path"
+            />
+          </svg>
+          <span>{{ text.tabs[tab.key] }}</span>
         </button>
       </nav>
     </aside>
