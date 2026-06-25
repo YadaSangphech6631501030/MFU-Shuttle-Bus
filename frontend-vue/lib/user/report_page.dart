@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:shuttle_bus_fronted/services/language_service.dart';
 
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
@@ -21,38 +20,16 @@ class _ReportPageState extends State<ReportPage>
   final TextEditingController detailController = TextEditingController();
   final TextEditingController locationController = TextEditingController();
 
-  // =========================
-  // 📡 SEND TO BACKEND
-  // =========================
-  Future<void> sendReport() async {
-    try {
-      final response = await http.post(
-        Uri.parse("http://10.0.2.2:3000/api/report"), // emulator
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "type": selectedType,
-          "detail": detailController.text,
-          "location": locationController.text,
-          "time": DateTime.now().toIso8601String(),
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        print("✅ Report sent");
-      } else {
-        print("❌ Failed: ${response.body}");
-      }
-    } catch (e) {
-      print("❌ Error: $e");
-    }
+  String _t({required String en, required String th}) {
+    return LanguageService.text(en: en, th: th);
   }
 
   // =========================
   // 📌 OPEN FORM DIALOG
   // =========================
-  void openReportForm(String title) {
+  void openReportForm({required String type, required String title}) {
     setState(() {
-      selectedType = title;
+      selectedType = type;
       detailController.clear();
       locationController.clear();
     });
@@ -73,7 +50,7 @@ class _ReportPageState extends State<ReportPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    "Report Problem",
+                    _t(en: "Report Problem", th: "แจ้งปัญหา"),
                     style: GoogleFonts.kanit(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -93,7 +70,10 @@ class _ReportPageState extends State<ReportPage>
                   TextField(
                     controller: locationController,
                     decoration: InputDecoration(
-                      hintText: "Location (optional)",
+                      hintText: _t(
+                        en: "Location (optional)",
+                        th: "สถานที่ (ไม่บังคับ)",
+                      ),
                       filled: true,
                       fillColor: Colors.grey.shade100,
                       border: OutlineInputBorder(
@@ -110,7 +90,10 @@ class _ReportPageState extends State<ReportPage>
                     controller: detailController,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: "Describe the problem...",
+                      hintText: _t(
+                        en: "Describe the problem...",
+                        th: "อธิบายปัญหา...",
+                      ),
                       filled: true,
                       fillColor: Colors.grey.shade100,
                       border: OutlineInputBorder(
@@ -128,9 +111,9 @@ class _ReportPageState extends State<ReportPage>
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          "Cancel",
-                          style: TextStyle(color: Colors.red),
+                        child: Text(
+                          _t(en: "Cancel", th: "ยกเลิก"),
+                          style: const TextStyle(color: Colors.red),
                         ),
                       ),
 
@@ -142,22 +125,27 @@ class _ReportPageState extends State<ReportPage>
                           ),
                         ),
                         onPressed: () async {
+                          final navigator = Navigator.of(context);
+                          final messenger = ScaffoldMessenger.of(context);
                           final result = await ApiService.sendReport(
                             selectedType ?? "",
                             detailController.text,
                             locationController.text,
                           );
 
+                          if (!mounted) return;
                           if (result == null) {
-                            Navigator.pop(context);
+                            navigator.pop();
                             showSuccessPopup();
                           } else {
-                            print("ERROR: $result");
+                            messenger.showSnackBar(
+                              SnackBar(content: Text(result)),
+                            );
                           }
                         },
-                        child: const Text(
-                          "Send",
-                          style: TextStyle(color: Colors.white),
+                        child: Text(
+                          _t(en: "Send", th: "ส่ง"),
+                          style: const TextStyle(color: Colors.white),
                         ),
                       ),
                     ],
@@ -184,19 +172,27 @@ class _ReportPageState extends State<ReportPage>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Padding(
-            padding: EdgeInsets.all(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 60),
-                SizedBox(height: 10),
+                const Icon(Icons.check_circle, color: Colors.green, size: 60),
+                const SizedBox(height: 10),
                 Text(
-                  "Success",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  _t(en: "Success", th: "สำเร็จ"),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                SizedBox(height: 5),
-                Text("Report sent successfully"),
+                const SizedBox(height: 5),
+                Text(
+                  _t(
+                    en: "Report sent successfully",
+                    th: "ส่งรายงานเรียบร้อยแล้ว",
+                  ),
+                ),
               ],
             ),
           ),
@@ -214,9 +210,14 @@ class _ReportPageState extends State<ReportPage>
   // =========================
   // 📦 CARD ITEM
   // =========================
-  Widget buildReportItem(IconData icon, String title, Color color) {
+  Widget buildReportItem(
+    IconData icon,
+    String type,
+    String title,
+    Color color,
+  ) {
     return GestureDetector(
-      onTap: () => openReportForm(title),
+      onTap: () => openReportForm(type: type, title: title),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
@@ -253,92 +254,128 @@ class _ReportPageState extends State<ReportPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final topPadding = MediaQuery.of(context).padding.top;
-    const homeAppBarHeight = 88.0;
-    const backButtonSize = 44.0;
-    final backButtonTop =
-        (topPadding + ((homeAppBarHeight - topPadding - backButtonSize) / 2))
-            .clamp(0.0, homeAppBarHeight - backButtonSize);
+    return ValueListenableBuilder<String>(
+      valueListenable: LanguageService.notifier,
+      builder: (context, selectedLanguage, _) {
+        final topPadding = MediaQuery.of(context).padding.top;
+        const homeAppBarHeight = 88.0;
+        const backButtonSize = 44.0;
+        final backButtonTop =
+            (topPadding +
+                    ((homeAppBarHeight - topPadding - backButtonSize) / 2))
+                .clamp(0.0, homeAppBarHeight - backButtonSize);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(homeAppBarHeight),
-        child: Material(
-          color: Colors.white,
-          elevation: 0,
-          child: Container(
-            height: homeAppBarHeight,
-            decoration: const BoxDecoration(
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(homeAppBarHeight),
+            child: Material(
               color: Colors.white,
-              border: Border(
-                bottom: BorderSide(color: Color(0xFFE0E0E0), width: 1),
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  top: topPadding,
-                  child: const Center(
-                    child: Text(
-                      "Report Problem",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+              elevation: 0,
+              child: Container(
+                height: homeAppBarHeight,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    bottom: BorderSide(color: Color(0xFFE0E0E0), width: 1),
                   ),
                 ),
-                Positioned(
-                  left: 16,
-                  top: backButtonTop,
-                  child: SizedBox(
-                    width: backButtonSize,
-                    height: backButtonSize,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      icon: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: Colors.black,
-                          size: 18,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      top: topPadding,
+                      child: Center(
+                        child: Text(
+                          _t(en: "Report Problem", th: "แจ้งปัญหา"),
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
                     ),
-                  ),
+                    Positioned(
+                      left: 16,
+                      top: backButtonTop,
+                      child: SizedBox(
+                        width: backButtonSize,
+                        height: backButtonSize,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.black,
+                              size: 18,
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: GridView.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.6,
+              children: [
+                buildReportItem(
+                  Icons.car_crash,
+                  "Accident",
+                  _t(en: "Accident", th: "อุบัติเหตุ"),
+                  Colors.red,
+                ),
+                buildReportItem(
+                  Icons.directions_car,
+                  "Breakdown",
+                  _t(en: "Breakdown", th: "รถเสีย"),
+                  Colors.red,
+                ),
+                buildReportItem(
+                  Icons.construction,
+                  "Construction",
+                  _t(en: "Construction", th: "ก่อสร้าง"),
+                  Colors.orange,
+                ),
+                buildReportItem(
+                  Icons.block,
+                  "Road Closed",
+                  _t(en: "Road Closed", th: "ปิดถนน"),
+                  Colors.orange,
+                ),
+                buildReportItem(
+                  Icons.warning,
+                  "Obstacle",
+                  _t(en: "Obstacle", th: "สิ่งกีดขวาง"),
+                  Colors.amber,
+                ),
+                buildReportItem(
+                  Icons.email,
+                  "Complaint",
+                  _t(en: "Complaint", th: "ร้องเรียน"),
+                  Colors.blue,
                 ),
               ],
             ),
           ),
-        ),
-      ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: GridView.count(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.6,
-          children: [
-            buildReportItem(Icons.car_crash, "Accident", Colors.red),
-            buildReportItem(Icons.directions_car, "Breakdown", Colors.red),
-            buildReportItem(Icons.construction, "Construction", Colors.orange),
-            buildReportItem(Icons.block, "Road Closed", Colors.orange),
-            buildReportItem(Icons.warning, "Obstacle", Colors.amber),
-            buildReportItem(Icons.email, "Complaint", Colors.blue),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
