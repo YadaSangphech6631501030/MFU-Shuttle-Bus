@@ -269,7 +269,9 @@ const dictionary = {
     busesDescription: 'Monitor shuttle availability by online and offline status.',
     online: 'Online',
     offline: 'Offline',
+    offlineBuses: 'Offline buses',
     total: 'Total',
+    totalBus: 'Total bus',
     busesUnit: 'buses',
     busPrefix: 'Bus',
     reportsUnit: 'reports',
@@ -406,7 +408,9 @@ const dictionary = {
     busesDescription: 'ตรวจสอบความพร้อมใช้งานของรถตามสถานะออนไลน์และออฟไลน์',
     online: 'ออนไลน์',
     offline: 'ออฟไลน์',
+    offlineBuses: 'รถออฟไลน์',
     total: 'ทั้งหมด',
+    totalBus: 'รถทั้งหมด',
     busesUnit: 'คัน',
     busPrefix: 'รถ',
     reportsUnit: 'รายการ',
@@ -464,6 +468,7 @@ const isLoggedIn = ref(Boolean(api.token));
 const isSidebarCollapsed = ref(false);
 const crowdThresholds = ref<CrowdThresholds>(DEFAULT_CROWD_THRESHOLDS);
 const isAlertMenuOpen = ref(false);
+const dismissedCrowdAlertKeys = ref<Set<string>>(new Set());
 const isUserMenuOpen = ref(false);
 const currentUsername = ref(localStorage.getItem(USERNAME_KEY) || '');
 const displayUsername = computed(() => currentUsername.value || text.value.signedInUser);
@@ -543,7 +548,7 @@ function setCrowdMapElement(element: HTMLElement | null) {
 
 const onlineBuses = computed(() => buses.value.filter((bus) => bus.status?.toLowerCase() !== 'offline').length);
 const pendingReports = computed(() => reports.value.filter((report) => report.status !== 'resolved').length);
-const crowdAlertStations = computed(() => stations.value
+const activeCrowdAlertStations = computed(() => stations.value
   .map((station) => ({
     station,
     waiting: stationWaiting(station),
@@ -554,6 +559,8 @@ const crowdAlertStations = computed(() => stations.value
     const severity = { HIGH: 2, MEDIUM: 1, LOW: 0 };
     return severity[b.level] - severity[a.level] || b.waiting - a.waiting;
   }));
+const crowdAlertStations = computed(() => activeCrowdAlertStations.value
+  .filter((item) => !dismissedCrowdAlertKeys.value.has(crowdAlertKey(item.station, item.level))));
 const selectedCameraStation = computed(() => {
   if (stations.value.length === 0) return null;
   return stations.value.find((station) => station.id === selectedCameraStationId.value) ?? stations.value[0];
@@ -583,6 +590,16 @@ function stationDensityLabel(station: Station) {
   if (level === 'HIGH') return text.value.high;
   if (level === 'MEDIUM') return text.value.medium;
   return text.value.low;
+}
+
+function crowdAlertKey(station: Station, level: DensityLevel) {
+  return `${station._id || station.id}:${level}`;
+}
+
+function dismissCrowdAlert(station: Station, level: DensityLevel) {
+  const nextDismissedKeys = new Set(dismissedCrowdAlertKeys.value);
+  nextDismissedKeys.add(crowdAlertKey(station, level));
+  dismissedCrowdAlertKeys.value = nextDismissedKeys;
 }
 
 function stationHasValidPosition(station: Station) {
@@ -754,7 +771,8 @@ function focusCrowdStation(station: Station) {
   }
 }
 
-function openCrowdAlertStation(station: Station) {
+function openCrowdAlertStation(station: Station, level: DensityLevel) {
+  dismissCrowdAlert(station, level);
   isAlertMenuOpen.value = false;
   activeTab.value = 'crowd';
   void nextTick(() => focusCrowdStation(station));
@@ -837,11 +855,6 @@ function getCameraPreviewKind(url?: string): CameraPreviewKind {
 
 function selectCameraStation(station: Station) {
   selectedCameraStationId.value = station.id;
-}
-
-function openCameraStation(station: Station) {
-  selectCameraStation(station);
-  activeTab.value = 'cctv';
 }
 
 function syncSelectedCameraStation(nextStations: Station[]) {
@@ -1409,6 +1422,17 @@ watch(stations, () => {
   }
 });
 
+watch(activeCrowdAlertStations, (items) => {
+  const activeKeys = new Set(items.map((item) => crowdAlertKey(item.station, item.level)));
+  const nextDismissedKeys = new Set(
+    [...dismissedCrowdAlertKeys.value].filter((key) => activeKeys.has(key)),
+  );
+
+  if (nextDismissedKeys.size !== dismissedCrowdAlertKeys.value.size) {
+    dismissedCrowdAlertKeys.value = nextDismissedKeys;
+  }
+});
+
 watch(selectedCameraStationId, () => {
   detectorStatus.value = null;
   revokeDetectorFrameUrl();
@@ -1542,7 +1566,7 @@ watch(selectedCameraStationId, () => {
                   class="notification-item"
                   :class="`level-${item.level.toLowerCase()}`"
                   type="button"
-                  @click="openCrowdAlertStation(item.station)"
+                  @click="openCrowdAlertStation(item.station, item.level)"
                 >
                   <span class="notification-dot" aria-hidden="true"></span>
                   <div>
@@ -1566,8 +1590,13 @@ watch(selectedCameraStationId, () => {
             </div>
           </div>
           <div class="user-menu" @click.stop>
-            <button class="user-menu-trigger" type="button" @click="toggleUserMenu">
-              <span v-if="currentUsername" class="admin-display-name">{{ currentUsername }}</span>
+            <span v-if="currentUsername" class="admin-display-name">{{ currentUsername }}</span>
+            <button
+              class="user-menu-trigger"
+              type="button"
+              :aria-label="text.profileInformation"
+              @click="toggleUserMenu"
+            >
               <span class="user-avatar">{{ userInitials }}</span>
             </button>
             <div v-if="isUserMenuOpen" class="user-menu-panel">
@@ -1595,12 +1624,14 @@ watch(selectedCameraStationId, () => {
         v-if="activeTab === 'dashboard'"
         :buses="buses"
         :crowd-thresholds="crowdThresholds"
+        :dismissed-crowd-alert-keys="dismissedCrowdAlertKeys"
         :online-buses="onlineBuses"
         :pending-reports="pendingReports"
         :reports="reports"
         :stations="stations"
         :text="text"
         :users="users"
+        @open-crowd-alert-station="openCrowdAlertStation"
       />
 
       <CrowdMonitorPage
@@ -1615,7 +1646,6 @@ watch(selectedCameraStationId, () => {
         :text="text"
         @crowd-map-ready="setCrowdMapElement"
         @focus-station="focusCrowdStation"
-        @open-camera-station="openCameraStation"
         @refresh="loadData"
       />
 

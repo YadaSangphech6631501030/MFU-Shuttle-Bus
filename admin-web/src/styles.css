@@ -200,6 +200,26 @@ textarea {
   gap: 8px;
 }
 
+.station-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-inline: 16px;
+  border-radius: 999px;
+}
+
+.action-btn-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .compact-btn .refresh-btn-icon {
   width: 16px;
   height: 16px;
@@ -597,17 +617,20 @@ nav button.active {
 
 .user-menu {
   position: relative;
-}
-
-.user-menu-trigger {
   display: inline-flex;
   align-items: center;
   gap: 12px;
+}
+
+.user-menu-trigger {
+  display: inline-grid;
+  place-items: center;
   border: 0;
   padding: 0;
   color: var(--ink);
   background: transparent;
   font-weight: 800;
+  cursor: pointer;
 }
 
 .admin-display-name {
@@ -1046,10 +1069,26 @@ nav button.active {
   display: grid;
   grid-template-columns: 10px minmax(0, 1fr);
   gap: 12px;
+  width: 100%;
   border: 1px solid rgba(95, 111, 134, 0.12);
   border-radius: 8px;
   padding: 13px 14px;
+  color: var(--ink);
   background: #ffffff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.dashboard-alert-item:hover,
+.dashboard-alert-item:focus-visible {
+  border-color: rgba(95, 111, 134, 0.28);
+  box-shadow: 0 8px 18px rgba(36, 52, 71, 0.07);
+  transform: translateY(-1px);
 }
 
 .dashboard-alert-dot {
@@ -1852,34 +1891,32 @@ th {
   gap: 16px;
 }
 
-.bus-total-chip {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  padding: 9px 13px;
-  color: var(--muted);
-  background: #ffffff;
-  border: 1px solid var(--line);
-  font-size: 12px;
-  font-weight: 900;
+.bus-overview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  align-items: start;
+  gap: 24px;
 }
 
 .bus-stat-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-self: start;
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
 .bus-stat-grid .dashboard-metric-card {
-  min-height: 166px;
+  min-height: 148px;
+  padding: 26px 28px;
 }
 
 .bus-stat-grid .dashboard-metric-card strong {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .bus-list-panel {
   display: grid;
   gap: 16px;
-  width: min(860px, 100%);
-  justify-self: center;
+  width: 100%;
   padding: 28px;
 }
 
@@ -2329,8 +2366,12 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .bus-overview-layout {
+    grid-template-columns: 1fr;
+  }
+
   .bus-stat-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .bus-card {
@@ -2445,8 +2486,7 @@ th {
   }
 
   .user-menu-trigger {
-    justify-content: space-between;
-    width: 100%;
+    width: auto;
   }
 
   .user-menu-panel {
