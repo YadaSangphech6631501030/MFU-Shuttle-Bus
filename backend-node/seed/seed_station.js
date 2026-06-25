@@ -3,6 +3,31 @@ const { MongoClient } = require("mongodb");
 const uri = "mongodb://localhost:27017";
 const client = new MongoClient(uri);
 
+const stationSeeds = [
+  { id: "station01", name: "Lamduan Dormitory 2", nameTH: "", lat: 20.058752, lng: 99.898396, lines: ["line1"], waiting: 10, status: "HIGH", cameraUrl: "" },
+  { id: "station02", name: "Lamduan Dormitory 7 (Outbound)", nameTH: "", lat: 20.057039, lng: 99.89693, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station03", name: "Staff Housing Junction", nameTH: "", lat: 20.054683, lng: 99.894515, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station04", name: "D2 Museum Building", nameTH: "", lat: 20.052544, lng: 99.892316, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station05", name: "Chinese Dormitory (Inbound)", nameTH: "", lat: 20.050817, lng: 99.89122, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station06", name: "Chinese Center (Inbound)", nameTH: "", lat: 20.049137, lng: 99.89125, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station07", name: "F Parking Lot", nameTH: "", lat: 20.048193, lng: 99.893221, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station08", name: "D1 Building", nameTH: "", lat: 20.047265, lng: 99.893146, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "rtsp://mfustream:mediamfu2025@172.30.36.122:554/LiveMedia/ch1/Media1/trackID=1", detectionRoi: [] },
+  { id: "station09", name: "Oval Pond", nameTH: "", lat: 20.045503, lng: 99.891442, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station10", name: "E2 Building (Inbound)", nameTH: "", lat: 20.043881, lng: 99.893486, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station11", name: "C4 Auditorium", nameTH: "", lat: 20.04392, lng: 99.894909, lines: ["line1"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station12", name: "C5 Building", nameTH: "", lat: 20.043311, lng: 99.895297, lines: ["line1"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station13", name: "E2 Building (Outbound)", nameTH: "", lat: 20.043846, lng: 99.893475, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station14", name: "M-Square Building", nameTH: "", lat: 20.045659, lng: 99.891332, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station15", name: "Chinese Center (Outbound)", nameTH: "", lat: 20.049391, lng: 99.891113, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station16", name: "Chinese Dormitory (Outbound)", nameTH: "", lat: 20.05083, lng: 99.891157, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station17", name: "Lamduan Center", nameTH: "", lat: 20.05269, lng: 99.892342, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station18", name: "Swimming Pool Entrance", nameTH: "", lat: 20.054732, lng: 99.89448, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station19", name: "Lamduan Dormitory 7 (Inbound)", nameTH: "", lat: 20.056898, lng: 99.897119, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station20", name: "Lamduan Food Court", nameTH: "", lat: 20.058064, lng: 99.897875, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station21", name: "Minnimart Lamduan", nameTH: "", lat: 20.058967, lng: 99.899517, lines: ["line1", "line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+  { id: "station22", name: "MFU Medical Center", nameTH: "", lat: 20.041244, lng: 99.894427, lines: ["line2"], waiting: 0, status: "LOW", cameraUrl: "" },
+];
+
 async function seed() {
   await client.connect();
 
@@ -11,174 +36,15 @@ async function seed() {
 
   await col.deleteMany({});
 
-  const stations = [
-    {
-      id: "station1",
-      name: "Station 01 (จุดหอพักลำดวน 2)",
-      lat: 20.05896500699539,
-      lng: 99.8988796884786,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-    {
-      id: "station2",
-      name: "Station 02 (จุดพักลำดวน 7 ขาเข้า)",
-      lat: 20.057081156842653,
-      lng: 99.89702395554524,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-    {
-      id: "station3",
-      name: "Station 03 (จุด หอพักจีน ขาเข้า)",
-      lat: 20.050870176213458,
-      lng: 99.8913375758622,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-    {
-      id: "station4",
-      name: "Station 04 (จุด ศูนย์จีน ขาเข้า)",
-      lat: 20.048895164537097,
-      lng: 99.89132709650245,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-    {
-      id: "station5",
-      name: "Station 05 (จุด ลานจอดหอพัก F)",
-      lat: 20.048215214947664,
-      lng: 99.89322591378016,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-     {
-      id: "station6",
-      name: "Station 06 (จุด อาคารโรงอาหาร D1)",
-      lat: 20.047237196545165,
-      lng: 99.89329478216467,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-     {
-      id: "station7",
-      name: "Station 07 (จุด สระน้ำวงรี ลานดาว)",
-      lat: 20.045606104291842,
-      lng: 99.89153621441135,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-     {
-      id: "station8",
-      name: "Station 08 (จุด อาคารโรงอาหาร E2 ขาเข้า)",
-      lat: 20.04399637202456,
-      lng: 99.893402801156,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-     {
-      id: "station9",
-      name: "Station 09 (จุด อาคารเรียนรวม C3 C2 และ หอประชุมสมเด็จย่า C4)",
-      lat: 20.043895277649657,
-      lng: 99.89521575716422,
-      lines: ["line1"],
-       waiting: 0,
-      status: "LOW",
-     },
-     {
-      id: "station10",
-      name: "Station 10 (จุด อาคารเรียนรวม C5 )",
-      lat: 20.043346224233225,
-      lng: 99.89513551300819,
-      lines: ["line1"],
-       waiting: 0,
-      status: "LOW",
-    },
-     {
-      id: "station11",
-      name: "Station 11 (จุด อาคาร m - square)",
-      lat: 20.045780781087203,
-      lng: 99.89135359185909,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-     {
-      id: "station12",
-      name: "Station 12 (จุด ศูนย์จีน ขาออก)",
-      lat: 20.048986374924546,
-      lng: 99.89118215098704,
-      lines: ["line1", "line2"],
-        waiting: 0,
-      status: "LOW",
-    },
-     {
-      id: "station13",
-      name: "Station 13 (จุด หอพักจีน ขาออก)",
-      lat: 20.05134933875068,
-      lng: 99.8914018941547,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-     {
-      id: "station14",
-      name: "Station 14 (จุด สนามกีฬากลาง)",
-      lat: 20.054763275437402,
-      lng: 99.89454537873918,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-     {
-      id: "station15",
-      name: "Station 15 (จุด หอพักลำดวน 7 ขาออก)",
-      lat: 20.056724686542545,
-      lng: 99.89712571588397,
-      lines: ["line1", "line2"],
-        waiting: 0,
-      status: "LOW",
-    },
-     {
-      id: "station16",
-      name: "Station 16 (จุด ครัวลำดวน)",
-      lat: 20.058276924103307,
-      lng:99.89811278167763,
-      lines: ["line1", "line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-    // line 2 (โรงพยาบาลแม่ฟ้าหลวง)
-    {
-      id: "station17",
-      name: "Station 17 (จุด โรงพยาบาลแม่ฟ้าหลวง)",
-      lat:  20.041278409327774,
-      lng: 99.89430864493072,
-      lines: ["line2"],
-      waiting: 0,
-      status: "LOW",
-    },
-  
+  await col.insertMany(stationSeeds);
 
-  ];
+  await col.createIndex({ id: 1 }, { unique: true });
+  await col.createIndex({ lines: 1 });
 
-  await col.insertMany(stations);
+  console.log("Insert stations success");
 
-await col.createIndex({ id: 1 }, { unique: true });
-await col.createIndex({ lines: 1 });
-
-console.log("✅ Insert stations success");
-
-await client.close();
-process.exit();
+  await client.close();
+  process.exit();
 }
 
 seed();

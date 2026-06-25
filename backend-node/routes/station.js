@@ -21,6 +21,12 @@ function normalizeStationBody(body, { partial = false } = {}) {
     if (!station.name) return { error: "Station name is required" };
   }
 
+  if (body.nameTH !== undefined) {
+    station.nameTH = String(body.nameTH ?? "").trim();
+  } else if (!partial) {
+    station.nameTH = "";
+  }
+
   if (!partial || body.lat !== undefined) {
     const lat = Number(body.lat);
     if (!Number.isFinite(lat)) return { error: "Latitude is invalid" };

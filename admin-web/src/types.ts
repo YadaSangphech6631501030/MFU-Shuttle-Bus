@@ -8,6 +8,7 @@ export type Station = {
   _id?: string;
   id: string;
   name: string;
+  nameTH?: string;
   lat: number;
   lng: number;
   lines: string[];

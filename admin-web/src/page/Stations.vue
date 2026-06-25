@@ -147,6 +147,7 @@ watch(
         <form class="station-form" @submit.prevent="saveStation">
           <label>ID <input v-model="stationForm.id" required :placeholder="text.stationIdPlaceholder" /></label>
           <label>{{ text.stationName }} <input v-model="stationForm.name" required :placeholder="text.stationNamePlaceholder" /></label>
+          <label>{{ text.stationNameTH }} <input v-model="stationForm.nameTH" :placeholder="text.stationNameTHPlaceholder" /></label>
           <div class="split">
             <label>{{ text.latitude }} <input v-model.number="stationForm.lat" required type="number" step="any" /></label>
             <label>{{ text.longitude }} <input v-model.number="stationForm.lng" required type="number" step="any" /></label>
