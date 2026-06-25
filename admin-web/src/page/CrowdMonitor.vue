@@ -18,7 +18,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   crowdMapReady: [element: HTMLElement | null];
   focusStation: [station: Station];
-  openCameraStation: [station: Station];
   refresh: [];
 }>();
 
@@ -51,10 +50,6 @@ function densityAdvice(level: DensityLevel) {
 
 function stationLineLabel(station: Station) {
   return station.lines?.length ? station.lines.join(', ') : props.text.noLine;
-}
-
-function hasCamera(station: Station) {
-  return Boolean(String(station.cameraUrl ?? '').trim());
 }
 
 const stationSummaries = computed(() => props.stations
@@ -183,14 +178,6 @@ onUnmounted(() => {
                   <strong>{{ item.waiting }}</strong>
                   <small>{{ densityLabel(item.level) }}</small>
                 </span>
-              </button>
-              <button
-                v-if="hasCamera(item.station)"
-                class="link-btn compact-inline"
-                type="button"
-                @click="$emit('openCameraStation', item.station)"
-              >
-                CCTV
               </button>
             </div>
           </div>

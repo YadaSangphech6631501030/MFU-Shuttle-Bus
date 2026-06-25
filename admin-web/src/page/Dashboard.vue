@@ -2,15 +2,22 @@
 import { computed } from 'vue';
 import type { Bus, CrowdThresholds, Report, Station, User } from '../types';
 
+type DensityLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
 const props = defineProps<{
   buses: Bus[];
   crowdThresholds: CrowdThresholds;
+  dismissedCrowdAlertKeys: Set<string>;
   onlineBuses: number;
   pendingReports: number;
   reports: Report[];
   stations: Station[];
   text: Record<string, any>;
   users: User[];
+}>();
+
+const emit = defineEmits<{
+  openCrowdAlertStation: [station: Station, level: DensityLevel];
 }>();
 
 function fillTemplate(template: string, values: Record<string, string | number>) {
@@ -22,7 +29,7 @@ function stationWaiting(station: Station) {
   return Number.isFinite(waiting) ? waiting : 0;
 }
 
-function stationDensityLevel(station: Station) {
+function stationDensityLevel(station: Station): DensityLevel {
   const waiting = stationWaiting(station);
 
   if (waiting >= props.crowdThresholds.high) return 'HIGH';
@@ -31,6 +38,7 @@ function stationDensityLevel(station: Station) {
 }
 
 const stationSummaries = computed(() => props.stations.map((station) => ({
+  station,
   id: station._id || station.id,
   name: station.name,
   line: station.lines.join(', ') || props.text.noLine,
@@ -56,12 +64,17 @@ const mediumCrowdPercent = computed(() => {
 const lowCrowdPercent = computed(() => Math.max(0, 100 - highCrowdPercent.value - mediumCrowdPercent.value));
 const alertStations = computed(() => crowdStations.value
   .filter((item) => item.level === 'HIGH' || item.level === 'MEDIUM')
+  .filter((item) => !props.dismissedCrowdAlertKeys.has(crowdAlertKey(item.station, item.level)))
   .slice(0, 5));
 
 function densityLabel(level: string) {
   if (level === 'HIGH') return props.text.high;
   if (level === 'MEDIUM') return props.text.medium;
   return props.text.low;
+}
+
+function crowdAlertKey(station: Station, level: DensityLevel) {
+  return `${station._id || station.id}:${level}`;
 }
 </script>
 
@@ -182,11 +195,13 @@ function densityLabel(level: string) {
         </div>
 
         <div v-if="alertStations.length" class="dashboard-alert-list">
-          <div
+          <button
             v-for="item in alertStations"
             :key="item.id"
             class="dashboard-alert-item"
             :class="`level-${item.level.toLowerCase()}`"
+            type="button"
+            @click="$emit('openCrowdAlertStation', item.station, item.level)"
           >
             <span class="dashboard-alert-dot" aria-hidden="true"></span>
             <div>
@@ -201,7 +216,7 @@ function densityLabel(level: string) {
                 }}
               </p>
             </div>
-          </div>
+          </button>
         </div>
 
         <div v-else class="dashboard-alert-empty">

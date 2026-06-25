@@ -99,7 +99,11 @@ watch(
           <h2>{{ text.stationList }}</h2>
           <span>{{ stations.length }} {{ text.stationsUnit }}</span>
         </div>
-        <button class="primary-btn compact-btn" type="button" @click="openAddStationModal">
+        <button class="primary-btn compact-btn station-add-btn" type="button" @click="openAddStationModal">
+          <svg class="action-btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+          </svg>
           {{ text.addStation }}
         </button>
       </div>
