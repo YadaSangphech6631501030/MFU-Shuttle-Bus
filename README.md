@@ -1,51 +1,33 @@
 # MFU Shuttle Bus
 
-โปรเจ็กต์นี้เป็นระบบ Shuttle Bus ของมหาวิทยาลัย ที่มีทั้ง
-- Backend Node.js + Express + MongoDB
-- Frontend Flutter (ในโฟลเดอร์ `frontend-vue`)
+ระบบ Shuttle Bus สำหรับมหาวิทยาลัย ประกอบด้วย Backend API, หน้า Admin Web และแอป Flutter สำหรับผู้ใช้งาน
 
-## โครงสร้างโปรเจ็กต์
+## Project Structure
 
-- `backend-node/` : API และระบบหลังบ้าน
-  - `app.js` : entry point ของเซิร์ฟเวอร์
-  - `routes/` : routes สำหรับ auth, station, bus, report
-  - `services/detector.js` : เรียกใช้งาน Python YOLO detector
-  - `db.js` : เชื่อมต่อ MongoDB
-  - `config.js` : การตั้งค่าเช่น Mongo URI และ secret key
-  - `python/detector.py` : สคริปต์ตรวจจับวัตถุด้วย YOLO
+- `backend-node/` - Backend API ด้วย Node.js, Express และ MongoDB
+- `admin-web/` - หน้าเว็บผู้ดูแลระบบด้วย Vue 3 และ Vite
+- `frontend-vue/` - แอป Flutter สำหรับผู้ใช้งาน
 
-- `frontend-vue/` : แอป Flutter สำหรับผู้ใช้งาน
-  - `lib/main.dart` : entry point ของแอป
-  - `lib/` : source code ของหน้าจอและบริการต่าง ๆ
-  - `pubspec.yaml` : dependency ของ Flutter
+## Main Features
 
-## แพ็กเกจหลักที่ใช้
+- ระบบเข้าสู่ระบบและจัดการผู้ใช้
+- จัดการสถานี shuttle bus และข้อมูลกล้อง CCTV
+- Dashboard สำหรับดูภาพรวมระบบ
+- Shuttle Monitor สำหรับดู crowd alerts และจำนวนผู้โดยสารที่รอในแต่ละสถานี
+- หน้า Buses สำหรับดูสถานะรถออนไลน์/ออฟไลน์/จำนวนรถทั้งหมด
+- รายงานข้อมูลการใช้งาน
 
-### Backend
-- express
-- cors
-- body-parser
-- jsonwebtoken
-- mongodb
-- bcrypt
+## Requirements
 
-### Frontend
-- flutter
-- google_fonts
-- flutter_map
-- latlong2
-- http
-- shared_preferences
+- Node.js และ npm
+- MongoDB
+- Flutter SDK
+- Google Maps API key สำหรับหน้าแผนที่
+- Python 3 ถ้าต้องใช้ detector script
 
-## วิธีติดตั้งและรัน
+## Backend Setup
 
-### 1. เตรียม MongoDB
-
-ระบบ backend จะเชื่อมต่อกับ MongoDB ที่ `mongodb://localhost:27017/` โดยค่าเริ่มต้น
-
-ถ้ายังไม่มี MongoDB ติดตั้ง ให้ติดตั้งและรันให้เรียบร้อยก่อน
-
-### 2. รัน backend
+Backend ใช้ค่าเริ่มต้นจาก `backend-node/config.js`
 
 ```bash
 cd backend-node
@@ -53,9 +35,47 @@ npm install
 node app.js
 ```
 
-หลังรันแล้วเซิร์ฟเวอร์จะฟังที่ `http://localhost:5001`
+หลังรันแล้ว API จะอยู่ที่
 
-### 3. รัน frontend
+```text
+http://localhost:5001
+```
+
+ค่าหลักใน `backend-node/config.js`
+
+- `MONGO_URI` - MongoDB URI ค่าเริ่มต้นคือ `mongodb://localhost:27017/`
+- `DB_NAME` - ชื่อ database ค่าเริ่มต้นคือ `shuttlebus_system`
+- `SECRET_KEY` - secret สำหรับ JWT
+- `CAMERA_URL` - URL กล้องสำหรับ detector
+- `SAVE_INTERVAL` - รอบเวลาบันทึกข้อมูล detector
+
+## Admin Web Setup
+
+```bash
+cd admin-web
+npm install
+cp .env.example .env
+npm run dev
+```
+
+ค่า env ที่ใช้ใน `admin-web/.env`
+
+```env
+VITE_API_BASE_URL=http://localhost:5001
+VITE_GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY
+```
+
+คำสั่งที่ใช้บ่อย
+
+```bash
+npm run dev
+npm run build
+npm run preview
+```
+
+## Flutter App Setup
+
+โฟลเดอร์ `frontend-vue/` เป็น Flutter app
 
 ```bash
 cd frontend-vue
@@ -63,26 +83,35 @@ flutter pub get
 flutter run
 ```
 
-หรือเลือกสตาร์ทบน Android/iOS ตามปกติ
+Backend URL ของแอปอยู่ที่ `frontend-vue/lib/services/api_service.dart`
 
-## ข้อมูลสำคัญ
+```dart
+static const String baseUrl = "http://localhost:5001";
+```
 
-- Backend เริ่มที่พอร์ต `5001`
-- MongoDB database name: `shuttlebus_system`
-- Config key ใน `backend-node/config.js`
-  - `MONGO_URI` : mongodb://localhost:27017/
-  - `DB_NAME` : shuttlebus_system
-  - `SECRET_KEY` : ใช้เข้ารหัส JWT
-  - `CAMERA_URL` : URL ของกล้องสำหรับ YOLO detector
+ถ้ารันบน Android emulator และ backend อยู่บนเครื่องเดียวกัน อาจต้องเปลี่ยน URL เป็น `http://10.0.2.2:5001` แทน `localhost`
 
-## หมายเหตุ
+สำหรับ iOS Google Maps ให้สร้างไฟล์ config จากตัวอย่าง
 
-- Backend เรียกสคริปต์ Python โดยใช้ `python3` เพื่อรัน `python/detector.py`
-- หากต้องการเปลี่ยน URL กล้องหรือข้อมูลฐานข้อมูล ให้ปรับใน `backend-node/config.js`
-- แอป Flutter จะเชื่อมต่อกับ backend ผ่าน HTTP โดยใช้บริการใน `frontend-vue/lib/services`
+```bash
+cp ios/Flutter/GoogleMaps.xcconfig.example ios/Flutter/GoogleMaps.xcconfig
+```
 
-## คำแนะนำเพิ่มเติม
+แล้วใส่ Google Maps API key ของโปรเจกต์
 
-- หากใช้งานบนเครื่องที่ไม่มี `python3` ให้ติดตั้งก่อน
-- ตรวจสอบไฟล์ `backend-node/config.js` ว่าค่าต่าง ๆ ถูกต้องก่อนรัน
-- ถ้าต้องการพัฒนาเพิ่มเติม ให้รัน backend และ frontend พร้อมกัน
+## API Overview
+
+Backend แบ่ง route หลักตามนี้
+
+- `/auth` - register, login และ authentication
+- `/station` - ข้อมูลสถานีและการจัดการสถานี
+- `/api/buses` - ข้อมูลรถ shuttle bus
+- `/api/report` - รายงาน
+- `/api/detector` - ข้อมูลจาก detector
+
+## Development Notes
+
+- ควรรัน MongoDB และ backend ก่อนเปิด Admin Web หรือ Flutter app
+- ถ้าทดสอบบนมือถือจริง ให้เปลี่ยน API URL จาก `localhost` เป็น IP เครื่องที่รัน backend
+- อย่า commit ไฟล์ local config ที่มี key จริง เช่น `admin-web/.env` หรือ `frontend-vue/ios/Flutter/GoogleMaps.xcconfig`
+- ไฟล์ build/cache เช่น `node_modules/`, `.dart_tool/` และ `build/` ไม่ควรนำเข้า git
