@@ -13,6 +13,16 @@ function getPythonCommand() {
   return process.platform === "win32" ? "python" : "python3";
 }
 
+function assertDetectorRuntime(pythonCommand) {
+  if (process.env.DETECTOR_ENABLED === "false") {
+    throw new Error("Detector runtime is not installed in this Docker image. Rebuild backend with INSTALL_DETECTOR=true to use CCTV/YOLO detection.");
+  }
+
+  if ((pythonCommand.includes("/") || pythonCommand.includes("\\")) && !fs.existsSync(pythonCommand)) {
+    throw new Error(`Python runtime not found at ${pythonCommand}`);
+  }
+}
+
 function isRunning(stationId) {
   const item = processes.get(stationId);
   return Boolean(item && item.process.exitCode === null && !item.process.killed);
@@ -32,9 +42,11 @@ function startDetector({ stationId, cameraUrl, detectionRoi = [] }) {
   }
 
   fs.mkdirSync(frameDir, { recursive: true });
+  const pythonCommand = getPythonCommand();
+  assertDetectorRuntime(pythonCommand);
 
   const child = spawn(
-    getPythonCommand(),
+    pythonCommand,
     [
       path.join("python", "detector.py"),
       "--station-id",
