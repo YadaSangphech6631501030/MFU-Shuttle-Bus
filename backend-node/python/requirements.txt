@@ -9,3 +9,4 @@ psutil
 polars
 nvidia-ml-py
 ultralytics-thop
+lap>=0.5.12
