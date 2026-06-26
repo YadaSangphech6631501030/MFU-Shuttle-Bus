@@ -14,6 +14,8 @@
 ## ไฟล์ที่เพิ่ม/แก้สำหรับ Docker
 
 - `docker-compose.yml`
+- `docker/mongo-init/001-import-backup.sh`
+- `docker/mongo-init/backup/*.json`
 - `.env.example`
 - `backend-node/Dockerfile`
 - `backend-node/.dockerignore`
@@ -44,6 +46,20 @@ docker compose version
 
 ```powershell
 docker compose up -d --build
+```
+
+ถ้าเป็นเครื่องใหม่หรือ MongoDB volume ยังว่างอยู่ Docker จะ import backup จาก `docker/mongo-init/backup` เข้า database ให้อัตโนมัติ โดยมี collections:
+
+- `buses`
+- `reports`
+- `stations`
+- `users`
+
+ระบบจะสร้าง admin สำรองให้ด้วย:
+
+```text
+username: admin
+password: 12345678
 ```
 
 หลังรันเสร็จ เปิดใช้งานได้ที่:
@@ -107,6 +123,27 @@ docker compose up -d admin-web
 ```
 
 ## Seed ข้อมูลเริ่มต้น
+
+โปรเจกต์มี backup JSON สำหรับ import อัตโนมัติอยู่ที่:
+
+```text
+docker/mongo-init/backup/
+```
+
+MongoDB official image จะรันไฟล์ใน `docker/mongo-init/001-import-backup.sh` เฉพาะตอนสร้าง database volume ใหม่ครั้งแรกเท่านั้น ถ้าเครื่องมี `mongo-data` volume อยู่แล้ว การรัน `docker compose up` จะไม่ import ซ้ำ เพื่อไม่ให้ข้อมูลเดิมถูกเขียนทับ
+
+ถ้าต้องการ re-import backup เข้า database เดิม ให้ระวังว่าคำสั่งนี้จะ `drop` collections ที่ import แล้วใส่ข้อมูลจาก backup ใหม่:
+
+```powershell
+docker compose exec mongo /docker-entrypoint-initdb.d/001-import-backup.sh
+```
+
+ถ้าต้องการเริ่ม database ใหม่ทั้งหมด ใช้คำสั่งนี้อย่างระวัง เพราะข้อมูล MongoDB เดิมจะหาย:
+
+```powershell
+docker compose down -v
+docker compose up -d --build
+```
 
 หลัง container รันแล้ว สามารถ seed station และ bus ได้:
 
