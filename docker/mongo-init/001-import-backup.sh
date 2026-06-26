@@ -15,6 +15,11 @@ import_collection() {
     return
   fi
 
+  if [ "$(tr -d '[:space:]' < "$file")" = "[]" ]; then
+    echo "Skipping ${collection}: ${file} is empty"
+    return
+  fi
+
   echo "Importing ${collection} from ${file}"
   mongoimport \
     --db "$DB_NAME" \
