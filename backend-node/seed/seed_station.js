@@ -1,7 +1,7 @@
 const { MongoClient } = require("mongodb");
+const { MONGO_URI, DB_NAME } = require("../config");
 
-const uri = "mongodb://localhost:27017";
-const client = new MongoClient(uri);
+const client = new MongoClient(MONGO_URI);
 
 const stationSeeds = [
   { id: "station01", name: "Lamduan Dormitory 2", nameTH: "", lat: 20.058752, lng: 99.898396, lines: ["line1"], waiting: 10, status: "HIGH", cameraUrl: "" },
@@ -31,7 +31,7 @@ const stationSeeds = [
 async function seed() {
   await client.connect();
 
-  const db = client.db("shuttlebus_system");
+  const db = client.db(DB_NAME);
   const col = db.collection("stations");
 
   await col.deleteMany({});
