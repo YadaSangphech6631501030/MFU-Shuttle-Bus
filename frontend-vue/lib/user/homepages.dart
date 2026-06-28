@@ -53,6 +53,7 @@ class _HomepagesState extends State<Homepages> {
   Timer? stationTimer;
   Timer? busTimer;
   Timer? moveTimer;
+  late final VoidCallback languageChangeListener;
   final TextEditingController fromSearchController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
 
@@ -559,9 +560,7 @@ class _HomepagesState extends State<Homepages> {
   }
 
   String stationDisplayName(dynamic station) {
-    final raw = station is Map
-        ? station["name"]?.toString().trim() ?? ""
-        : station?.toString().trim() ?? "";
+    final raw = LanguageService.stationName(station);
 
     var name = raw
         .replaceFirst(
@@ -582,9 +581,7 @@ class _HomepagesState extends State<Homepages> {
   }
 
   String cleanStationName(dynamic station) {
-    final raw = station is Map
-        ? station["name"]?.toString().trim() ?? ""
-        : station?.toString().trim() ?? "";
+    final raw = LanguageService.stationName(station);
 
     final stationWithName = RegExp(
       r'^station\s*0*\d+\s*\((.*)\)\s*$',
@@ -790,6 +787,19 @@ class _HomepagesState extends State<Homepages> {
         selectedTripRoute = [];
       });
     }
+  }
+
+  void syncSelectedStationNames() {
+    if (selectedFromStation == null && selectedStation == null) return;
+
+    setState(() {
+      if (selectedFromStation != null) {
+        fromSearchController.text = cleanStationName(selectedFromStation);
+      }
+      if (selectedStation != null) {
+        searchController.text = cleanStationName(selectedStation);
+      }
+    });
   }
 
   Map<String, dynamic>? getNearestBusInfo(Map<String, dynamic>? station) {
@@ -1533,11 +1543,13 @@ class _HomepagesState extends State<Homepages> {
   @override
   void initState() {
     super.initState();
+    languageChangeListener = syncSelectedStationNames;
     currentZoom = widget.initialMapZoom;
     loadStationMarkerIcons();
     loadBusMarkerIcons();
     fetchStations();
     fetchBuses();
+    LanguageService.notifier.addListener(languageChangeListener);
 
     BusController.instance.start();
 
@@ -1559,6 +1571,7 @@ class _HomepagesState extends State<Homepages> {
     stationTimer?.cancel();
     busTimer?.cancel();
     moveTimer?.cancel();
+    LanguageService.notifier.removeListener(languageChangeListener);
     mapController?.dispose();
     fromSearchController.dispose();
     searchController.dispose();

@@ -1,7 +1,7 @@
 const { MongoClient } = require("mongodb");
+const { MONGO_URI, DB_NAME } = require("../config");
 
-const uri = "mongodb://127.0.0.1:27017";
-const client = new MongoClient(uri);
+const client = new MongoClient(MONGO_URI);
 
 const buses = [
   { busNumber: "1", 
@@ -41,7 +41,7 @@ const seedBus = async () => {
     await client.connect();
     console.log("✅ Connected to MongoDB");
 
-    const db = client.db("shuttlebus_system");
+    const db = client.db(DB_NAME);
     const collection = db.collection("buses"); 
 
     // delete existing data

@@ -25,4 +25,17 @@ class LanguageService {
   static String text({required String en, required String th}) {
     return isThai ? th : en;
   }
+
+  static String stationName(dynamic station) {
+    if (station is Map) {
+      final primary = isThai ? station['nameTH'] : station['name'];
+      final fallback = isThai ? station['name'] : station['nameTH'];
+      final primaryName = primary?.toString().trim() ?? '';
+      final fallbackName = fallback?.toString().trim() ?? '';
+
+      return primaryName.isNotEmpty ? primaryName : fallbackName;
+    }
+
+    return station?.toString().trim() ?? '';
+  }
 }

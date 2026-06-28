@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 
 const { connectDB } = require("./db");
+const { PORT } = require("./config");
 
 const authRoutes = require("./routes/auth");
 const stationRoutes = require("./routes/station");
@@ -30,12 +31,15 @@ app.get("/", (req, res) => {
   res.send("Shuttle Bus API is running");
 });
 
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
 async function start() {
   try {
     await connectDB();
     startEngine();
 
-    const PORT = 5001;
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
