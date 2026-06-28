@@ -24,4 +24,13 @@
   "email": "a@gmail.com",
   "password": "$2b$10$djmdCsCXvZ6I6cs0rGjR8eYBYNAQlXOKGBG1WKDdTznE7S1CmUz72",
   "role": "user"
+},
+{
+  "_id": {
+    "$oid": "6a1f00000000000000000000"
+  },
+  "username": "admin",
+  "email": "admin@mfu.ac.th",
+  "password": "$2b$10$RwFtHtc8T6xpyGm5CWOrhe3KZQtwO1fCmISA2VUQDmric01dncftm",
+  "role": "admin"
 }]
