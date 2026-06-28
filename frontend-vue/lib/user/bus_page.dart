@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
+import 'package:shuttle_bus_fronted/services/language_service.dart';
 import 'custom_bottom_bar.dart';
 import 'homepages.dart';
 
@@ -57,7 +58,7 @@ class _BusPageState extends State<BusPage> {
 
       setState(() {
         busStations = stations
-            .map<String>((station) => station["name"]?.toString().trim() ?? "")
+            .map<String>((station) => LanguageService.stationName(station))
             .where((name) => name.isNotEmpty)
             .toList();
 

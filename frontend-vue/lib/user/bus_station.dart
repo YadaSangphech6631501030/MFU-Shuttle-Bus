@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
+import 'package:shuttle_bus_fronted/services/language_service.dart';
 import 'homepages.dart';
 
 class BusStationPage extends StatefulWidget {
@@ -57,7 +58,7 @@ class _BusStationPageState extends State<BusStationPage> {
 
     return sortedStations
         .map<_StationInfo?>((station) {
-          final name = _cleanStationName(station["name"]);
+          final name = _cleanStationName(station);
           final lat = _coordinate(station["lat"]);
           final lng = _coordinate(station["lng"]);
 
@@ -79,8 +80,8 @@ class _BusStationPageState extends State<BusStationPage> {
     return int.tryParse(number ?? "") ?? 9999;
   }
 
-  String _cleanStationName(dynamic name) {
-    final raw = name?.toString().trim() ?? "";
+  String _cleanStationName(dynamic station) {
+    final raw = LanguageService.stationName(station);
     return raw
         .replaceFirst(
           RegExp(r'^station\s*0*\d+\s*[:\-.]?\s*', caseSensitive: false),

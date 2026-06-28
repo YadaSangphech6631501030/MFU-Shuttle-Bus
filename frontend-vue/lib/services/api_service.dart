@@ -1,12 +1,35 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = String.fromEnvironment(
+  static const String _configuredBaseUrl = String.fromEnvironment(
     "API_BASE_URL",
-    defaultValue: "http://localhost:5001",
   );
+
+  static String get baseUrl {
+    if (_configuredBaseUrl.isNotEmpty) {
+      return _configuredBaseUrl;
+    }
+
+    if (kIsWeb) {
+      return "http://localhost:5001";
+    }
+
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return "http://10.0.2.2:5001";
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+      case TargetPlatform.linux:
+      case TargetPlatform.fuchsia:
+        return "http://localhost:5001";
+    }
+  }
+
   static const Duration _requestTimeout = Duration(seconds: 10);
 
   // ===== COMMON FUNCTION =====

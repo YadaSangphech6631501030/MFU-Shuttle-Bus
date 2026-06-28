@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
+import 'package:shuttle_bus_fronted/services/language_service.dart';
 
 class FavoriteStationPage extends StatefulWidget {
   const FavoriteStationPage({super.key});
@@ -39,7 +40,7 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
 
       for (final station in [...results[0], ...results[1]]) {
         final id = station['id']?.toString() ?? '';
-        final name = station['name']?.toString().trim() ?? '';
+        final name = LanguageService.stationName(station);
         if (id.isEmpty || name.isEmpty) continue;
 
         final lineNames =
