@@ -26,12 +26,35 @@ class LanguageService {
     return isThai ? th : en;
   }
 
+  static String _firstText(Map station, List<String> keys) {
+    for (final key in keys) {
+      final value = station[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+
+    return '';
+  }
+
   static String stationName(dynamic station) {
     if (station is Map) {
-      final primary = isThai ? station['nameTH'] : station['name'];
-      final fallback = isThai ? station['name'] : station['nameTH'];
-      final primaryName = primary?.toString().trim() ?? '';
-      final fallbackName = fallback?.toString().trim() ?? '';
+      final thaiName = _firstText(station, const [
+        'nameTH',
+        'nameTh',
+        'name_th',
+        'thaiName',
+        'nameThai',
+        'th',
+      ]);
+      final englishName = _firstText(station, const [
+        'name',
+        'nameEN',
+        'nameEn',
+        'name_en',
+        'englishName',
+        'en',
+      ]);
+      final primaryName = isThai ? thaiName : englishName;
+      final fallbackName = isThai ? englishName : thaiName;
 
       return primaryName.isNotEmpty ? primaryName : fallbackName;
     }
