@@ -2,7 +2,6 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { api } from './services/api';
 import BusesPage from './page/Buses.vue';
-import CrowdMonitorPage from './page/CrowdMonitor.vue';
 import DashboardPage from './page/Dashboard.vue';
 import ReportsPage from './page/Reports.vue';
 import StationCCTVPage from './page/StationCCTV.vue';
@@ -12,7 +11,7 @@ import type { AdminUserPayload, Bus, CrowdThresholds, DetectorStatus, Report, St
 import mfuLogoUrl from './assets/mfu_logo.png';
 
 type Lang = 'en' | 'th';
-type TabKey = 'dashboard' | 'crowd' | 'stations' | 'cctv' | 'buses' | 'reports' | 'users';
+type TabKey = 'dashboard' | 'stations' | 'cctv' | 'buses' | 'reports' | 'users';
 type LatLng = { lat: number; lng: number };
 type CameraPreviewKind = 'none' | 'rtsp' | 'image' | 'video' | 'link';
 type DensityLevel = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -115,7 +114,6 @@ const DEFAULT_CROWD_THRESHOLDS: CrowdThresholds = {
 const lang = ref<Lang>(savedLanguage === 'th' ? 'th' : 'en');
 const tabs: Array<{ key: TabKey }> = [
   { key: 'dashboard' },
-  { key: 'crowd' },
   { key: 'stations' },
   { key: 'cctv' },
   { key: 'buses' },
@@ -129,13 +127,6 @@ const tabIcons: Record<TabKey, NavIcon> = {
       { x: 14, y: 3, width: 7, height: 7, rx: 1.5 },
       { x: 3, y: 14, width: 7, height: 7, rx: 1.5 },
       { x: 14, y: 14, width: 7, height: 7, rx: 1.5 },
-    ],
-  },
-  crowd: {
-    rects: [{ x: 3, y: 4, width: 18, height: 12, rx: 2 }],
-    paths: [
-      'M8 20h8',
-      'M12 16v4',
     ],
   },
   stations: {
@@ -434,7 +425,7 @@ const dictionary = {
     reportTitleLabel: 'หัวข้อ',
     reportDetailLabel: 'รายละเอียด',
     activeReports: 'รายงานที่ต้องดำเนินการ',
-    feedbackReports: 'Feedback',
+    feedbackReports: 'ติชม',
     historyReports: 'ประวัติรายงาน',
     reportViewLabel: 'มุมมองรายงาน',
     reportSearch: 'ค้นหา',
@@ -444,8 +435,8 @@ const dictionary = {
     reportDateRange: 'ช่วงวันที่',
     reportDateFrom: 'จากวันที่',
     reportDateTo: 'ถึงวันที่',
-    reportDateFromShort: 'From',
-    reportDateToShort: 'to',
+    reportDateFromShort: 'จาก',
+    reportDateToShort: 'ถึง',
     to: 'ถึง',
     reportActions: 'จัดการ',
     deleteReport: 'ลบรายงาน',
@@ -804,7 +795,7 @@ function renderCrowdMarkers() {
 }
 
 async function initCrowdMap() {
-  if (activeTab.value !== 'crowd' || !crowdMapEl.value) return;
+  if (activeTab.value !== 'dashboard' || !crowdMapEl.value) return;
 
   if (crowdMap.value) {
     renderCrowdMarkers();
@@ -857,7 +848,7 @@ function focusCrowdStation(station: Station) {
 function openCrowdAlertStation(station: Station, level: DensityLevel) {
   dismissCrowdAlert(station, level);
   isAlertMenuOpen.value = false;
-  activeTab.value = 'crowd';
+  activeTab.value = 'dashboard';
   void nextTick(() => focusCrowdStation(station));
 }
 
@@ -1475,7 +1466,7 @@ onMounted(() => {
   }, 5000);
 
   crowdRefreshTimer = window.setInterval(() => {
-    if (activeTab.value === 'crowd' && isLoggedIn.value && !loading.value) {
+    if (activeTab.value === 'dashboard' && isLoggedIn.value && !loading.value) {
       void loadData();
     }
   }, 15000);
@@ -1496,7 +1487,7 @@ onUnmounted(() => {
 });
 
 watch(activeTab, (tab) => {
-  if (tab === 'crowd') {
+  if (tab === 'dashboard') {
     void nextTick(initCrowdMap);
   }
   if (tab === 'stations') {
@@ -1512,7 +1503,7 @@ watch(
 );
 
 watch(stations, () => {
-  if (activeTab.value === 'crowd') {
+  if (activeTab.value === 'dashboard') {
     renderCrowdMarkers();
   }
 });
@@ -1718,30 +1709,16 @@ watch(selectedCameraStationId, () => {
       <DashboardPage
         v-if="activeTab === 'dashboard'"
         :buses="buses"
-        :crowd-thresholds="crowdThresholds"
-        :dismissed-crowd-alert-keys="dismissedCrowdAlertKeys"
-        :online-buses="onlineBuses"
-        :pending-reports="pendingReports"
-        :reports="reports"
-        :stations="stations"
-        :text="text"
-        :users="users"
-        @open-crowd-alert-station="openCrowdAlertStation"
-      />
-
-      <CrowdMonitorPage
-        v-if="activeTab === 'crowd'"
-        :buses="buses"
         :crowd-map-error="crowdMapError"
         :crowd-map-loading="crowdMapLoading"
         :crowd-thresholds="crowdThresholds"
-        :loading="loading"
+        :online-buses="onlineBuses"
+        :pending-reports="pendingReports"
         :selected-station-id="selectedCrowdStationId"
         :stations="stations"
         :text="text"
         @crowd-map-ready="setCrowdMapElement"
         @focus-station="focusCrowdStation"
-        @refresh="loadData"
       />
 
       <StationsPage

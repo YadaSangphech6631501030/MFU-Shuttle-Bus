@@ -315,11 +315,14 @@ class _ReportPageState extends State<ReportPage>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.86,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
@@ -330,98 +333,100 @@ class _ReportPageState extends State<ReportPage>
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 5),
-                      Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.kanit(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 6),
                       _ratingScaleLegend(),
-                      const SizedBox(height: 12),
-                      _feedbackRatingQuestion(
-                        number: 1,
-                        title: _t(
-                          en: "Station service condition *",
-                          th: "สภาพของสถานีที่ให้บริการระดับใด *",
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Column(
+                            children: [
+                              _feedbackRatingQuestion(
+                                number: 1,
+                                title: _t(
+                                  en: "Station service condition *",
+                                  th: "สภาพของสถานีที่ให้บริการระดับใด *",
+                                ),
+                                value: stationRating,
+                                hasError: ratingErrors.contains(1),
+                                onChanged: (rating) {
+                                  setDialogState(() {
+                                    stationRating = rating;
+                                    ratingErrors.remove(1);
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 6),
+                              _feedbackRatingQuestion(
+                                number: 2,
+                                title: _t(
+                                  en: "Bus condition *",
+                                  th: "สภาพของรถที่ให้บริการระดับใด *",
+                                ),
+                                value: busConditionRating,
+                                hasError: ratingErrors.contains(2),
+                                onChanged: (rating) {
+                                  setDialogState(() {
+                                    busConditionRating = rating;
+                                    ratingErrors.remove(2);
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 6),
+                              _feedbackRatingQuestion(
+                                number: 3,
+                                title: _t(
+                                  en: "Driving manners and passenger safety *",
+                                  th: "มารยาทในการขับขี่ของพนักงานขับรถและความปลอดภัยในการโดยสาร ระดับใด *",
+                                ),
+                                value: drivingSafetyRating,
+                                hasError: ratingErrors.contains(3),
+                                onChanged: (rating) {
+                                  setDialogState(() {
+                                    drivingSafetyRating = rating;
+                                    ratingErrors.remove(3);
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 6),
+                              _feedbackRatingQuestion(
+                                number: 4,
+                                title: _t(
+                                  en: "Driver politeness and conduct *",
+                                  th: "กิริยามารยาทของพนักงานขับรถมีความเหมาะสม สุภาพเรียบร้อย ระดับใด *",
+                                ),
+                                value: driverMannersRating,
+                                hasError: ratingErrors.contains(4),
+                                onChanged: (rating) {
+                                  setDialogState(() {
+                                    driverMannersRating = rating;
+                                    ratingErrors.remove(4);
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 6),
+                              _feedbackRatingQuestion(
+                                number: 5,
+                                title: _t(
+                                  en: "Overall MFU shuttle bus satisfaction *",
+                                  th: "ท่านมีความพึงพอใจต่อการให้บริการของรถโดยสารรับ-ส่ง ภายในมหาวิทยาลัย แม่ฟ้าหลวง ระดับใด *",
+                                ),
+                                value: overallSatisfactionRating,
+                                hasError: ratingErrors.contains(5),
+                                onChanged: (rating) {
+                                  setDialogState(() {
+                                    overallSatisfactionRating = rating;
+                                    ratingErrors.remove(5);
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                        value: stationRating,
-                        hasError: ratingErrors.contains(1),
-                        onChanged: (rating) {
-                          setDialogState(() {
-                            stationRating = rating;
-                            ratingErrors.remove(1);
-                          });
-                        },
                       ),
                       const SizedBox(height: 8),
-                      _feedbackRatingQuestion(
-                        number: 2,
-                        title: _t(
-                          en: "Bus condition *",
-                          th: "สภาพของรถที่ให้บริการระดับใด *",
-                        ),
-                        value: busConditionRating,
-                        hasError: ratingErrors.contains(2),
-                        onChanged: (rating) {
-                          setDialogState(() {
-                            busConditionRating = rating;
-                            ratingErrors.remove(2);
-                          });
-                        },
-                      ),
+                      const Divider(height: 1),
                       const SizedBox(height: 8),
-                      _feedbackRatingQuestion(
-                        number: 3,
-                        title: _t(
-                          en: "Driving manners and passenger safety *",
-                          th: "มารยาทในการขับขี่ของพนักงานขับรถและความปลอดภัยในการโดยสาร ระดับใด *",
-                        ),
-                        value: drivingSafetyRating,
-                        hasError: ratingErrors.contains(3),
-                        onChanged: (rating) {
-                          setDialogState(() {
-                            drivingSafetyRating = rating;
-                            ratingErrors.remove(3);
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      _feedbackRatingQuestion(
-                        number: 4,
-                        title: _t(
-                          en: "Driver politeness and conduct *",
-                          th: "กิริยามารยาทของพนักงานขับรถมีความเหมาะสม สุภาพเรียบร้อย ระดับใด *",
-                        ),
-                        value: driverMannersRating,
-                        hasError: ratingErrors.contains(4),
-                        onChanged: (rating) {
-                          setDialogState(() {
-                            driverMannersRating = rating;
-                            ratingErrors.remove(4);
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      _feedbackRatingQuestion(
-                        number: 5,
-                        title: _t(
-                          en: "Overall MFU shuttle bus satisfaction *",
-                          th: "ท่านมีความพึงพอใจต่อการให้บริการของรถโดยสารรับ-ส่ง ภายในมหาวิทยาลัย แม่ฟ้าหลวง ระดับใด *",
-                        ),
-                        value: overallSatisfactionRating,
-                        hasError: ratingErrors.contains(5),
-                        onChanged: (rating) {
-                          setDialogState(() {
-                            overallSatisfactionRating = rating;
-                            ratingErrors.remove(5);
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 14),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -435,6 +440,7 @@ class _ReportPageState extends State<ReportPage>
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.black,
+                              minimumSize: const Size(92, 42),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -477,27 +483,37 @@ class _ReportPageState extends State<ReportPage>
                                 "stationService": {
                                   "label": "Station service",
                                   "score": stationRating,
-                                  "description": _ratingDescription(stationRating),
+                                  "description": _ratingDescription(
+                                    stationRating,
+                                  ),
                                 },
                                 "busCondition": {
                                   "label": "Bus condition",
                                   "score": busConditionRating,
-                                  "description": _ratingDescription(busConditionRating),
+                                  "description": _ratingDescription(
+                                    busConditionRating,
+                                  ),
                                 },
                                 "drivingSafety": {
                                   "label": "Driving manners and safety",
                                   "score": drivingSafetyRating,
-                                  "description": _ratingDescription(drivingSafetyRating),
+                                  "description": _ratingDescription(
+                                    drivingSafetyRating,
+                                  ),
                                 },
                                 "driverPoliteness": {
                                   "label": "Driver politeness",
                                   "score": driverMannersRating,
-                                  "description": _ratingDescription(driverMannersRating),
+                                  "description": _ratingDescription(
+                                    driverMannersRating,
+                                  ),
                                 },
                                 "overallSatisfaction": {
                                   "label": "Overall satisfaction",
                                   "score": overallSatisfactionRating,
-                                  "description": _ratingDescription(overallSatisfactionRating),
+                                  "description": _ratingDescription(
+                                    overallSatisfactionRating,
+                                  ),
                                 },
                               };
                               final result = await ApiService.sendReport(
@@ -554,7 +570,7 @@ class _ReportPageState extends State<ReportPage>
 
   Widget _ratingScaleLegend() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
@@ -582,7 +598,7 @@ class _ReportPageState extends State<ReportPage>
     required ValueChanged<int> onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 7),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
@@ -642,7 +658,7 @@ class _ReportPageState extends State<ReportPage>
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 3),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(5, (index) {
@@ -650,14 +666,14 @@ class _ReportPageState extends State<ReportPage>
               final isSelected = rating <= value;
 
               return IconButton(
-                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                constraints: const BoxConstraints(minWidth: 27, minHeight: 27),
                 padding: EdgeInsets.zero,
                 icon: Icon(
                   isSelected ? Icons.star_rounded : Icons.star_border_rounded,
                   color: isSelected
                       ? const Color(0xFFFFB300)
                       : Colors.grey.shade400,
-                  size: 26,
+                  size: 23,
                 ),
                 onPressed: () => onChanged(rating),
               );

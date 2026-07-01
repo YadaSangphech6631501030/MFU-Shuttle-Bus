@@ -13,17 +13,21 @@ router.post("/report", async (req, res) => {
     const { type, detail, location, feedbackRatings } = req.body;
     const normalizedType = String(type || "").trim();
     const sanitizedFeedbackRatings = sanitizeFeedbackRatings(feedbackRatings);
+    const isFeedback = normalizedType.toLowerCase() === "feedback";
 
     const newReport = {
       type: normalizedType,
       detail,
       location,
-      status: "pending",
       reporterType: "guest",
       time: new Date(),
     };
 
-    if (normalizedType.toLowerCase() === "feedback" && sanitizedFeedbackRatings.length) {
+    if (!isFeedback) {
+      newReport.status = "pending";
+    }
+
+    if (isFeedback && sanitizedFeedbackRatings.length) {
       newReport.feedbackRatings = sanitizedFeedbackRatings;
       newReport.feedbackAverage = averageFeedbackScore(sanitizedFeedbackRatings);
     }
