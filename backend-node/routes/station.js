@@ -8,6 +8,44 @@ const adminOnly = require("../middleware/admin");
 const allowedLines = ["line1", "line2"];
 const allowedStatuses = ["LOW", "MEDIUM", "HIGH"];
 
+function firstText(source, keys) {
+  for (const key of keys) {
+    const value = source[key];
+    if (value === undefined || value === null) continue;
+
+    const text = String(value).trim();
+    if (text) return text;
+  }
+
+  return "";
+}
+
+function publicStationFrom(station) {
+  const { cameraUrl, ...publicStation } = station;
+  const englishName = firstText(station, [
+    "name",
+    "nameEN",
+    "nameEn",
+    "name_en",
+    "englishName",
+    "en",
+  ]);
+  const thaiName = firstText(station, [
+    "nameTH",
+    "nameTh",
+    "name_th",
+    "thaiName",
+    "nameThai",
+    "th",
+  ]);
+
+  return {
+    ...publicStation,
+    name: englishName || thaiName,
+    nameTH: thaiName,
+  };
+}
+
 function normalizeStationBody(body, { partial = false } = {}) {
   const station = {};
 
@@ -202,7 +240,7 @@ router.get("/:line", async (req, res) => {
     }).toArray();
 
    const updatedStations = data.map((s) => {
-    const { cameraUrl, ...publicStation } = s;
+    const publicStation = publicStationFrom(s);
     let waiting = s.waiting ?? 0;
 
   let status = "LOW";

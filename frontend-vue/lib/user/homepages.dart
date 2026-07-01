@@ -652,9 +652,7 @@ class _HomepagesState extends State<Homepages> {
   }
 
   String cleanStationName(dynamic station) {
-    final raw = station is Map
-        ? station["name"]?.toString().trim() ?? ""
-        : station?.toString().trim() ?? "";
+    final raw = LanguageService.stationName(station);
 
     final stationWithName = RegExp(
       r'^station\s*0*\d+\s*\((.*)\)\s*$',
