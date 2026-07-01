@@ -323,6 +323,39 @@ class _HomepagesState extends State<Homepages> {
     return LanguageService.text(en: en, th: th);
   }
 
+  Future<void> _toggleLanguage() async {
+    final nextLanguage = LanguageService.isThai
+        ? LanguageService.english
+        : LanguageService.thai;
+    await LanguageService.changeLanguage(nextLanguage);
+  }
+
+  Widget _buildLanguageToggleButton() {
+    final flagAsset = LanguageService.isThai
+        ? "assets/thai_flag.png"
+        : "assets/eng_flag.png";
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(4),
+        onTap: _toggleLanguage,
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: Image.asset(
+              flagAsset,
+              width: 25,
+              height: 18,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   String _minuteText(String value) {
     return _t(en: "$value min", th: "$value นาที");
   }
@@ -734,9 +767,11 @@ class _HomepagesState extends State<Homepages> {
     Set<String> favoriteStationIds,
     String query,
   ) {
-    final aStarts = _searchableStationName(a).startsWith(query) ||
+    final aStarts =
+        _searchableStationName(a).startsWith(query) ||
         _searchableStationId(a).startsWith(query);
-    final bStarts = _searchableStationName(b).startsWith(query) ||
+    final bStarts =
+        _searchableStationName(b).startsWith(query) ||
         _searchableStationId(b).startsWith(query);
     if (aStarts != bStarts) return aStarts ? -1 : 1;
 
@@ -770,8 +805,8 @@ class _HomepagesState extends State<Homepages> {
         (selectedLine != "all" && stationInLine(station, selectedLine)
             ? selectedLine
             : stationLines.length == 1
-                ? stationLines.first
-                : "all");
+            ? stationLines.first
+            : "all");
     final shouldUpdateLine = selectedLine != nextLine;
 
     setState(() {
@@ -1152,12 +1187,7 @@ class _HomepagesState extends State<Homepages> {
 
     var nextRoute = tripLine == null
         ? fallbackRoute
-        : _buildTripPointsForLine(
-            tripLine,
-            lineRoute,
-            fromStation,
-            toStation,
-          );
+        : _buildTripPointsForLine(tripLine, lineRoute, fromStation, toStation);
     if (nextRoute.length < 2) {
       nextRoute = fallbackRoute;
     }
@@ -1261,8 +1291,8 @@ class _HomepagesState extends State<Homepages> {
     final tripLineName = tripLineKey != null
         ? lineLabel(tripLineKey)
         : tripCandidates.isNotEmpty
-            ? tripCandidates.map(lineLabel).join(" / ")
-            : _t(en: "Shuttle line", th: "สายรถ");
+        ? tripCandidates.map(lineLabel).join(" / ")
+        : _t(en: "Shuttle line", th: "สายรถ");
     final nearestInfo = getNearestBusInfo(fromStation, lineKey: tripLineKey);
     final fromName = fromStation == null
         ? _t(en: "Choose start station", th: "เลือกสถานีต้นทาง")
@@ -2078,10 +2108,7 @@ class _HomepagesState extends State<Homepages> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFD2232A),
-                    width: 3,
-                  ),
+                  border: Border.all(color: const Color(0xFFD2232A), width: 3),
                 ),
               ),
               Container(
@@ -2111,10 +2138,8 @@ class _HomepagesState extends State<Homepages> {
                     en: "From station",
                     th: "à¸ªà¸–à¸²à¸™à¸µà¸•à¹‰à¸™à¸—à¸²à¸‡",
                   ),
-                  onTap: () => searchStations(
-                    fromSearchController.text,
-                    "from",
-                  ),
+                  onTap: () =>
+                      searchStations(fromSearchController.text, "from"),
                   onChanged: (value) => searchStations(value, "from"),
                   onClear: () => clearStationField("from"),
                   textInputAction: TextInputAction.next,
@@ -2535,115 +2560,117 @@ class _HomepagesState extends State<Homepages> {
                     if (isTripSearchCollapsed && hasCompleteTripSearch())
                       _buildCollapsedTripSearchCard()
                     else
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFFECECEC)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 12,
-                                height: 12,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: const Color(0xFFD2232A),
-                                    width: 3,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                width: 2,
-                                height: 38,
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                color: const Color(0xFFE0E0E0),
-                              ),
-                              Container(
-                                width: 12,
-                                height: 12,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade700,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFECECEC)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _stationSearchField(
-                                  controller: fromSearchController,
-                                  hintText: _t(
-                                    en: "From station",
-                                    th: "สถานีต้นทาง",
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: const Color(0xFFD2232A),
+                                      width: 3,
+                                    ),
                                   ),
-                                  onTap: () => searchStations(
-                                    fromSearchController.text,
-                                    "from",
-                                  ),
-                                  onChanged: (value) =>
-                                      searchStations(value, "from"),
-                                  onClear: () => clearStationField("from"),
-                                  textInputAction: TextInputAction.next,
                                 ),
-                                const SizedBox(height: 8),
-                                _stationSearchField(
-                                  controller: searchController,
-                                  hintText: _t(
-                                    en: "To station",
-                                    th: "สถานีปลายทาง",
+                                Container(
+                                  width: 2,
+                                  height: 38,
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 4,
                                   ),
-                                  onTap: () => searchStations(
-                                    searchController.text,
-                                    "to",
+                                  color: const Color(0xFFE0E0E0),
+                                ),
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade700,
+                                    shape: BoxShape.circle,
                                   ),
-                                  onChanged: (value) =>
-                                      searchStations(value, "to"),
-                                  onClear: () => clearStationField("to"),
-                                  textInputAction: TextInputAction.search,
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (hasCompleteTripSearch()) ...[
-                                _searchActionButton(
-                                  icon: Icons.keyboard_arrow_up_rounded,
-                                  onTap: collapseTripSearch,
-                                ),
-                                const SizedBox(height: 8),
-                              ],
-                              _searchActionButton(
-                                icon: Icons.import_export_rounded,
-                                onTap: hasTripSearchValues
-                                    ? swapTripStations
-                                    : null,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _stationSearchField(
+                                    controller: fromSearchController,
+                                    hintText: _t(
+                                      en: "From station",
+                                      th: "สถานีต้นทาง",
+                                    ),
+                                    onTap: () => searchStations(
+                                      fromSearchController.text,
+                                      "from",
+                                    ),
+                                    onChanged: (value) =>
+                                        searchStations(value, "from"),
+                                    onClear: () => clearStationField("from"),
+                                    textInputAction: TextInputAction.next,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _stationSearchField(
+                                    controller: searchController,
+                                    hintText: _t(
+                                      en: "To station",
+                                      th: "สถานีปลายทาง",
+                                    ),
+                                    onTap: () => searchStations(
+                                      searchController.text,
+                                      "to",
+                                    ),
+                                    onChanged: (value) =>
+                                        searchStations(value, "to"),
+                                    onClear: () => clearStationField("to"),
+                                    textInputAction: TextInputAction.search,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ],
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (hasCompleteTripSearch()) ...[
+                                  _searchActionButton(
+                                    icon: Icons.keyboard_arrow_up_rounded,
+                                    onTap: collapseTripSearch,
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
+                                _searchActionButton(
+                                  icon: Icons.import_export_rounded,
+                                  onTap: hasTripSearchValues
+                                      ? swapTripStations
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
                     if (showStationSuggestions)
                       Container(
                         margin: const EdgeInsets.only(top: 8),
@@ -2669,8 +2696,7 @@ class _HomepagesState extends State<Homepages> {
                             itemBuilder: (context, index) {
                               final station = filteredStations[index];
                               final name = cleanStationName(station);
-                              final shouldShowLineBadge =
-                                  selectedLine == "all";
+                              final shouldShowLineBadge = selectedLine == "all";
                               final lineSummary = stationLineSummary(station);
                               final isFavorite = favoriteStationIds.contains(
                                 station["id"]?.toString(),
@@ -2714,8 +2740,9 @@ class _HomepagesState extends State<Homepages> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFF2F2F2),
-                                            borderRadius:
-                                                BorderRadius.circular(999),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
                                           ),
                                           child: Text(
                                             lineSummary,
@@ -2742,11 +2769,7 @@ class _HomepagesState extends State<Homepages> {
               ),
 
               if (shouldShowLineSelector)
-                Positioned(
-                  right: 16,
-                  bottom: 24,
-                  child: _buildLineSelector(),
-                ),
+                Positioned(right: 16, bottom: 24, child: _buildLineSelector()),
 
               // App bar
               Positioned(
@@ -2769,45 +2792,65 @@ class _HomepagesState extends State<Homepages> {
                       ),
                     ],
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      // Title text
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'MFU ',
-                              style: GoogleFonts.kanit(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFD2232A),
-                              ),
+                      Positioned(
+                        left: 0,
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.menu,
+                              color: Color(0xFFD2232A),
+                              size: 30,
                             ),
-                            TextSpan(
-                              text: 'SHUTTLE BUS',
-                              style: GoogleFonts.kanit(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFBC9945),
-                              ),
-                            ),
-                          ],
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const UserSetting(),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
-
-                      // Menu button
-                      IconButton(
-                        icon: const Icon(Icons.menu, color: Color(0xFFD2232A)),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const UserSetting(),
+                      Positioned.fill(
+                        left: 58,
+                        right: 58,
+                        child: Center(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: RichText(
+                              maxLines: 1,
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: 'MFU ',
+                                    style: GoogleFonts.kanit(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFD2232A),
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: 'SHUTTLE BUS',
+                                    style: GoogleFonts.kanit(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFBC9945),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
+                      Positioned(right: 0, child: _buildLanguageToggleButton()),
                     ],
                   ),
                 ),

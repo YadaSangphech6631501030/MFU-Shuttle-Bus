@@ -3,7 +3,6 @@ import '../services/language_service.dart';
 import 'bus_station.dart';
 import 'favorite_station.dart';
 import 'report_page.dart';
-import 'setting.dart';
 
 class UserSetting extends StatefulWidget {
   const UserSetting({super.key});
@@ -134,19 +133,6 @@ class _UserSettingState extends State<UserSetting> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const FavoriteStationPage(),
-                          ),
-                        );
-                      },
-                    ),
-                    _sectionTitle(text(en: 'Preferences', th: 'การตั้งค่า')),
-                    _settingTile(
-                      icon: Icons.settings,
-                      title: text(en: 'Settings', th: 'ตั้งค่า'),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const Setting(),
                           ),
                         );
                       },

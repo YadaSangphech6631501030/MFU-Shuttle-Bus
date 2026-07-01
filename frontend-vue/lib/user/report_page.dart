@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import 'package:shuttle_bus_fronted/services/language_service.dart';
+import 'homepages.dart';
 
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
@@ -28,6 +29,11 @@ class _ReportPageState extends State<ReportPage>
   // 📌 OPEN FORM DIALOG
   // =========================
   void openReportForm({required String type, required String title}) {
+    if (type == "Feedback") {
+      openFeedbackForm(title: title);
+      return;
+    }
+
     setState(() {
       selectedType = type;
       detailController.clear();
@@ -50,10 +56,10 @@ class _ReportPageState extends State<ReportPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _t(en: "Report Problem", th: "แจ้งปัญหา"),
+                    _t(en: "Help & Feedback", th: "ช่วยเหลือ & ข้อเสนอแนะ"),
                     style: GoogleFonts.kanit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
 
@@ -156,6 +162,343 @@ class _ReportPageState extends State<ReportPage>
           ),
         );
       },
+    );
+  }
+
+  void openFeedbackForm({required String title}) {
+    setState(() {
+      selectedType = "Feedback";
+    });
+
+    int stationRating = 0;
+    int busConditionRating = 0;
+    int drivingSafetyRating = 0;
+    int driverMannersRating = 0;
+    int overallSatisfactionRating = 0;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        _t(en: "Help & Feedback", th: "ช่วยเหลือ & ข้อเสนอแนะ"),
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.kanit(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.kanit(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _ratingScaleLegend(),
+                      const SizedBox(height: 12),
+                      _feedbackRatingQuestion(
+                        number: 1,
+                        title: _t(
+                          en: "Station service condition *",
+                          th: "สภาพของสถานีที่ให้บริการระดับใด *",
+                        ),
+                        value: stationRating,
+                        onChanged: (rating) {
+                          setDialogState(() {
+                            stationRating = rating;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _feedbackRatingQuestion(
+                        number: 2,
+                        title: _t(
+                          en: "Bus condition *",
+                          th: "สภาพของรถที่ให้บริการระดับใด *",
+                        ),
+                        value: busConditionRating,
+                        onChanged: (rating) {
+                          setDialogState(() {
+                            busConditionRating = rating;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _feedbackRatingQuestion(
+                        number: 3,
+                        title: _t(
+                          en: "Driving manners and passenger safety *",
+                          th: "มารยาทในการขับขี่ของพนักงานขับรถและความปลอดภัยในการโดยสาร ระดับใด *",
+                        ),
+                        value: drivingSafetyRating,
+                        onChanged: (rating) {
+                          setDialogState(() {
+                            drivingSafetyRating = rating;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _feedbackRatingQuestion(
+                        number: 4,
+                        title: _t(
+                          en: "Driver politeness and conduct *",
+                          th: "กิริยามารยาทของพนักงานขับรถมีความเหมาะสม สุภาพเรียบร้อย ระดับใด *",
+                        ),
+                        value: driverMannersRating,
+                        onChanged: (rating) {
+                          setDialogState(() {
+                            driverMannersRating = rating;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _feedbackRatingQuestion(
+                        number: 5,
+                        title: _t(
+                          en: "Overall MFU shuttle bus satisfaction *",
+                          th: "ท่านมีความพึงพอใจต่อการให้บริการของรถโดยสารรับ-ส่ง ภายในมหาวิทยาลัย แม่ฟ้าหลวง ระดับใด *",
+                        ),
+                        value: overallSatisfactionRating,
+                        onChanged: (rating) {
+                          setDialogState(() {
+                            overallSatisfactionRating = rating;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(
+                              _t(en: "Cancel", th: "ยกเลิก"),
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: () async {
+                              final navigator = Navigator.of(context);
+                              final messenger = ScaffoldMessenger.of(context);
+
+                              if (stationRating == 0 ||
+                                  busConditionRating == 0 ||
+                                  drivingSafetyRating == 0 ||
+                                  driverMannersRating == 0 ||
+                                  overallSatisfactionRating == 0) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      _t(
+                                        en: "Please complete all required fields",
+                                        th: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ",
+                                      ),
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              final feedbackDetail =
+                                  "Station service rating: $stationRating/5 "
+                                  "(${_ratingDescription(stationRating)})\n"
+                                  "Bus condition rating: $busConditionRating/5 "
+                                  "(${_ratingDescription(busConditionRating)})\n"
+                                  "Driving manners and safety rating: $drivingSafetyRating/5 "
+                                  "(${_ratingDescription(drivingSafetyRating)})\n"
+                                  "Driver politeness rating: $driverMannersRating/5 "
+                                  "(${_ratingDescription(driverMannersRating)})\n"
+                                  "Overall satisfaction rating: $overallSatisfactionRating/5 "
+                                  "(${_ratingDescription(overallSatisfactionRating)})";
+                              final result = await ApiService.sendReport(
+                                selectedType ?? "Feedback",
+                                feedbackDetail,
+                                "",
+                              );
+
+                              if (!mounted) return;
+                              if (result == null) {
+                                navigator.pop();
+                                showSuccessPopup();
+                              } else {
+                                messenger.showSnackBar(
+                                  SnackBar(content: Text(result)),
+                                );
+                              }
+                            },
+                            child: Text(
+                              _t(en: "Send", th: "ส่ง"),
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _ratingDescription(int rating) {
+    switch (rating) {
+      case 1:
+        return _t(en: "1 Needs improvement", th: "1 ควรปรับปรุง");
+      case 2:
+        return _t(en: "2 Poor", th: "2 น้อย");
+      case 3:
+        return _t(en: "3 Average", th: "3 ปานกลาง");
+      case 4:
+        return _t(en: "4 Good", th: "4 ดี");
+      case 5:
+        return _t(en: "5 Excellent", th: "5 ดีมาก");
+      default:
+        return "";
+    }
+  }
+
+  Widget _ratingScaleLegend() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        _t(
+          en: "1 Needs improvement  •  2 Poor  •  3 Average  •  4 Good  •  5 Excellent",
+          th: "1 ควรปรับปรุง  •  2 น้อย  •  3 ปานกลาง  •  4 ดี  •  5 ดีมาก",
+        ),
+        textAlign: TextAlign.center,
+        style: GoogleFonts.kanit(
+          color: Colors.grey.shade700,
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _feedbackRatingQuestion({
+    required int number,
+    required String title,
+    required int value,
+    required ValueChanged<int> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE8E8E8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFD2232A),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  "$number",
+                  style: GoogleFonts.kanit(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.kanit(
+                    fontSize: 13,
+                    height: 1.25,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: value == 0
+                      ? Colors.grey.shade200
+                      : const Color(0xFFFFF3D6),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  value == 0 ? "-" : "$value/5",
+                  style: GoogleFonts.kanit(
+                    color: value == 0
+                        ? Colors.grey.shade600
+                        : const Color(0xFFD2232A),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (index) {
+              final rating = index + 1;
+              final isSelected = rating <= value;
+
+              return IconButton(
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                padding: EdgeInsets.zero,
+                icon: Icon(
+                  isSelected ? Icons.star_rounded : Icons.star_border_rounded,
+                  color: isSelected
+                      ? const Color(0xFFFFB300)
+                      : Colors.grey.shade400,
+                  size: 26,
+                ),
+                onPressed: () => onChanged(rating),
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 
@@ -284,13 +627,19 @@ class _ReportPageState extends State<ReportPage>
                   children: [
                     Positioned.fill(
                       top: topPadding,
-                      child: Center(
-                        child: Text(
-                          _t(en: "Report Problem", th: "แจ้งปัญหา"),
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
+                      child: Transform.translate(
+                        offset: const Offset(0, -6),
+                        child: Center(
+                          child: Text(
+                            _t(
+                              en: "Help & Feedback",
+                              th: "ช่วยเหลือ & ข้อเสนอแนะ",
+                            ),
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ),
@@ -317,6 +666,31 @@ class _ReportPageState extends State<ReportPage>
                           ),
                           onPressed: () {
                             Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 24,
+                      top: backButtonTop,
+                      child: SizedBox(
+                        width: backButtonSize,
+                        height: backButtonSize,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(
+                            Icons.home_rounded,
+                            color: Color(0xFF757575),
+                            size: 25,
+                          ),
+                          onPressed: () {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const Homepages(),
+                              ),
+                              (route) => false,
+                            );
                           },
                         ),
                       ),
@@ -370,6 +744,12 @@ class _ReportPageState extends State<ReportPage>
                   "Complaint",
                   _t(en: "Complaint", th: "ร้องเรียน"),
                   Colors.blue,
+                ),
+                buildReportItem(
+                  Icons.star,
+                  "Feedback",
+                  _t(en: "Feedback", th: "ส่งข้อเสนอแนะ"),
+                  Colors.green,
                 ),
               ],
             ),

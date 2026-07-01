@@ -118,13 +118,16 @@ class _BusStationPageState extends State<BusStationPage> {
               children: [
                 Positioned.fill(
                   top: topPadding,
-                  child: Center(
-                    child: Text(
-                      'Bus Stations',
-                      style: GoogleFonts.kanit(
-                        color: Colors.black,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
+                  child: Transform.translate(
+                    offset: const Offset(0, -6),
+                    child: Center(
+                      child: Text(
+                        'MFU Transit',
+                        style: GoogleFonts.kanit(
+                          color: Colors.black,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
@@ -151,6 +154,31 @@ class _BusStationPageState extends State<BusStationPage> {
                       ),
                       onPressed: () {
                         Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 24,
+                  top: backButtonTop,
+                  child: SizedBox(
+                    width: backButtonSize,
+                    height: backButtonSize,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(
+                        Icons.home_rounded,
+                        color: Color(0xFF757575),
+                        size: 25,
+                      ),
+                      onPressed: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const Homepages(),
+                          ),
+                          (route) => false,
+                        );
                       },
                     ),
                   ),
@@ -265,8 +293,8 @@ class _LineSectionState extends State<_LineSection> {
                           widget.title,
                           style: GoogleFonts.kanit(
                             color: Colors.black,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 2),
