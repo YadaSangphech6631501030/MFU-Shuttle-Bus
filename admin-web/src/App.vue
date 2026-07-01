@@ -244,8 +244,47 @@ const dictionary = {
     noDriver: 'No driver name',
     noLine: 'No line',
     issueReports: 'Issue reports',
+    issueReportsHint: 'Review passenger issue reports and update their status.',
     issueReport: 'Issue report',
     anonymous: 'anonymous',
+    guestUser: 'Guest user',
+    guestUserInitial: 'G',
+    guestReportMeta: 'Public report, no user account attached',
+    reportedBy: 'Reported by',
+    reportTitleLabel: 'Title',
+    reportDetailLabel: 'Detail',
+    activeReports: 'Active reports',
+    feedbackReports: 'Feedback',
+    historyReports: 'History report',
+    reportViewLabel: 'Report view',
+    reportSearch: 'Search',
+    reportSearchPlaceholder: 'Search title, detail, location...',
+    reportCategoryFilter: 'Category',
+    reportStatusFilter: 'Status',
+    reportDateRange: 'Date range',
+    reportDateFrom: 'From date',
+    reportDateTo: 'To date',
+    reportDateFromShort: 'From',
+    reportDateToShort: 'to',
+    to: 'to',
+    reportActions: 'Actions',
+    deleteReport: 'Delete report',
+    deleteReportConfirm: 'Delete report "{name}"?',
+    feedbackAverage: 'Average',
+    allCategories: 'All categories',
+    allStatuses: 'All statuses',
+    noFilteredReports: 'No reports match filters',
+    noFilteredReportsHint: 'Adjust search, category, or status filters.',
+    reportUserId: 'User ID',
+    reportUserUnknown: 'No user information',
+    submittedAt: 'Submitted',
+    reportLocation: 'Location',
+    reportStatus: 'Report status',
+    noReportDetail: 'No report detail',
+    noReportLocation: 'No location provided',
+    unknownTime: 'No time recorded',
+    noReports: 'No issue reports',
+    noReportsHint: 'New passenger reports will appear here.',
     systemUsers: 'System users',
     changeRole: 'Change role',
     deleteStationConfirm: 'Delete station "{name}"?',
@@ -385,8 +424,47 @@ const dictionary = {
     noDriver: 'ไม่มีชื่อคนขับ',
     noLine: 'ไม่ระบุสาย',
     issueReports: 'รายงานปัญหา',
+    issueReportsHint: 'ตรวจสอบรายงานจากผู้โดยสารและอัปเดตสถานะ',
     issueReport: 'รายงานปัญหา',
     anonymous: 'ไม่ระบุชื่อ',
+    guestUser: 'ผู้ใช้ทั่วไป',
+    guestUserInitial: 'G',
+    guestReportMeta: 'รายงานแบบ Guest ไม่ผูกกับบัญชีผู้ใช้',
+    reportedBy: 'ผู้แจ้ง',
+    reportTitleLabel: 'หัวข้อ',
+    reportDetailLabel: 'รายละเอียด',
+    activeReports: 'รายงานที่ต้องดำเนินการ',
+    feedbackReports: 'Feedback',
+    historyReports: 'ประวัติรายงาน',
+    reportViewLabel: 'มุมมองรายงาน',
+    reportSearch: 'ค้นหา',
+    reportSearchPlaceholder: 'ค้นหาหัวข้อ รายละเอียด ตำแหน่ง...',
+    reportCategoryFilter: 'หมวดหมู่',
+    reportStatusFilter: 'สถานะ',
+    reportDateRange: 'ช่วงวันที่',
+    reportDateFrom: 'จากวันที่',
+    reportDateTo: 'ถึงวันที่',
+    reportDateFromShort: 'From',
+    reportDateToShort: 'to',
+    to: 'ถึง',
+    reportActions: 'จัดการ',
+    deleteReport: 'ลบรายงาน',
+    deleteReportConfirm: 'ลบรายงาน "{name}" ใช่ไหม?',
+    feedbackAverage: 'เฉลี่ย',
+    allCategories: 'ทุกหมวดหมู่',
+    allStatuses: 'ทุกสถานะ',
+    noFilteredReports: 'ไม่พบรายงานตามตัวกรอง',
+    noFilteredReportsHint: 'ลองปรับคำค้นหา หมวดหมู่ หรือสถานะ',
+    reportUserId: 'รหัสผู้ใช้',
+    reportUserUnknown: 'ไม่มีข้อมูลผู้ใช้',
+    submittedAt: 'เวลาที่ส่ง',
+    reportLocation: 'ตำแหน่ง',
+    reportStatus: 'สถานะรายงาน',
+    noReportDetail: 'ไม่มีรายละเอียดรายงาน',
+    noReportLocation: 'ไม่ระบุตำแหน่ง',
+    unknownTime: 'ไม่มีเวลาบันทึก',
+    noReports: 'ยังไม่มีรายงานปัญหา',
+    noReportsHint: 'รายงานใหม่จากผู้โดยสารจะแสดงที่นี่',
     systemUsers: 'ผู้ใช้ในระบบ',
     changeRole: 'เปลี่ยนสิทธิ์',
     deleteStationConfirm: 'ลบสถานี "{name}" ใช่ไหม?',
@@ -1342,6 +1420,17 @@ async function updateReportStatus(report: Report, status: string) {
   });
 }
 
+async function deleteReport(report: Report) {
+  const reportName = report.title || report.category || report.type || text.value.issueReport;
+  const message = fillTemplate(text.value.deleteReportConfirm, { name: reportName });
+  if (!confirm(message)) return;
+
+  await withLoading(async () => {
+    await api.deleteReport(report._id);
+    reports.value = await api.getReports();
+  });
+}
+
 async function createAdminUser(payload: AdminUserPayload) {
   await withLoading(async () => {
     await api.createAdminUser(payload);
@@ -1709,6 +1798,7 @@ watch(selectedCameraStationId, () => {
         v-if="activeTab === 'reports'"
         :reports="reports"
         :text="text"
+        @delete-report="deleteReport"
         @update-report-status="updateReportStatus"
       />
 

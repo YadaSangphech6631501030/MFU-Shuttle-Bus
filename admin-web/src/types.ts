@@ -47,6 +47,7 @@ export type Report = {
   UserId?: string;
   username?: string;
   user?: {
+    _id?: string;
     username?: string;
     email?: string;
   };
@@ -59,6 +60,13 @@ export type Report = {
   status?: string;
   createdAt?: string;
   time?: string;
+  feedbackRatings?: Array<{
+    key?: string;
+    label?: string;
+    score?: number;
+    description?: string;
+  }>;
+  feedbackAverage?: number;
 };
 
 export type User = {

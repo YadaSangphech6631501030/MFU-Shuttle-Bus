@@ -473,10 +473,38 @@ class _ReportPageState extends State<ReportPage>
                                   "(${_ratingDescription(driverMannersRating)})\n"
                                   "Overall satisfaction rating: $overallSatisfactionRating/5 "
                                   "(${_ratingDescription(overallSatisfactionRating)})";
+                              final feedbackRatings = {
+                                "stationService": {
+                                  "label": "Station service",
+                                  "score": stationRating,
+                                  "description": _ratingDescription(stationRating),
+                                },
+                                "busCondition": {
+                                  "label": "Bus condition",
+                                  "score": busConditionRating,
+                                  "description": _ratingDescription(busConditionRating),
+                                },
+                                "drivingSafety": {
+                                  "label": "Driving manners and safety",
+                                  "score": drivingSafetyRating,
+                                  "description": _ratingDescription(drivingSafetyRating),
+                                },
+                                "driverPoliteness": {
+                                  "label": "Driver politeness",
+                                  "score": driverMannersRating,
+                                  "description": _ratingDescription(driverMannersRating),
+                                },
+                                "overallSatisfaction": {
+                                  "label": "Overall satisfaction",
+                                  "score": overallSatisfactionRating,
+                                  "description": _ratingDescription(overallSatisfactionRating),
+                                },
+                              };
                               final result = await ApiService.sendReport(
                                 selectedType ?? "Feedback",
                                 feedbackDetail,
                                 "",
+                                feedbackRatings: feedbackRatings,
                               );
 
                               if (!mounted) return;

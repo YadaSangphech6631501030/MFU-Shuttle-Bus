@@ -204,21 +204,24 @@ class ApiService {
   static Future<String?> sendReport(
     String type,
     String detail,
-    String location,
-  ) async {
+    String location, {
+    Map<String, dynamic>? feedbackRatings,
+  }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString("userId");
+      final body = <String, dynamic>{
+        "type": type,
+        "detail": detail,
+        "location": location,
+      };
+
+      if (feedbackRatings != null) {
+        body["feedbackRatings"] = feedbackRatings;
+      }
 
       final res = await http.post(
         Uri.parse("$baseUrl/api/report"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "type": type,
-          "detail": detail,
-          "location": location,
-          "UserId": userId,
-        }),
+        body: jsonEncode(body),
       ).timeout(_requestTimeout);
 
       if (res.statusCode == 201 || res.statusCode == 200) {
