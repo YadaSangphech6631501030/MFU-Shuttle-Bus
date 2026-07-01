@@ -1,24 +1,27 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { Bus, CrowdThresholds, Report, Station, User } from '../types';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import type { Bus, CrowdThresholds, Station } from '../types';
 
 type DensityLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
 const props = defineProps<{
   buses: Bus[];
+  crowdMapError: string;
+  crowdMapLoading: boolean;
   crowdThresholds: CrowdThresholds;
-  dismissedCrowdAlertKeys: Set<string>;
   onlineBuses: number;
   pendingReports: number;
-  reports: Report[];
+  selectedStationId: string | null;
   stations: Station[];
   text: Record<string, any>;
-  users: User[];
 }>();
 
 const emit = defineEmits<{
-  openCrowdAlertStation: [station: Station, level: DensityLevel];
+  crowdMapReady: [element: HTMLElement | null];
+  focusStation: [station: Station];
 }>();
+
+const crowdMapEl = ref<HTMLElement | null>(null);
 
 function fillTemplate(template: string, values: Record<string, string | number>) {
   return template.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ''));
@@ -29,7 +32,7 @@ function stationWaiting(station: Station) {
   return Number.isFinite(waiting) ? waiting : 0;
 }
 
-function stationDensityLevel(station: Station): DensityLevel {
+function densityLevel(station: Station): DensityLevel {
   const waiting = stationWaiting(station);
 
   if (waiting >= props.crowdThresholds.high) return 'HIGH';
@@ -37,49 +40,41 @@ function stationDensityLevel(station: Station): DensityLevel {
   return 'LOW';
 }
 
-const stationSummaries = computed(() => props.stations.map((station) => ({
-  station,
-  id: station._id || station.id,
-  name: station.name,
-  line: station.lines.join(', ') || props.text.noLine,
-  waiting: stationWaiting(station),
-  level: stationDensityLevel(station),
-})));
-
-const totalWaiting = computed(() => stationSummaries.value.reduce((sum, item) => sum + item.waiting, 0));
-const crowdStations = computed(() => [...stationSummaries.value]
-  .sort((a, b) => b.waiting - a.waiting));
-const highCrowdCount = computed(() => crowdStations.value.filter((item) => item.level === 'HIGH').length);
-const mediumCrowdCount = computed(() => crowdStations.value.filter((item) => item.level === 'MEDIUM').length);
-const lowCrowdCount = computed(() => crowdStations.value.filter((item) => item.level === 'LOW').length);
-const totalStationsCount = computed(() => props.stations.length);
-const highCrowdPercent = computed(() => {
-  if (!totalStationsCount.value) return 0;
-  return Math.round((highCrowdCount.value / totalStationsCount.value) * 100);
-});
-const mediumCrowdPercent = computed(() => {
-  if (!totalStationsCount.value) return 0;
-  return Math.round((mediumCrowdCount.value / totalStationsCount.value) * 100);
-});
-const lowCrowdPercent = computed(() => Math.max(0, 100 - highCrowdPercent.value - mediumCrowdPercent.value));
-const alertStations = computed(() => crowdStations.value
-  .filter((item) => item.level === 'HIGH' || item.level === 'MEDIUM')
-  .filter((item) => !props.dismissedCrowdAlertKeys.has(crowdAlertKey(item.station, item.level)))
-  .slice(0, 5));
-
-function densityLabel(level: string) {
+function densityLabel(level: DensityLevel) {
   if (level === 'HIGH') return props.text.high;
   if (level === 'MEDIUM') return props.text.medium;
   return props.text.low;
 }
 
-function crowdAlertKey(station: Station, level: DensityLevel) {
-  return `${station._id || station.id}:${level}`;
+function densityAdvice(level: DensityLevel) {
+  if (level === 'HIGH') return props.text.highAdvice;
+  if (level === 'MEDIUM') return props.text.mediumAdvice;
+  return props.text.lowAdvice;
 }
+
+function stationLineLabel(station: Station) {
+  return station.lines?.length ? station.lines.join(', ') : props.text.noLine;
+}
+
+const stationSummaries = computed(() => props.stations.map((station) => ({
+  station,
+  waiting: stationWaiting(station),
+  level: densityLevel(station),
+})).sort((a, b) => b.waiting - a.waiting));
+
+const totalWaiting = computed(() => stationSummaries.value.reduce((sum, item) => sum + item.waiting, 0));
+
+onMounted(() => {
+  emit('crowdMapReady', crowdMapEl.value);
+});
+
+onUnmounted(() => {
+  emit('crowdMapReady', null);
+});
 </script>
 
 <template>
-  <section class="dashboard-page">
+  <section class="dashboard-page dashboard-overview-page">
     <header class="dashboard-page-header">
       <div>
         <p class="eyebrow">{{ text.adminDashboard }}</p>
@@ -132,98 +127,63 @@ function crowdAlertKey(station: Station, level: DensityLevel) {
       </article>
     </section>
 
-    <section class="dashboard-chart-grid crowd-dashboard-grid">
-      <article class="dashboard-chart-panel crowd-pie-panel">
+    <section class="crowd-layout dashboard-live-crowd-layout">
+      <article class="dashboard-chart-panel crowd-map-panel">
         <div class="dashboard-panel-heading">
           <div>
-            <h2>{{ text.crowdStatus }}</h2>
-            <span>Realtime station density</span>
-          </div>
-          <div class="crowd-status-summary">
-            <span class="summary-high">{{ highCrowdCount }} {{ text.high }}</span>
-            <span class="summary-medium">{{ mediumCrowdCount }} {{ text.medium }}</span>
-            <span class="summary-low">{{ lowCrowdCount }} {{ text.low }}</span>
+            <h2>{{ text.liveStationMap }}</h2>
+            <span>{{ text.markerColorHint }}</span>
           </div>
         </div>
-
-        <div class="crowd-pie-layout">
-          <div
-            class="crowd-donut"
-            :class="{ empty: totalStationsCount === 0 }"
-            :style="{
-              '--high': `${highCrowdPercent}%`,
-              '--medium': `${mediumCrowdPercent}%`,
-            }"
-            aria-hidden="true"
-          >
-            <span>{{ totalStationsCount }}</span>
-            <small>{{ text.stationsUnit }}</small>
-          </div>
-
-          <div class="crowd-pie-legend">
-            <p>
-              <span class="overview-dot dot-rose"></span>
-              {{ text.high }}
-              <strong>{{ highCrowdCount }}</strong>
-            </p>
-            <p>
-              <span class="overview-dot dot-gold"></span>
-              {{ text.medium }}
-              <strong>{{ mediumCrowdCount }}</strong>
-            </p>
-            <p>
-              <span class="overview-dot dot-green"></span>
-              {{ text.low }}
-              <strong>{{ lowCrowdCount }}</strong>
-            </p>
-          </div>
+        <div class="crowd-map-shell">
+          <div ref="crowdMapEl" class="crowd-map dashboard-crowd-map"></div>
+          <div v-if="crowdMapLoading" class="map-overlay">{{ text.mapLoading }}</div>
         </div>
+        <p v-if="crowdMapError" class="map-error">{{ crowdMapError }}</p>
       </article>
 
-      <article class="dashboard-chart-panel crowd-alert-panel">
-        <div class="dashboard-panel-heading">
-          <div>
-            <h2>{{ text.crowdAlerts }}</h2>
-            <span>
-              {{
-                alertStations.length
-                  ? fillTemplate(text.stationsNeedAttention, { count: alertStations.length })
-                  : text.noNotifications
-              }}
-            </span>
-          </div>
-        </div>
-
-        <div v-if="alertStations.length" class="dashboard-alert-list">
-          <button
-            v-for="item in alertStations"
-            :key="item.id"
-            class="dashboard-alert-item"
-            :class="`level-${item.level.toLowerCase()}`"
-            type="button"
-            @click="$emit('openCrowdAlertStation', item.station, item.level)"
-          >
-            <span class="dashboard-alert-dot" aria-hidden="true"></span>
+      <aside class="crowd-side">
+        <article class="dashboard-chart-panel station-load-panel">
+          <div class="dashboard-panel-heading">
             <div>
-              <strong>{{ item.name }}</strong>
-              <p>
-                {{
-                  fillTemplate(text.passengersWaitingAt, {
-                    level: densityLabel(item.level),
-                    count: item.waiting,
-                    line: item.line,
-                  })
-                }}
-              </p>
+              <h2>{{ text.crowdAlerts }}</h2>
+              <span>{{ text.dispatchGuide }}</span>
             </div>
-          </button>
-        </div>
+          </div>
+          <div class="station-load-list dashboard-station-load-list">
+            <div
+              v-for="item in stationSummaries"
+              :key="item.station._id || item.station.id"
+              class="station-load-item"
+              :class="[
+                `level-${item.level.toLowerCase()}`,
+                { active: selectedStationId === item.station.id },
+              ]"
+            >
+              <button class="station-load-main" type="button" @click="$emit('focusStation', item.station)">
+                <span class="load-dot" aria-hidden="true"></span>
+                <span class="station-load-name">
+                  <strong>{{ item.station.name }}</strong>
+                  <small>{{ stationLineLabel(item.station) }}</small>
+                </span>
+                <span class="station-load-count">
+                  <strong>{{ item.waiting }}</strong>
+                  <small>{{ densityLabel(item.level) }}</small>
+                </span>
+              </button>
+            </div>
+          </div>
+        </article>
 
-        <div v-else class="dashboard-alert-empty">
-          <strong>{{ text.noNotifications }}</strong>
-          <span>{{ text.lowAdvice }}</span>
-        </div>
-      </article>
+        <article class="dashboard-chart-panel crowd-guide-panel">
+          <h2>{{ text.dispatchGuide }}</h2>
+          <div class="crowd-guide-list">
+            <p><span class="guide-dot high"></span><strong>{{ text.high }}</strong> {{ densityAdvice('HIGH') }}</p>
+            <p><span class="guide-dot medium"></span><strong>{{ text.medium }}</strong> {{ densityAdvice('MEDIUM') }}</p>
+            <p><span class="guide-dot low"></span><strong>{{ text.low }}</strong> {{ densityAdvice('LOW') }}</p>
+          </div>
+        </article>
+      </aside>
     </section>
   </section>
 </template>

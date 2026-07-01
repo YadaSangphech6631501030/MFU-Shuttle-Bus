@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import type { Report } from '../types';
 
 type ReportView = 'active' | 'feedback' | 'history';
+type DateTarget = 'from' | 'to';
 
 const props = defineProps<{
   reports: Report[];
@@ -27,12 +28,54 @@ function firstText(...values: unknown[]) {
   return values.map(cleanText).find(Boolean) || '';
 }
 
+function isEnglishAdmin() {
+  return props.text.language === 'EN';
+}
+
+const reportTextTranslations: Record<string, { en: string; th: string }> = {
+  accident: { en: 'Accident', th: 'อุบัติเหตุ' },
+  'อุบัติเหตุ': { en: 'Accident', th: 'อุบัติเหตุ' },
+  breakdown: { en: 'Breakdown', th: 'รถเสีย' },
+  'รถเสีย': { en: 'Breakdown', th: 'รถเสีย' },
+  construction: { en: 'Construction', th: 'ก่อสร้าง' },
+  'ก่อสร้าง': { en: 'Construction', th: 'ก่อสร้าง' },
+  'road closed': { en: 'Road Closed', th: 'ปิดถนน' },
+  'ปิดถนน': { en: 'Road Closed', th: 'ปิดถนน' },
+  obstacle: { en: 'Obstacle', th: 'สิ่งกีดขวาง' },
+  'สิ่งกีดขวาง': { en: 'Obstacle', th: 'สิ่งกีดขวาง' },
+  complaint: { en: 'Complaint', th: 'ร้องเรียน' },
+  'ร้องเรียน': { en: 'Complaint', th: 'ร้องเรียน' },
+  feedback: { en: 'Feedback', th: 'ติชม' },
+  'ส่งข้อเสนอแนะ': { en: 'Feedback', th: 'ติชม' },
+  'ข้อเสนอแนะ': { en: 'Feedback', th: 'ติชม' },
+  'ติชม': { en: 'Feedback', th: 'ติชม' },
+};
+
+function localizedReportText(value: string) {
+  const normalized = value.trim().toLowerCase();
+  const translation = reportTextTranslations[normalized] || reportTextTranslations[value.trim()];
+  if (!translation) return value;
+  return isEnglishAdmin() ? translation.en : translation.th;
+}
+
 function reportTitle(report: Report) {
-  return firstText(report.title, report.category, report.type, props.text.issueReport);
+  return localizedReportText(firstText(report.title, report.category, report.type, props.text.issueReport));
+}
+
+function rawReportCategory(report: Report) {
+  return firstText(report.type, report.category, props.text.issueReport);
 }
 
 function reportCategory(report: Report) {
-  return firstText(report.type, report.category, props.text.issueReport);
+  return localizedReportText(rawReportCategory(report));
+}
+
+function categoryClass(category: string) {
+  return `report-category-${category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+}
+
+function shouldShowTableCategory(report: Report, category: string) {
+  return reportTitle(report).trim().toLowerCase() !== category.trim().toLowerCase();
 }
 
 function reportDetail(report: Report) {
@@ -43,12 +86,18 @@ function reportLocation(report: Report) {
   return firstText(report.location, props.text.noReportLocation);
 }
 
-function reporterName() {
+function reporterSearchText() {
   return props.text.guestUser;
 }
 
-function reporterMeta() {
-  return props.text.guestReportMeta || props.text.reportUserUnknown;
+function isSameReport(a: Report, b: Report) {
+  if (a._id && b._id) return a._id === b._id;
+  return a === b;
+}
+
+function reporterName(report: Report) {
+  const index = guestReportOrder.value.findIndex((item) => isSameReport(item, report));
+  return `${props.text.guestUser} ${index >= 0 ? String(index + 1).padStart(2, '0') : ''}`.trim();
 }
 
 function normalizedStatus(report: Report) {
@@ -82,6 +131,36 @@ function reportDateValue(report: Report) {
   const date = reportDate(report);
   if (!date) return '';
 
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateInput(value: string) {
+  if (!value) return dateInputPlaceholder();
+
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat(reportLocale(), {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
+function dateInputPlaceholder() {
+  return props.text.language === 'TH' ? 'ดด/วว/ปปปป' : 'MM/DD/YYYY';
+}
+
+function dateInputToDate(value: string) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toDateInputValue(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -143,7 +222,7 @@ function hasStructuredFeedbackRatings(report: Report) {
 }
 
 function isFeedbackReport(report: Report) {
-  return reportCategory(report).toLowerCase() === 'feedback';
+  return rawReportCategory(report).toLowerCase() === 'feedback';
 }
 
 function matchesSearch(report: Report, query: string) {
@@ -154,7 +233,7 @@ function matchesSearch(report: Report, query: string) {
     reportCategory(report),
     reportDetail(report),
     reportLocation(report),
-    reporterName(),
+    reporterSearchText(),
     statusLabel(normalizedStatus(report)),
     formatReportDateTime(report),
   ].join(' ').toLowerCase();
@@ -176,6 +255,107 @@ const categoryFilter = ref('all');
 const statusFilter = ref('all');
 const dateFromFilter = ref('');
 const dateToFilter = ref('');
+const datePickerRoot = ref<HTMLElement | null>(null);
+const activeDateTarget = ref<DateTarget>('from');
+const isDatePickerOpen = ref(false);
+const calendarMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+
+const calendarWeekdays = computed(() => (
+  props.text.language === 'TH'
+    ? ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+));
+
+function openDatePicker(target: DateTarget) {
+  activeDateTarget.value = target;
+  const selectedDate = dateInputToDate(target === 'from' ? dateFromFilter.value : dateToFilter.value)
+    || dateInputToDate(dateFromFilter.value)
+    || dateInputToDate(dateToFilter.value)
+    || new Date();
+  calendarMonth.value = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+  isDatePickerOpen.value = true;
+}
+
+function closeDatePicker() {
+  isDatePickerOpen.value = false;
+}
+
+function handleReportClickOutside(event: MouseEvent) {
+  if (!datePickerRoot.value?.contains(event.target as Node)) {
+    closeDatePicker();
+  }
+}
+
+function shiftCalendarMonth(amount: number) {
+  calendarMonth.value = new Date(
+    calendarMonth.value.getFullYear(),
+    calendarMonth.value.getMonth() + amount,
+    1,
+  );
+}
+
+const calendarMonthLabel = computed(() => new Intl.DateTimeFormat(reportLocale(), {
+  month: 'long',
+  year: 'numeric',
+}).format(calendarMonth.value));
+
+const calendarDays = computed(() => {
+  const firstOfMonth = calendarMonth.value;
+  const start = new Date(firstOfMonth);
+  start.setDate(1 - firstOfMonth.getDay());
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    const value = toDateInputValue(date);
+    const from = dateFromFilter.value;
+    const to = dateToFilter.value;
+
+    return {
+      date,
+      value,
+      label: date.getDate(),
+      inCurrentMonth: date.getMonth() === firstOfMonth.getMonth(),
+      isStart: value === from,
+      isEnd: value === to,
+      inRange: Boolean(from && to && value > from && value < to),
+      isToday: value === toDateInputValue(new Date()),
+    };
+  });
+});
+
+function selectCalendarDate(value: string) {
+  if (!dateFromFilter.value || dateToFilter.value || activeDateTarget.value === 'from') {
+    dateFromFilter.value = value;
+    dateToFilter.value = '';
+    activeDateTarget.value = 'to';
+    return;
+  }
+
+  if (value < dateFromFilter.value) {
+    dateToFilter.value = dateFromFilter.value;
+    dateFromFilter.value = value;
+  } else {
+    dateToFilter.value = value;
+  }
+
+  closeDatePicker();
+}
+
+function clearDateRange() {
+  dateFromFilter.value = '';
+  dateToFilter.value = '';
+  activeDateTarget.value = 'from';
+  closeDatePicker();
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleReportClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleReportClickOutside);
+});
 
 const feedbackReports = computed(() => props.reports.filter((report) => isFeedbackReport(report)));
 const activeReports = computed(() => props.reports
@@ -189,6 +369,13 @@ const visibleReports = computed(() => {
   if (activeReportView.value === 'history') return historyReports.value;
   return activeReports.value;
 });
+
+const guestReportOrder = computed(() => [...props.reports].sort((a, b) => {
+  const aDate = reportDate(a)?.getTime() ?? 0;
+  const bDate = reportDate(b)?.getTime() ?? 0;
+  if (aDate !== bDate) return aDate - bDate;
+  return String(a._id || '').localeCompare(String(b._id || ''));
+}));
 
 const categoryOptions = computed(() => {
   const categories = new Set(visibleReports.value.map((report) => reportCategory(report)));
@@ -242,9 +429,10 @@ const reportGroups = computed(() => {
     <div class="panel-heading report-heading">
       <div>
         <h2>{{ text.issueReports }}</h2>
-        <p>{{ text.issueReportsHint }}</p>
       </div>
-      <span class="report-total">{{ filteredReports.length }} / {{ reports.length }} {{ text.reportsUnit }}</span>
+      <div class="report-heading-actions">
+        <span class="report-total">{{ filteredReports.length }} / {{ visibleReports.length }} {{ text.reportsUnit }}</span>
+      </div>
     </div>
 
     <div class="report-toolbar">
@@ -276,9 +464,15 @@ const reportGroups = computed(() => {
       </div>
 
       <div class="report-filters">
-        <label>
+        <label class="report-search-field">
           {{ text.reportSearch }}
-          <input v-model="searchQuery" type="search" :placeholder="text.reportSearchPlaceholder" />
+          <span class="report-search-input">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m16 16 4 4" />
+            </svg>
+            <input v-model="searchQuery" type="search" :placeholder="text.reportSearchPlaceholder" />
+          </span>
         </label>
         <label>
           {{ text.reportCategoryFilter }}
@@ -291,27 +485,81 @@ const reportGroups = computed(() => {
         </label>
         <label class="report-date-range-field">
           {{ text.reportDateRange }}
-          <span class="report-date-range">
-            <span class="report-date-input">
-              <input
-                v-model="dateFromFilter"
-                type="date"
-                :aria-label="text.reportDateFrom"
-                :class="{ empty: !dateFromFilter }"
-                :title="text.reportDateFrom"
-              />
-              <span v-if="!dateFromFilter">{{ text.reportDateFromShort }}</span>
+          <span ref="datePickerRoot" class="report-date-range">
+            <span class="report-date-control">
+              <span class="report-date-inline-label">{{ text.reportDateFromShort }}</span>
+              <button
+                class="report-date-input"
+                :class="{ active: isDatePickerOpen && activeDateTarget === 'from' }"
+                type="button"
+                @click.stop="openDatePicker('from')"
+              >
+                <span :class="{ empty: !dateFromFilter }">{{ formatDateInput(dateFromFilter) }}</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 2v4" />
+                  <path d="M16 2v4" />
+                  <rect x="4" y="5" width="16" height="17" rx="2" />
+                  <path d="M4 10h16" />
+                </svg>
+              </button>
             </span>
-            <span class="report-date-input">
-              <input
-                v-model="dateToFilter"
-                type="date"
-                :aria-label="text.reportDateTo"
-                :class="{ empty: !dateToFilter }"
-                :title="text.reportDateTo"
-              />
-              <span v-if="!dateToFilter">{{ text.reportDateToShort }}</span>
+            <span class="report-date-control">
+              <span class="report-date-inline-label">{{ text.reportDateToShort }}</span>
+              <button
+                class="report-date-input"
+                :class="{ active: isDatePickerOpen && activeDateTarget === 'to' }"
+                type="button"
+                @click.stop="openDatePicker('to')"
+              >
+                <span :class="{ empty: !dateToFilter }">{{ formatDateInput(dateToFilter) }}</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 2v4" />
+                  <path d="M16 2v4" />
+                  <rect x="4" y="5" width="16" height="17" rx="2" />
+                  <path d="M4 10h16" />
+                </svg>
+              </button>
             </span>
+            <div v-if="isDatePickerOpen" class="report-calendar-popover" @click.stop>
+              <div class="report-calendar-header">
+                <button type="button" aria-label="Previous month" @click="shiftCalendarMonth(-1)">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m15 18-6-6 6-6" />
+                  </svg>
+                </button>
+                <strong>{{ calendarMonthLabel }}</strong>
+                <button type="button" aria-label="Next month" @click="shiftCalendarMonth(1)">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </button>
+              </div>
+              <div class="report-calendar-weekdays">
+                <span v-for="weekday in calendarWeekdays" :key="weekday">{{ weekday }}</span>
+              </div>
+              <div class="report-calendar-grid">
+                <button
+                  v-for="day in calendarDays"
+                  :key="day.value"
+                  class="report-calendar-day"
+                  :class="{
+                    muted: !day.inCurrentMonth,
+                    today: day.isToday,
+                    'in-range': day.inRange,
+                    'range-start': day.isStart,
+                    'range-end': day.isEnd,
+                  }"
+                  type="button"
+                  @click="selectCalendarDate(day.value)"
+                >
+                  {{ day.label }}
+                </button>
+              </div>
+              <div class="report-calendar-footer">
+                <button type="button" @click="clearDateRange">Clear</button>
+                <button type="button" @click="closeDatePicker">Done</button>
+              </div>
+            </div>
           </span>
         </label>
         <label v-if="activeReportView !== 'feedback'">
@@ -330,8 +578,7 @@ const reportGroups = computed(() => {
       <section v-for="group in reportGroups" :key="group.category" class="report-category-section">
         <header class="report-category-heading">
           <div>
-            <span class="report-category-pill">{{ group.category }}</span>
-            <strong>{{ group.category }}</strong>
+            <span class="report-category-pill" :class="categoryClass(group.category)">{{ group.category }}</span>
           </div>
           <span>{{ group.items.length }} {{ text.reportsUnit }}</span>
         </header>
@@ -347,7 +594,7 @@ const reportGroups = computed(() => {
                 <th>{{ text.reportedBy }}</th>
                 <th>{{ text.submittedAt }}</th>
                 <th v-if="activeReportView !== 'feedback'">{{ text.reportStatus }}</th>
-                <th>{{ text.reportActions }}</th>
+                <th class="report-actions-heading" :aria-label="text.reportActions"></th>
               </tr>
             </thead>
             <tbody>
@@ -355,7 +602,7 @@ const reportGroups = computed(() => {
                 <td class="report-index">{{ rowIndex + 1 }}</td>
                 <td>
                   <strong class="report-table-title">{{ reportTitle(report) }}</strong>
-                  <span class="report-table-category">{{ group.category }}</span>
+                  <span v-if="shouldShowTableCategory(report, group.category)" class="report-table-category">{{ group.category }}</span>
                 </td>
                 <td>
                   <div v-if="hasStructuredFeedbackRatings(report)" class="feedback-rating-list">
@@ -387,17 +634,21 @@ const reportGroups = computed(() => {
                 </td>
                 <td v-if="activeReportView !== 'feedback'" class="report-table-location">{{ reportLocation(report) }}</td>
                 <td>
-                  <strong class="reporter-table-name">{{ reporterName() }}</strong>
-                  <small>{{ reporterMeta() }}</small>
+                  <strong class="reporter-table-name">{{ reporterName(report) }}</strong>
                 </td>
                 <td class="report-table-time">{{ formatReportDateTime(report) }}</td>
                 <td v-if="activeReportView !== 'feedback'">
                   <div class="report-status-cell">
-                    <span class="report-status-pill" :class="statusClass(report)">
-                      {{ statusLabel(normalizedStatus(report)) }}
+                    <span
+                      v-if="activeReportView === 'history'"
+                      class="report-status-display report-status-resolved"
+                    >
+                      {{ text.resolvedStatus }}
                     </span>
                     <select
+                      v-else
                       class="report-status-select"
+                      :class="statusClass(report)"
                       :value="normalizedStatus(report)"
                       @change="$emit('updateReportStatus', report, selectValue($event))"
                     >
@@ -408,8 +659,14 @@ const reportGroups = computed(() => {
                   </div>
                 </td>
                 <td>
-                  <button class="report-delete-btn" type="button" @click="$emit('deleteReport', report)">
-                    -
+                  <button class="report-delete-btn" type="button" :aria-label="text.deleteReport" @click="$emit('deleteReport', report)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4h8v2" />
+                      <path d="M19 6l-1 14H6L5 6" />
+                      <path d="M10 11v5" />
+                      <path d="M14 11v5" />
+                    </svg>
                   </button>
                 </td>
               </tr>
