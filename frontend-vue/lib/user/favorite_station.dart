@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shuttle_bus_fronted/services/api_service.dart';
 import 'package:shuttle_bus_fronted/services/language_service.dart';
+import 'homepages.dart';
 
 class FavoriteStationPage extends StatefulWidget {
   const FavoriteStationPage({super.key});
@@ -207,13 +208,16 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
               children: [
                 Positioned.fill(
                   top: topPadding,
-                  child: const Center(
-                    child: Text(
-                      'Favorite Stations',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
+                  child: Transform.translate(
+                    offset: const Offset(0, -6),
+                    child: const Center(
+                      child: Text(
+                        'Favorite Stations',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
@@ -240,6 +244,31 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
                       ),
                       onPressed: () {
                         Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 24,
+                  top: backButtonTop,
+                  child: SizedBox(
+                    width: backButtonSize,
+                    height: backButtonSize,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(
+                        Icons.home_rounded,
+                        color: Color(0xFF757575),
+                        size: 25,
+                      ),
+                      onPressed: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const Homepages(),
+                          ),
+                          (route) => false,
+                        );
                       },
                     ),
                   ),
