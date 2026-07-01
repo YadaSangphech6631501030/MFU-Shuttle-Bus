@@ -34,20 +34,20 @@ class _HomepagesState extends State<Homepages> {
     20.045780781087203,
     99.89135359185909,
   );
+  static final LatLngBounds _mfuCampusBounds = LatLngBounds(
+    southwest: const LatLng(20.0385, 99.8875),
+    northeast: const LatLng(20.0640, 99.9040),
+  );
   static const double _defaultMapZoom = 16.9;
-  static const double _defaultMapTilt = 55;
-  static const double _defaultMapBearing = 0;
+  static const double _minMapZoom = 15.0;
+  static const double _maxMapZoom = 18.2;
   static const double _routeOverviewNorthOffsetDegrees = 0.0045;
-  static const double _tiltStartZoom = 15.2;
-  static const double _tiltFullZoom = 17.2;
 
   int currentIndex = 0;
 
   String selectedLine = "all";
   String activeBusLine = "line1";
   GoogleMapController? mapController;
-  CameraPosition? latestCameraPosition;
-  bool isAdjustingZoomTilt = false;
   double currentZoom = _defaultMapZoom;
 
   Timer? stationTimer;
@@ -214,7 +214,9 @@ class _HomepagesState extends State<Homepages> {
         stationData = stationById.values.toList();
       });
 
-      updateAllRoutes();
+      if (route1.isEmpty || route2.isEmpty) {
+        updateAllRoutes();
+      }
     } catch (e) {
       debugPrint("API ERROR: $e");
     }
@@ -303,7 +305,7 @@ class _HomepagesState extends State<Homepages> {
     final rawLine = bus?["line"]?.toString();
     if (rawLine == "1" || rawLine == "line1") return "line1";
     if (rawLine == "2" || rawLine == "line2") return "line2";
-    return null;
+    return selectedLine;
   }
 
   List<String> stationLineKeys(Map<String, dynamic> station) {
@@ -465,7 +467,7 @@ class _HomepagesState extends State<Homepages> {
       ).compareTo(_pointsDistanceMeters(bPoints));
     });
 
-    return null;
+    return candidates.first;
   }
 
   String? _routeTripLineKeyFor(
@@ -533,43 +535,7 @@ class _HomepagesState extends State<Homepages> {
   }
 
   void handleCameraMove(CameraPosition position) {
-    latestCameraPosition = position;
     currentZoom = position.zoom;
-  }
-
-  double tiltForZoom(double zoom) {
-    if (zoom <= _tiltStartZoom) return 0;
-    if (zoom >= _tiltFullZoom) return _defaultMapTilt;
-
-    final progress = (zoom - _tiltStartZoom) / (_tiltFullZoom - _tiltStartZoom);
-    return _defaultMapTilt * progress;
-  }
-
-  Future<void> adjustTiltForCurrentZoom() async {
-    final controller = mapController;
-    final position = latestCameraPosition;
-    if (controller == null || position == null || isAdjustingZoomTilt) return;
-
-    final targetTilt = tiltForZoom(position.zoom);
-    if ((position.tilt - targetTilt).abs() < 3) return;
-
-    isAdjustingZoomTilt = true;
-    try {
-      await controller.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: position.target,
-            zoom: position.zoom,
-            tilt: targetTilt,
-            bearing: position.bearing,
-          ),
-        ),
-      );
-    } catch (e) {
-      debugPrint("MAP TILT ERROR: $e");
-    } finally {
-      isAdjustingZoomTilt = false;
-    }
   }
 
   Future<void> focusInitialMapTarget() async {
@@ -582,8 +548,8 @@ class _HomepagesState extends State<Homepages> {
           CameraPosition(
             target: widget.initialMapTarget ?? _mSquareStationCenter,
             zoom: widget.initialMapZoom,
-            tilt: _defaultMapTilt,
-            bearing: _defaultMapBearing,
+            tilt: 0,
+            bearing: 0,
           ),
         ),
       );
@@ -731,6 +697,27 @@ class _HomepagesState extends State<Homepages> {
         .toList();
   }
 
+  List<Map<String, dynamic>> _searchStationPool(Set<String> favoriteIds) {
+    final stationById = <String, Map<String, dynamic>>{};
+    final sourceStations = selectedLine == "all"
+        ? getAllLines()
+        : getSelectedLine();
+
+    for (final station in sourceStations) {
+      final id = station["id"]?.toString() ?? "";
+      if (id.isNotEmpty) stationById[id] = station;
+    }
+
+    for (final station in getAllLines()) {
+      final id = station["id"]?.toString() ?? "";
+      if (id.isNotEmpty && favoriteIds.contains(id)) {
+        stationById[id] = station;
+      }
+    }
+
+    return stationById.values.toList();
+  }
+
   Future<void> searchStations(String value, String field) async {
     final query = value.trim().toLowerCase();
     final prefs = await SharedPreferences.getInstance();
@@ -739,7 +726,7 @@ class _HomepagesState extends State<Homepages> {
 
     if (!mounted) return;
 
-    final stations = selectedLine == "all" ? getAllLines() : getSelectedLine();
+    final stations = _searchStationPool(favoriteStationIds);
     final matchedStations = query.isEmpty
         ? stations
         : stations.where((station) {
@@ -843,8 +830,8 @@ class _HomepagesState extends State<Homepages> {
           CameraPosition(
             target: LatLng(station["lat"], station["lng"]),
             zoom: 17,
-            tilt: _defaultMapTilt,
-            bearing: _defaultMapBearing,
+            tilt: 0,
+            bearing: 0,
           ),
         ),
       );
@@ -1178,6 +1165,10 @@ class _HomepagesState extends State<Homepages> {
         ? <LatLng>[]
         : _routeForLineKey(tripLineKey);
     if (tripLineKey != null && lineRoute.length < 2) {
+      setState(() {
+        selectedTripRoute = fallbackRoute;
+      });
+
       final assetRoute = await RouteAssetService.loadRouteForLine(tripLineKey);
       if (!mounted || requestId != selectedTripRouteRequestId) return;
       if (assetRoute.length > 1) {
@@ -1757,6 +1748,7 @@ class _HomepagesState extends State<Homepages> {
     currentZoom = widget.initialMapZoom;
     loadStationMarkerIcons();
     loadBusMarkerIcons();
+    updateAllRoutes();
     fetchStations();
     fetchBuses();
 
@@ -2428,23 +2420,26 @@ class _HomepagesState extends State<Homepages> {
                 initialCameraPosition: CameraPosition(
                   target: widget.initialMapTarget ?? _mSquareStationCenter,
                   zoom: currentZoom,
-                  tilt: _defaultMapTilt,
-                  bearing: _defaultMapBearing,
+                  tilt: 0,
+                  bearing: 0,
                 ),
                 onMapCreated: (controller) {
                   mapController = controller;
                   focusInitialMapTarget();
                 },
                 onCameraMove: handleCameraMove,
-                onCameraIdle: adjustTiltForCurrentZoom,
                 onTap: (_) => hideSearchOverlay(resetLineWhenEmpty: true),
                 zoomControlsEnabled: false,
-                minMaxZoomPreference: const MinMaxZoomPreference(13.8, 19),
+                minMaxZoomPreference: const MinMaxZoomPreference(
+                  _minMapZoom,
+                  _maxMapZoom,
+                ),
+                cameraTargetBounds: CameraTargetBounds(_mfuCampusBounds),
                 mapToolbarEnabled: false,
                 myLocationButtonEnabled: false,
-                buildingsEnabled: true,
-                rotateGesturesEnabled: true,
-                tiltGesturesEnabled: true,
+                buildingsEnabled: false,
+                rotateGesturesEnabled: false,
+                tiltGesturesEnabled: false,
                 polylines: {
                   if (selectedTripPoints.length > 1)
                     Polyline(

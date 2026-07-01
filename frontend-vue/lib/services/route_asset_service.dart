@@ -8,6 +8,7 @@ class RouteAssetService {
       'assets/routes/polyline_line1_mfu.geojson';
   static const String line2RouteAsset =
       'assets/routes/polyline_line2_mfu.geojson';
+  static final Map<String, List<LatLng>> _routeCache = {};
 
   static Future<List<LatLng>> loadLine1Route() {
     return loadGeoJsonRoute(line1RouteAsset);
@@ -24,12 +25,15 @@ class RouteAssetService {
   }
 
   static Future<List<LatLng>> loadGeoJsonRoute(String assetPath) async {
+    final cachedRoute = _routeCache[assetPath];
+    if (cachedRoute != null) return cachedRoute;
+
     try {
       final rawGeoJson = await rootBundle.loadString(assetPath);
       final geoJson = jsonDecode(rawGeoJson);
       final coordinates = _extractCoordinates(geoJson);
 
-      return coordinates
+      final route = coordinates
           .whereType<List>()
           .where((point) => point.length >= 2)
           .map((point) {
@@ -38,6 +42,9 @@ class RouteAssetService {
             return LatLng(lat, lng);
           })
           .toList();
+      _routeCache[assetPath] = route;
+
+      return route;
     } catch (_) {
       return [];
     }
