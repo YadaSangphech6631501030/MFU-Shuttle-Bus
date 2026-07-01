@@ -40,126 +40,253 @@ class _ReportPageState extends State<ReportPage>
       locationController.clear();
     });
 
+    var showLocationError = false;
+    var showDetailError = false;
+
     showDialog(
       context: context,
       barrierColor: Colors.black54,
       builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _t(en: "Help & Feedback", th: "ช่วยเหลือ & ข้อเสนอแนะ"),
-                    style: GoogleFonts.kanit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-
-                  const SizedBox(height: 5),
-
-                  Text(
-                    title,
-                    style: GoogleFonts.kanit(fontSize: 14, color: Colors.grey),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  // 📍 LOCATION
-                  TextField(
-                    controller: locationController,
-                    decoration: InputDecoration(
-                      hintText: _t(
-                        en: "Location (optional)",
-                        th: "สถานที่ (ไม่บังคับ)",
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // 📝 DETAIL
-                  TextField(
-                    controller: detailController,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: _t(
-                        en: "Describe the problem...",
-                        th: "อธิบายปัญหา...",
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  // BUTTONS
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(
-                          _t(en: "Cancel", th: "ยกเลิก"),
-                          style: const TextStyle(color: Colors.red),
+                      Text(
+                        _t(en: "Help & Feedback", th: "ช่วยเหลือ & ข้อเสนอแนะ"),
+                        style: GoogleFonts.kanit(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
 
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                      const SizedBox(height: 5),
+
+                      Text(
+                        title,
+                        style: GoogleFonts.kanit(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      // 📍 LOCATION
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: RichText(
+                          text: TextSpan(
+                            style: GoogleFonts.kanit(
+                              color: Colors.black87,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: _t(en: "Location", th: "สถานที่"),
+                              ),
+                              const TextSpan(
+                                text: " *",
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
                           ),
                         ),
-                        onPressed: () async {
-                          final navigator = Navigator.of(context);
-                          final messenger = ScaffoldMessenger.of(context);
-                          final result = await ApiService.sendReport(
-                            selectedType ?? "",
-                            detailController.text,
-                            locationController.text,
-                          );
-
-                          if (!mounted) return;
-                          if (result == null) {
-                            navigator.pop();
-                            showSuccessPopup();
-                          } else {
-                            messenger.showSnackBar(
-                              SnackBar(content: Text(result)),
-                            );
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: locationController,
+                        onChanged: (value) {
+                          if (showLocationError && value.trim().isNotEmpty) {
+                            setDialogState(() {
+                              showLocationError = false;
+                            });
                           }
                         },
-                        child: Text(
-                          _t(en: "Send", th: "ส่ง"),
-                          style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: _t(en: "Location", th: "สถานที่"),
+                          errorText: showLocationError
+                              ? _t(
+                                  en: "Please enter the location",
+                                  th: "กรุณากรอกสถานที่",
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.red,
+                              width: 1.2,
+                            ),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.red,
+                              width: 1.2,
+                            ),
+                          ),
                         ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // 📝 DETAIL
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: RichText(
+                          text: TextSpan(
+                            style: GoogleFonts.kanit(
+                              color: Colors.black87,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: _t(
+                                  en: "Describe the problem",
+                                  th: "อธิบายปัญหา",
+                                ),
+                              ),
+                              const TextSpan(
+                                text: " *",
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: detailController,
+                        maxLines: 4,
+                        onChanged: (value) {
+                          if (showDetailError && value.trim().isNotEmpty) {
+                            setDialogState(() {
+                              showDetailError = false;
+                            });
+                          }
+                        },
+                        decoration: InputDecoration(
+                          hintText: _t(
+                            en: "Describe the problem...",
+                            th: "อธิบายปัญหา...",
+                          ),
+                          errorText: showDetailError
+                              ? _t(
+                                  en: "Please describe the problem",
+                                  th: "กรุณาอธิบายปัญหา",
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.red,
+                              width: 1.2,
+                            ),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.red,
+                              width: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      // BUTTONS
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(
+                              _t(en: "Cancel", th: "ยกเลิก"),
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
+
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: () async {
+                              final navigator = Navigator.of(context);
+                              final messenger = ScaffoldMessenger.of(context);
+                              final location = locationController.text.trim();
+                              final detail = detailController.text.trim();
+
+                              if (location.isEmpty || detail.isEmpty) {
+                                setDialogState(() {
+                                  showLocationError = location.isEmpty;
+                                  showDetailError = detail.isEmpty;
+                                });
+                                return;
+                              }
+
+                              final result = await ApiService.sendReport(
+                                selectedType ?? "",
+                                detail,
+                                location,
+                              );
+
+                              if (!mounted) return;
+                              if (result == null) {
+                                navigator.pop();
+                                showSuccessPopup();
+                              } else {
+                                messenger.showSnackBar(
+                                  SnackBar(content: Text(result)),
+                                );
+                              }
+                            },
+                            child: Text(
+                              _t(en: "Send", th: "ส่ง"),
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -175,6 +302,7 @@ class _ReportPageState extends State<ReportPage>
     int drivingSafetyRating = 0;
     int driverMannersRating = 0;
     int overallSatisfactionRating = 0;
+    final ratingErrors = <int>{};
 
     showDialog(
       context: context,
@@ -221,9 +349,11 @@ class _ReportPageState extends State<ReportPage>
                           th: "สภาพของสถานีที่ให้บริการระดับใด *",
                         ),
                         value: stationRating,
+                        hasError: ratingErrors.contains(1),
                         onChanged: (rating) {
                           setDialogState(() {
                             stationRating = rating;
+                            ratingErrors.remove(1);
                           });
                         },
                       ),
@@ -235,9 +365,11 @@ class _ReportPageState extends State<ReportPage>
                           th: "สภาพของรถที่ให้บริการระดับใด *",
                         ),
                         value: busConditionRating,
+                        hasError: ratingErrors.contains(2),
                         onChanged: (rating) {
                           setDialogState(() {
                             busConditionRating = rating;
+                            ratingErrors.remove(2);
                           });
                         },
                       ),
@@ -249,9 +381,11 @@ class _ReportPageState extends State<ReportPage>
                           th: "มารยาทในการขับขี่ของพนักงานขับรถและความปลอดภัยในการโดยสาร ระดับใด *",
                         ),
                         value: drivingSafetyRating,
+                        hasError: ratingErrors.contains(3),
                         onChanged: (rating) {
                           setDialogState(() {
                             drivingSafetyRating = rating;
+                            ratingErrors.remove(3);
                           });
                         },
                       ),
@@ -263,9 +397,11 @@ class _ReportPageState extends State<ReportPage>
                           th: "กิริยามารยาทของพนักงานขับรถมีความเหมาะสม สุภาพเรียบร้อย ระดับใด *",
                         ),
                         value: driverMannersRating,
+                        hasError: ratingErrors.contains(4),
                         onChanged: (rating) {
                           setDialogState(() {
                             driverMannersRating = rating;
+                            ratingErrors.remove(4);
                           });
                         },
                       ),
@@ -277,9 +413,11 @@ class _ReportPageState extends State<ReportPage>
                           th: "ท่านมีความพึงพอใจต่อการให้บริการของรถโดยสารรับ-ส่ง ภายในมหาวิทยาลัย แม่ฟ้าหลวง ระดับใด *",
                         ),
                         value: overallSatisfactionRating,
+                        hasError: ratingErrors.contains(5),
                         onChanged: (rating) {
                           setDialogState(() {
                             overallSatisfactionRating = rating;
+                            ratingErrors.remove(5);
                           });
                         },
                       ),
@@ -310,16 +448,17 @@ class _ReportPageState extends State<ReportPage>
                                   drivingSafetyRating == 0 ||
                                   driverMannersRating == 0 ||
                                   overallSatisfactionRating == 0) {
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      _t(
-                                        en: "Please complete all required fields",
-                                        th: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ",
-                                      ),
-                                    ),
-                                  ),
-                                );
+                                setDialogState(() {
+                                  ratingErrors
+                                    ..clear()
+                                    ..addAll([
+                                      if (stationRating == 0) 1,
+                                      if (busConditionRating == 0) 2,
+                                      if (drivingSafetyRating == 0) 3,
+                                      if (driverMannersRating == 0) 4,
+                                      if (overallSatisfactionRating == 0) 5,
+                                    ]);
+                                });
                                 return;
                               }
 
@@ -411,6 +550,7 @@ class _ReportPageState extends State<ReportPage>
     required int number,
     required String title,
     required int value,
+    required bool hasError,
     required ValueChanged<int> onChanged,
   }) {
     return Container(
@@ -418,7 +558,10 @@ class _ReportPageState extends State<ReportPage>
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8E8E8)),
+        border: Border.all(
+          color: hasError ? Colors.red : const Color(0xFFE8E8E8),
+          width: hasError ? 1.2 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -444,21 +587,14 @@ class _ReportPageState extends State<ReportPage>
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.kanit(
-                    fontSize: 13,
-                    height: 1.25,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+              Expanded(child: _requiredTitle(title)),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: value == 0
+                  color: hasError
+                      ? const Color(0xFFFFE8E8)
+                      : value == 0
                       ? Colors.grey.shade200
                       : const Color(0xFFFFF3D6),
                   borderRadius: BorderRadius.circular(999),
@@ -466,7 +602,9 @@ class _ReportPageState extends State<ReportPage>
                 child: Text(
                   value == 0 ? "-" : "$value/5",
                   style: GoogleFonts.kanit(
-                    color: value == 0
+                    color: hasError
+                        ? Colors.red
+                        : value == 0
                         ? Colors.grey.shade600
                         : const Color(0xFFD2232A),
                     fontSize: 11,
@@ -496,6 +634,28 @@ class _ReportPageState extends State<ReportPage>
                 onPressed: () => onChanged(rating),
               );
             }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _requiredTitle(String title) {
+    final cleanTitle = title.replaceAll(" *", "").trimRight();
+
+    return RichText(
+      text: TextSpan(
+        style: GoogleFonts.kanit(
+          color: Colors.black87,
+          fontSize: 13,
+          height: 1.25,
+          fontWeight: FontWeight.w600,
+        ),
+        children: [
+          TextSpan(text: cleanTitle),
+          const TextSpan(
+            text: " *",
+            style: TextStyle(color: Colors.red),
           ),
         ],
       ),
