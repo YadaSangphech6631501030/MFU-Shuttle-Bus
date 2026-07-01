@@ -90,6 +90,10 @@ class _BusStationPageState extends State<BusStationPage> {
         .trim();
   }
 
+  String _t({required String en, required String th}) {
+    return LanguageService.text(en: en, th: th);
+  }
+
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
@@ -122,7 +126,7 @@ class _BusStationPageState extends State<BusStationPage> {
                     offset: const Offset(0, -6),
                     child: Center(
                       child: Text(
-                        'MFU Transit',
+                        _t(en: 'MFU Transit', th: 'สถานีรถรับส่ง'),
                         style: GoogleFonts.kanit(
                           color: Colors.black,
                           fontSize: 18,
@@ -196,15 +200,21 @@ class _BusStationPageState extends State<BusStationPage> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
               children: [
                 _LineSection(
-                  title: "Line 1",
-                  subtitle: "Main campus route",
+                  title: _t(en: "Line 1", th: "สาย 1"),
+                  subtitle: _t(
+                    en: "Main campus route",
+                    th: "เส้นทางในมหาวิทยาลัย",
+                  ),
                   stations: line1Stations,
                   color: const Color(0xFFBC9945),
                 ),
                 const SizedBox(height: 14),
                 _LineSection(
-                  title: "Line 2",
-                  subtitle: "MFU Medical Center route",
+                  title: _t(en: "Line 2", th: "สาย 2"),
+                  subtitle: _t(
+                    en: "MFU Medical Center route",
+                    th: "เส้นทางศูนย์การแพทย์ มฟล.",
+                  ),
                   stations: line2Stations,
                   color: Colors.grey.shade700,
                 ),
@@ -234,6 +244,10 @@ class _LineSection extends StatefulWidget {
 class _LineSectionState extends State<_LineSection> {
   String search = "";
   bool isOpen = false;
+
+  String _t({required String en, required String th}) {
+    return LanguageService.text(en: en, th: th);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +313,7 @@ class _LineSectionState extends State<_LineSection> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          "${widget.subtitle} • ${widget.stations.length} stations",
+                          "${widget.subtitle} • ${widget.stations.length} ${_t(en: "stations", th: "สถานี")}",
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.kanit(
@@ -343,7 +357,7 @@ class _LineSectionState extends State<_LineSection> {
                         });
                       },
                       decoration: InputDecoration(
-                        hintText: "Find station",
+                        hintText: _t(en: "Find station", th: "ค้นหาสถานี"),
                         hintStyle: GoogleFonts.kanit(
                           fontSize: 14,
                           color: Colors.black45,
@@ -367,7 +381,7 @@ class _LineSectionState extends State<_LineSection> {
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Text(
-                        "No stations found",
+                        _t(en: "No stations found", th: "ไม่พบสถานี"),
                         style: GoogleFonts.kanit(
                           color: Colors.black45,
                           fontSize: 14,

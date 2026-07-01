@@ -84,6 +84,10 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
     return int.tryParse(number ?? '') ?? 9999;
   }
 
+  String _t({required String en, required String th}) {
+    return LanguageService.text(en: en, th: th);
+  }
+
   Future<void> _toggleFavorite(String stationId) async {
     final nextFavorites = Set<String>.from(_favoriteStationIds);
 
@@ -121,11 +125,14 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
         return AlertDialog(
           backgroundColor: Colors.white,
           title: Text(
-            'Remove "${station.name}"?',
+            _t(en: 'Remove "${station.name}"?', th: 'ลบ "${station.name}"?'),
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
-          content: const Text(
-            'This station will be permanently removed from your saved favorite stations. Are you sure?',
+          content: Text(
+            _t(
+              en: 'This station will be permanently removed from your saved favorite stations. Are you sure?',
+              th: 'สถานีนี้จะถูกลบออกจากรายการโปรดของคุณ ต้องการลบใช่ไหม?',
+            ),
           ),
           actions: [
             Row(
@@ -140,7 +147,7 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
                     ),
                   ),
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
+                  child: Text(_t(en: 'Cancel', th: 'ยกเลิก')),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
@@ -153,7 +160,7 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
                     ),
                   ),
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Delete'),
+                  child: Text(_t(en: 'Delete', th: 'ลบ')),
                 ),
               ],
             ),
@@ -210,10 +217,10 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
                   top: topPadding,
                   child: Transform.translate(
                     offset: const Offset(0, -6),
-                    child: const Center(
+                    child: Center(
                       child: Text(
-                        'Favorite Stations',
-                        style: TextStyle(
+                        _t(en: 'Favorite Stations', th: 'สถานีโปรด'),
+                        style: const TextStyle(
                           color: Colors.black,
                           fontSize: 18,
                           fontWeight: FontWeight.w500,
@@ -294,13 +301,16 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(color: Colors.black54)),
+            Text(
+              _t(en: _error!, th: 'โหลดข้อมูลสถานีไม่สำเร็จ'),
+              style: const TextStyle(color: Colors.black54),
+            ),
             const SizedBox(height: 12),
             TextButton(
               onPressed: _loadStations,
-              child: const Text(
-                'Try again',
-                style: TextStyle(color: Color(0xFFD2232A)),
+              child: Text(
+                _t(en: 'Try again', th: 'ลองอีกครั้ง'),
+                style: const TextStyle(color: Color(0xFFD2232A)),
               ),
             ),
           ],
@@ -332,22 +342,25 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Add new',
-                          style: TextStyle(
+                          _t(en: 'Add new', th: 'เพิ่มสถานี'),
+                          style: const TextStyle(
                             color: Color(0xFFD2232A),
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Save your favorite station',
-                          style: TextStyle(
+                          _t(
+                            en: 'Save your favorite station',
+                            th: 'บันทึกสถานีที่คุณใช้บ่อย',
+                          ),
+                          style: const TextStyle(
                             color: Colors.black54,
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
@@ -364,10 +377,13 @@ class _FavoriteStationPageState extends State<FavoriteStationPage> {
         const SizedBox(height: 12),
         Expanded(
           child: favoriteStations.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
-                    'No favorite stations yet',
-                    style: TextStyle(color: Colors.black54),
+                    _t(
+                      en: 'No favorite stations yet',
+                      th: 'ยังไม่มีสถานีโปรด',
+                    ),
+                    style: const TextStyle(color: Colors.black54),
                   ),
                 )
               : ListView.separated(
@@ -448,6 +464,10 @@ class _StationSearchPageState extends State<_StationSearchPage> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
 
+  String _t({required String en, required String th}) {
+    return LanguageService.text(en: en, th: th);
+  }
+
   List<_StationOption> get _filteredStations {
     final query = _query.trim().toLowerCase();
     final stations = query.isEmpty
@@ -507,10 +527,10 @@ class _StationSearchPageState extends State<_StationSearchPage> {
               children: [
                 Positioned.fill(
                   top: topPadding,
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      'Search station',
-                      style: TextStyle(
+                      _t(en: 'Search station', th: 'ค้นหาสถานี'),
+                      style: const TextStyle(
                         color: Colors.black,
                         fontSize: 22,
                         fontWeight: FontWeight.w600,
@@ -562,7 +582,7 @@ class _StationSearchPageState extends State<_StationSearchPage> {
                 });
               },
               decoration: InputDecoration(
-                hintText: 'Type station name',
+                hintText: _t(en: 'Type station name', th: 'พิมพ์ชื่อสถานี'),
                 prefixIcon: const Icon(Icons.search, color: Colors.black45),
                 filled: true,
                 fillColor: Colors.grey.shade100,
@@ -580,8 +600,11 @@ class _StationSearchPageState extends State<_StationSearchPage> {
                 ? Center(
                     child: Text(
                       _query.trim().isEmpty
-                          ? 'No stations available'
-                          : 'No stations found',
+                          ? _t(
+                              en: 'No stations available',
+                              th: 'ไม่มีข้อมูลสถานี',
+                            )
+                          : _t(en: 'No stations found', th: 'ไม่พบสถานี'),
                       style: const TextStyle(color: Colors.black54),
                     ),
                   )
