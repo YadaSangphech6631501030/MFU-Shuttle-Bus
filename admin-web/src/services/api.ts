@@ -127,6 +127,12 @@ export const api = {
     });
   },
 
+  deleteReport(id: string) {
+    return request<{ message: string }>(`/api/report/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   getUsers() {
     return request<User[]>('/auth/admin/users', { auth: true });
   },
