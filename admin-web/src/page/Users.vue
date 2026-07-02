@@ -90,18 +90,9 @@ function submitAdmin() {
             <td>{{ user.email || '-' }}</td>
             <td>
               <div class="role-menu">
-                <button
-                  class="role-select"
-                  type="button"
-                  :aria-label="text.changeRole"
-                  @click="$emit('toggleRoleMenu', user)"
-                >
+                <span class="role-select" :aria-label="text.roleLabel">
                   {{ user.role === 'admin' ? text.adminRole : text.userRole }}
-                  <span aria-hidden="true">⌄</span>
-                </button>
-                <div v-if="openRoleMenu === user.username" class="role-options">
-                  <button type="button" @click="$emit('updateUserRole', user, 'admin')">{{ text.adminRole }}</button>
-                </div>
+                </span>
               </div>
             </td>
             <td class="actions">
