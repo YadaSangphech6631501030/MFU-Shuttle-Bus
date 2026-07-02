@@ -403,7 +403,7 @@ const filteredReports = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
 
   return visibleReports.value.filter((report) => {
-    if (categoryFilter.value !== 'all' && reportCategory(report) !== categoryFilter.value) return false;
+    if (activeReportView.value !== 'feedback' && categoryFilter.value !== 'all' && reportCategory(report) !== categoryFilter.value) return false;
     if (statusFilter.value !== 'all' && normalizedStatus(report) !== statusFilter.value) return false;
     if (!matchesDateRange(report)) return false;
     return matchesSearch(report, query);
@@ -411,6 +411,10 @@ const filteredReports = computed(() => {
 });
 
 const reportGroups = computed(() => {
+  if (activeReportView.value === 'feedback') {
+    return [{ category: '', items: filteredReports.value }];
+  }
+
   const groups = new Map<string, Report[]>();
 
   filteredReports.value.forEach((report) => {
@@ -463,7 +467,7 @@ const reportGroups = computed(() => {
         </button>
       </div>
 
-      <div class="report-filters">
+      <div class="report-filters" :class="{ 'feedback-filters': activeReportView === 'feedback' }">
         <label class="report-search-field">
           {{ text.reportSearch }}
           <span class="report-search-input">
@@ -474,7 +478,7 @@ const reportGroups = computed(() => {
             <input v-model="searchQuery" type="search" :placeholder="text.reportSearchPlaceholder" />
           </span>
         </label>
-        <label>
+        <label v-if="activeReportView !== 'feedback'">
           {{ text.reportCategoryFilter }}
           <select v-model="categoryFilter">
             <option value="all">{{ text.allCategories }}</option>
@@ -576,7 +580,7 @@ const reportGroups = computed(() => {
 
     <div v-if="filteredReports.length" class="report-category-list">
       <section v-for="group in reportGroups" :key="group.category" class="report-category-section">
-        <header class="report-category-heading">
+        <header v-if="activeReportView !== 'feedback'" class="report-category-heading">
           <div>
             <span class="report-category-pill" :class="categoryClass(group.category)">{{ group.category }}</span>
           </div>
