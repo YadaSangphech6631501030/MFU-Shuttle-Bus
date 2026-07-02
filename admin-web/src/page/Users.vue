@@ -64,85 +64,87 @@ function submitAdmin() {
 </script>
 
 <template>
-  <section class="panel">
-    <div class="panel-heading">
-      <div class="panel-title-group">
-        <h2>{{ text.systemUsers }}</h2>
-        <span>{{ users.length }} {{ text.usersCount }}</span>
-      </div>
-      <button class="primary-btn compact-btn" type="button" @click="openAdminModal">
-        {{ labels.addAdmin }}
-      </button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>{{ text.usernameLabel }}</th>
-            <th>{{ text.emailLabel }}</th>
-            <th>{{ text.roleLabel }}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="user in users" :key="user._id || user.username">
-            <td>{{ user.username }}</td>
-            <td>{{ user.email || '-' }}</td>
-            <td>
-              <div class="role-menu">
-                <span class="role-select" :aria-label="text.roleLabel">
-                  {{ user.role === 'admin' ? text.adminRole : text.userRole }}
-                </span>
-              </div>
-            </td>
-            <td class="actions">
-              <button class="danger-link" @click="$emit('deleteUser', user)">{{ text.delete }}</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <div v-if="isAdminModalOpen" class="modal-backdrop" @click.self="closeAdminModal">
-    <section class="panel station-modal admin-user-modal">
+  <div>
+    <section class="panel">
       <div class="panel-heading">
-        <h2>{{ labels.addAdmin }}</h2>
-        <button class="secondary-btn compact-btn" type="button" :disabled="loading" @click="closeAdminModal">
-          {{ text.cancel }}
+        <div class="panel-title-group">
+          <h2>{{ text.systemUsers }}</h2>
+          <span>{{ users.length }} {{ text.usersCount }}</span>
+        </div>
+        <button class="primary-btn compact-btn" type="button" @click="openAdminModal">
+          {{ labels.addAdmin }}
         </button>
       </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ text.usernameLabel }}</th>
+              <th>{{ text.emailLabel }}</th>
+              <th>{{ text.roleLabel }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="user in users" :key="user._id || user.username">
+              <td>{{ user.username }}</td>
+              <td>{{ user.email || '-' }}</td>
+              <td>
+                <div class="role-menu">
+                  <span class="role-select" :aria-label="text.roleLabel">
+                    {{ user.role === 'admin' ? text.adminRole : text.userRole }}
+                  </span>
+                </div>
+              </td>
+              <td class="actions">
+                <button class="danger-link" @click="$emit('deleteUser', user)">{{ text.delete }}</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-      <form class="station-form" @submit.prevent="submitAdmin">
-        <label>
-          {{ text.usernameLabel }}
-          <input v-model="adminForm.username" required autocomplete="off" :placeholder="text.usernamePlaceholder" />
-        </label>
-        <label>
-          {{ text.emailLabel }}
-          <input v-model="adminForm.email" required type="email" autocomplete="off" placeholder="admin@email.com" />
-        </label>
-        <label>
-          {{ labels.adminPassword }}
-          <input
-            v-model="adminForm.password"
-            required
-            type="password"
-            minlength="6"
-            autocomplete="new-password"
-            :placeholder="labels.passwordHint"
-          />
-        </label>
-
-        <div class="form-actions">
-          <button class="secondary-btn" type="button" :disabled="loading" @click="closeAdminModal">
+    <div v-if="isAdminModalOpen" class="modal-backdrop" @click.self="closeAdminModal">
+      <section class="panel station-modal admin-user-modal">
+        <div class="panel-heading">
+          <h2>{{ labels.addAdmin }}</h2>
+          <button class="secondary-btn compact-btn" type="button" :disabled="loading" @click="closeAdminModal">
             {{ text.cancel }}
           </button>
-          <button class="primary-btn" type="submit" :disabled="loading">
-            {{ loading ? labels.creatingAdmin : labels.createAdmin }}
-          </button>
         </div>
-      </form>
-    </section>
+
+        <form class="station-form" @submit.prevent="submitAdmin">
+          <label>
+            {{ text.usernameLabel }}
+            <input v-model="adminForm.username" required autocomplete="off" :placeholder="text.usernamePlaceholder" />
+          </label>
+          <label>
+            {{ text.emailLabel }}
+            <input v-model="adminForm.email" required type="email" autocomplete="off" placeholder="admin@email.com" />
+          </label>
+          <label>
+            {{ labels.adminPassword }}
+            <input
+              v-model="adminForm.password"
+              required
+              type="password"
+              minlength="6"
+              autocomplete="new-password"
+              :placeholder="labels.passwordHint"
+            />
+          </label>
+
+          <div class="form-actions">
+            <button class="secondary-btn" type="button" :disabled="loading" @click="closeAdminModal">
+              {{ text.cancel }}
+            </button>
+            <button class="primary-btn" type="submit" :disabled="loading">
+              {{ loading ? labels.creatingAdmin : labels.createAdmin }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   </div>
 </template>
