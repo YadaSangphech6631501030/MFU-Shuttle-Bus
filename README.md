@@ -10,12 +10,12 @@
 
 ## Main Features
 
-- ระบบเข้าสู่ระบบและจัดการผู้ใช้
 - จัดการสถานี shuttle bus และข้อมูลกล้อง CCTV
-- Dashboard สำหรับดูภาพรวมระบบ
-- Shuttle Monitor สำหรับดู crowd alerts และจำนวนผู้โดยสารที่รอในแต่ละสถานี
-- หน้า Buses สำหรับดูสถานะรถออนไลน์/ออฟไลน์/จำนวนรถทั้งหมด
-- รายงานข้อมูลการใช้งาน
+- Dashboard สำหรับดูภาพรวมระบบ แผนที่สถานี และ crowd alerts
+- หน้า Buses สำหรับดูและจัดการสถานะรถออนไลน์/ออฟไลน์/จำนวนรถทั้งหมด
+- แอปผู้ใช้สำหรับเลือก From/To station ดูเส้นทางรถ และบันทึกสถานีโปรด
+- ระบบรายงานปัญหาและ feedback พร้อมหน้า Reports สำหรับผู้ดูแลระบบ
+- รองรับภาษาอังกฤษและภาษาไทยในแอปผู้ใช้และ Admin Web
 
 ## Requirements
 
@@ -113,5 +113,12 @@ Backend แบ่ง route หลักตามนี้
 
 - ควรรัน MongoDB และ backend ก่อนเปิด Admin Web หรือ Flutter app
 - ถ้าทดสอบบนมือถือจริง ให้เปลี่ยน API URL จาก `localhost` เป็น IP เครื่องที่รัน backend
+- ถ้ารันด้วย Docker ให้ดูรายละเอียดใน `docs/DOCKER.md`
 - อย่า commit ไฟล์ local config ที่มี key จริง เช่น `admin-web/.env` หรือ `frontend-vue/ios/Flutter/GoogleMaps.xcconfig`
 - ไฟล์ build/cache เช่น `node_modules/`, `.dart_tool/` และ `build/` ไม่ควรนำเข้า git
+
+## Documentation
+
+- `docs/HANDBOOK.md` - คู่มือการใช้งานระบบสำหรับ user, admin และผู้ดูแลระบบ
+- `docs/HANDOVER.md` - checklist สำหรับเตรียมส่งมอบระบบ
+- `docs/DOCKER.md` - คู่มือรันระบบด้วย Docker
