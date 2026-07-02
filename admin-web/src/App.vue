@@ -596,6 +596,8 @@ const detectorFrameUrl = ref('');
 let detectorFrameTimer: number | undefined;
 let detectorStatusTimer: number | undefined;
 let crowdRefreshTimer: number | undefined;
+let reportRefreshTimer: number | undefined;
+let reportRefreshBusy = false;
 
 function setStationMapElement(element: HTMLElement | null) {
   if (stationMapEl.value !== element) {
@@ -620,8 +622,15 @@ function setCrowdMapElement(element: HTMLElement | null) {
   }
 }
 
+function isFeedbackReport(report: Report) {
+  const reportType = `${report.type || report.category || report.title || ''}`.trim().toLowerCase();
+  return reportType === 'feedback' || reportType === 'ติชม' || reportType === 'ข้อเสนอแนะ' || reportType === 'ส่งข้อเสนอแนะ';
+}
+
 const onlineBuses = computed(() => buses.value.filter((bus) => bus.status?.toLowerCase() !== 'offline').length);
-const pendingReports = computed(() => reports.value.filter((report) => report.status !== 'resolved').length);
+const pendingReports = computed(() => reports.value
+  .filter((report) => !isFeedbackReport(report))
+  .filter((report) => report.status !== 'resolved').length);
 const activeCrowdAlertStations = computed(() => stations.value
   .map((station) => ({
     station,
@@ -1332,6 +1341,22 @@ async function loadData() {
   });
 }
 
+async function refreshReportsSilently() {
+  if (!isLoggedIn.value || reportRefreshBusy) return;
+
+  reportRefreshBusy = true;
+  try {
+    reports.value = await api.getReports();
+  } catch (err) {
+    if (isAuthTokenError(err)) {
+      resetSession();
+      error.value = text.value.sessionExpired;
+    }
+  } finally {
+    reportRefreshBusy = false;
+  }
+}
+
 async function login() {
   await withLoading(async () => {
     const username = loginForm.username.trim();
@@ -1470,6 +1495,12 @@ onMounted(() => {
       void loadData();
     }
   }, 15000);
+
+  reportRefreshTimer = window.setInterval(() => {
+    if (isLoggedIn.value && !loading.value) {
+      void refreshReportsSilently();
+    }
+  }, 5000);
 });
 
 onUnmounted(() => {
@@ -1482,6 +1513,9 @@ onUnmounted(() => {
   }
   if (crowdRefreshTimer) {
     window.clearInterval(crowdRefreshTimer);
+  }
+  if (reportRefreshTimer) {
+    window.clearInterval(reportRefreshTimer);
   }
   revokeDetectorFrameUrl();
 });

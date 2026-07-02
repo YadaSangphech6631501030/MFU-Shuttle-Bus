@@ -2528,17 +2528,19 @@ th {
 
 .report-table-wrap {
   width: 100%;
-  overflow-x: auto;
+  overflow-x: visible;
+  overflow-y: hidden;
 }
 
 .report-table {
-  min-width: 1180px;
+  width: 100%;
+  min-width: 0;
   table-layout: fixed;
 }
 
 .report-table th,
 .report-table td {
-  padding: 8px 12px;
+  padding: 8px 10px;
   vertical-align: middle;
 }
 
@@ -2553,42 +2555,42 @@ th {
 
 .report-table th:nth-child(1),
 .report-table td:nth-child(1) {
-  width: 42px;
+  width: 34px;
 }
 
 .report-table th:nth-child(2),
 .report-table td:nth-child(2) {
-  width: 160px;
+  width: 13%;
 }
 
 .report-table th:nth-child(3),
 .report-table td:nth-child(3) {
-  width: 300px;
+  width: 24%;
 }
 
 .report-table th:nth-child(4),
 .report-table td:nth-child(4) {
-  width: 160px;
+  width: 12%;
 }
 
 .report-table th:nth-child(5),
 .report-table td:nth-child(5) {
-  width: 170px;
+  width: 13%;
 }
 
 .report-table th:nth-child(6),
 .report-table td:nth-child(6) {
-  width: 190px;
+  width: 17%;
 }
 
 .report-table th:nth-child(7),
 .report-table td:nth-child(7) {
-  width: 190px;
+  width: 128px;
 }
 
 .report-table th:nth-child(8),
 .report-table td:nth-child(8) {
-  width: 56px;
+  width: 38px;
   text-align: center;
 }
 
@@ -2748,13 +2750,13 @@ th {
 }
 
 .report-status-cell .report-status-select {
-  flex: 1 1 118px;
-  width: auto;
-  min-width: 118px;
+  flex: 0 1 118px;
+  width: 118px;
+  min-width: 0;
   min-height: 34px;
   border-radius: 8px;
-  padding: 7px 28px 7px 10px;
-  font-size: 11px;
+  padding: 7px 22px 7px 9px;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -2801,8 +2803,8 @@ th {
 .report-delete-btn {
   display: inline-grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border: 1px solid rgba(220, 53, 69, 0.24);
   border-radius: 8px;
   color: var(--danger-dark);
@@ -3406,8 +3408,12 @@ th {
     grid-template-columns: 1fr 1fr;
   }
 
+  .report-table-wrap {
+    overflow-x: auto;
+  }
+
   .report-table {
-    min-width: 1180px;
+    min-width: 920px;
   }
 
   .crowd-map {
