@@ -675,11 +675,129 @@ class _HomepagesState extends State<Homepages> {
   }
 
   String _searchableStationName(Map<String, dynamic> station) {
-    return cleanStationName(station).trim().toLowerCase();
+    final names = [
+      cleanStationName(station),
+      stationDisplayName(station),
+      station["name"]?.toString() ?? "",
+      station["nameTH"]?.toString() ?? "",
+      station["nameTh"]?.toString() ?? "",
+      station["name_th"]?.toString() ?? "",
+      station["thaiName"]?.toString() ?? "",
+      station["nameThai"]?.toString() ?? "",
+      station["th"]?.toString() ?? "",
+      station["nameEN"]?.toString() ?? "",
+      station["nameEn"]?.toString() ?? "",
+      station["name_en"]?.toString() ?? "",
+      station["englishName"]?.toString() ?? "",
+      station["en"]?.toString() ?? "",
+    ];
+
+    return names
+        .map(_normalizeSearchText)
+        .where((name) => name.isNotEmpty)
+        .join(" ");
   }
 
   String _searchableStationId(Map<String, dynamic> station) {
-    return station["id"]?.toString().trim().toLowerCase() ?? "";
+    return _normalizeSearchText(station["id"]?.toString() ?? "");
+  }
+
+  String _normalizeSearchText(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  bool _matchesStationSearch(Map<String, dynamic> station, String query) {
+    final name = _searchableStationName(station);
+    final id = _searchableStationId(station);
+    final searchableText = "$name $id";
+    final queryWords = query
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+
+    if (searchableText.contains(query)) return true;
+    return queryWords.isNotEmpty &&
+        queryWords.every((word) => searchableText.contains(word));
+  }
+
+  static const List<String> _outboundStationOrder = [
+    "station13",
+    "station14",
+    "station15",
+    "station16",
+    "station17",
+    "station18",
+    "station19",
+    "station20",
+    "station21",
+  ];
+
+  String _routeRuleName(Map<String, dynamic>? station) {
+    if (station == null) return "";
+    final names = [
+      cleanStationName(station),
+      station["name"]?.toString() ?? "",
+      station["nameTH"]?.toString() ?? "",
+      station["nameEn"]?.toString() ?? "",
+      station["id"]?.toString() ?? "",
+    ];
+    return names.join(" ").toLowerCase();
+  }
+
+  bool _mustTravelOutboundFrom(Map<String, dynamic>? station) {
+    final name = _routeRuleName(station);
+    if (name.isEmpty) return false;
+
+    return name.contains("e2") ||
+        name.contains("c4") ||
+        name.contains("c5") ||
+        name.contains("m square") ||
+        name.contains("m-square") ||
+        name.contains("m aqure") ||
+        name.contains("maqure") ||
+        name.contains("mfu medical center") ||
+        name.contains("โรงพยาบาลแม่ฟ้าหลวง");
+  }
+
+  bool _isOutboundRouteStation(Map<String, dynamic>? station) {
+    final stationId = station?["id"]?.toString();
+    return stationId != null && _outboundStationOrder.contains(stationId);
+  }
+
+  bool _isAllowedOutboundDestination({
+    required Map<String, dynamic> fromStation,
+    required Map<String, dynamic> toStation,
+  }) {
+    final toId = toStation["id"]?.toString();
+    if (toId == null) return false;
+
+    final fromId = fromStation["id"]?.toString();
+    final fromIndex = _outboundStationOrder.indexOf(fromId ?? "");
+    final toIndex = _outboundStationOrder.indexOf(toId);
+
+    if (fromIndex >= 0) {
+      return toIndex > fromIndex;
+    }
+
+    return toIndex >= 0;
+  }
+
+  bool _isAllowedTripSelection({
+    required Map<String, dynamic>? fromStation,
+    required Map<String, dynamic>? toStation,
+  }) {
+    if (fromStation == null || toStation == null) return true;
+    if (!_mustTravelOutboundFrom(fromStation)) return true;
+    if (_isOutboundRouteStation(fromStation)) {
+      return _isAllowedOutboundDestination(
+        fromStation: fromStation,
+        toStation: toStation,
+      );
+    }
+    return _isAllowedOutboundDestination(
+      fromStation: fromStation,
+      toStation: toStation,
+    );
   }
 
   List<Map<String, dynamic>> visibleStationMarkers() {
@@ -716,6 +834,12 @@ class _HomepagesState extends State<Homepages> {
     return stationById.values.toList();
   }
 
+  String? _blockedStationIdForField(String field) {
+    final station = field == "from" ? selectedStation : selectedFromStation;
+    final id = station?["id"]?.toString();
+    return id == null || id.isEmpty ? null : id;
+  }
+
   Future<void> searchStations(String value, String field) async {
     final query = value.trim().toLowerCase();
     final prefs = await SharedPreferences.getInstance();
@@ -724,13 +848,24 @@ class _HomepagesState extends State<Homepages> {
 
     if (!mounted) return;
 
-    final stations = _searchStationPool(favoriteStationIds);
+    final blockedStationId = _blockedStationIdForField(field);
+    final stations = _searchStationPool(favoriteStationIds)
+        .where((station) => station["id"]?.toString() != blockedStationId)
+        .where((station) {
+          final nextFromStation = field == "from"
+              ? station
+              : selectedFromStation;
+          final nextToStation = field == "from" ? selectedStation : station;
+          return _isAllowedTripSelection(
+            fromStation: nextFromStation,
+            toStation: nextToStation,
+          );
+        })
+        .toList();
     final matchedStations = query.isEmpty
         ? stations
         : stations.where((station) {
-            final name = _searchableStationName(station);
-            final id = _searchableStationId(station);
-            return name.startsWith(query) || id.startsWith(query);
+            return _matchesStationSearch(station, query);
           }).toList();
 
     matchedStations.sort(
@@ -773,6 +908,11 @@ class _HomepagesState extends State<Homepages> {
   }
 
   void selectStation(Map<String, dynamic> station) {
+    if (station["id"]?.toString() ==
+        _blockedStationIdForField(activeSearchField)) {
+      return;
+    }
+
     final stationName = cleanStationName(station);
     final stationLines = stationLineKeys(station);
     final nextFromStation = activeSearchField == "from"
@@ -781,6 +921,14 @@ class _HomepagesState extends State<Homepages> {
     final nextToStation = activeSearchField == "from"
         ? selectedStation
         : station;
+
+    if (!_isAllowedTripSelection(
+      fromStation: nextFromStation,
+      toStation: nextToStation,
+    )) {
+      return;
+    }
+
     final nextLine =
         _bestTripLineKeyFor(
           nextFromStation,
@@ -927,6 +1075,13 @@ class _HomepagesState extends State<Homepages> {
 
     final nextFromStation = selectedStation;
     final nextToStation = selectedFromStation;
+    if (!_isAllowedTripSelection(
+      fromStation: nextFromStation,
+      toStation: nextToStation,
+    )) {
+      return;
+    }
+
     final nextLine =
         _bestTripLineKeyFor(
           nextFromStation,
