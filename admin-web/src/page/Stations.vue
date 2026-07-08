@@ -64,6 +64,11 @@ function saveStation() {
   emit('saveStation');
 }
 
+function stationDisplayName(station: Station) {
+  const thaiName = station.nameTH?.trim();
+  return props.text.language === 'TH' && thaiName ? thaiName : station.name;
+}
+
 onMounted(() => {
   emit('stationMapReady', stationMapEl.value);
 });
@@ -121,7 +126,7 @@ watch(
           <tbody>
             <tr v-for="station in stations" :key="station._id || station.id">
               <td>{{ station.id }}</td>
-              <td>{{ station.name }}</td>
+              <td>{{ stationDisplayName(station) }}</td>
               <td>{{ station.lines.join(', ') }}</td>
               <td>
                 <span class="chip" :class="{ 'chip-muted': !station.cameraUrl }">
