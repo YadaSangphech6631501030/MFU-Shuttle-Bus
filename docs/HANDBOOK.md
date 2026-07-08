@@ -12,6 +12,16 @@
 
 ผู้ใช้ทั่วไปใช้แอปเพื่อดูเส้นทางรถ เลือกสถานีต้นทาง/ปลายทาง บันทึกสถานีโปรด ส่งรายงานปัญหา และส่ง feedback ส่วนผู้ดูแลระบบใช้ Admin Web เพื่อดู dashboard จัดการสถานี จัดการรถ ตรวจรายงาน และดู feedback
 
+เอกสารประกอบสำหรับเตรียมสอบและส่งมอบ:
+
+- `docs/projectmap.md` แผนที่โครงสร้างโปรเจกต์
+- `docs/prd.md` Product Requirements Document
+- `docs/agent.md` System/agent architecture
+- `docs/er.md` ER/logical relationship
+- `docs/data.md` Data dictionary
+- `docs/HANDOVER.md` Checklist ส่งมอบ
+- `docs/DOCKER.md` คู่มือ Docker
+
 ## 2. คู่มือผู้ใช้งานแอป
 
 ### 2.1 หน้า Home

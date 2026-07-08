@@ -6,9 +6,15 @@
 
 - Source code ทั้ง repository
 - `README.md`
+- `docs/projectmap.md`
+- `docs/prd.md`
+- `docs/agent.md`
+- `docs/er.md`
+- `docs/data.md`
 - `docs/HANDBOOK.md`
 - `docs/DOCKER.md`
 - `docs/HANDOVER.md`
+- `docs/AI-WORKFLOW.md`
 - `.env.example` หรือไฟล์ตัวอย่าง environment
 - รายการบัญชีสำหรับทดสอบ
 - Screenshot หรือวิดีโอ demo ถ้าต้องส่งประกอบรายงาน
@@ -130,6 +136,15 @@ password: 12345678
 - ส่ง report ได้
 - ส่ง feedback ได้
 
+### Documentation
+
+- `docs/projectmap.md` อธิบาย directory/file map ครบ
+- `docs/prd.md` อธิบาย requirement และ acceptance criteria
+- `docs/agent.md` อธิบาย architecture และ workflow สำหรับ AI/agent
+- `docs/er.md` อธิบาย logical ER ของ collections หลัก
+- `docs/data.md` อธิบาย schema, index, seed และ backup data
+- `README.md`, `HANDBOOK.md`, `HANDOVER.md`, `DOCKER.md` link ไปยังเอกสารสำคัญครบ
+
 ## 8. Known Issues / ข้อจำกัด
 
 - ถ้าไม่มี translation API ระบบจะไม่แปลข้อความ report ที่ผู้ใช้พิมพ์เองแบบอัตโนมัติ
@@ -167,4 +182,4 @@ node --check app.js
 
 ## 10. สรุปสำหรับผู้รับระบบ
 
-ระบบนี้ประกอบด้วย Backend API, Admin Web และ Flutter App ผู้รับระบบควรเริ่มจากอ่าน `README.md` เพื่อรันระบบ อ่าน `docs/HANDBOOK.md` เพื่อใช้งานระบบ และอ่าน `docs/DOCKER.md` ถ้าต้องการรันด้วย Docker
+ระบบนี้ประกอบด้วย Backend API, Admin Web และ Flutter App ผู้รับระบบควรเริ่มจากอ่าน `README.md` และ `docs/projectmap.md` เพื่อเข้าใจโครงสร้าง อ่าน `docs/prd.md`, `docs/er.md`, `docs/data.md` เพื่อเข้าใจ requirement/database อ่าน `docs/HANDBOOK.md` เพื่อใช้งานระบบ และอ่าน `docs/DOCKER.md` ถ้าต้องการรันด้วย Docker

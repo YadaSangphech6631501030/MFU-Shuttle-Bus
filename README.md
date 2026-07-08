@@ -103,7 +103,7 @@ cp ios/Flutter/GoogleMaps.xcconfig.example ios/Flutter/GoogleMaps.xcconfig
 
 Backend แบ่ง route หลักตามนี้
 
-- `/auth` - register, login และ authentication
+- `/auth` - Admin login, JWT authentication และการจัดการบัญชีผ่าน Admin Web
 - `/station` - ข้อมูลสถานีและการจัดการสถานี
 - `/api/buses` - ข้อมูลรถ shuttle bus
 - `/api/report` - รายงาน
@@ -119,6 +119,12 @@ Backend แบ่ง route หลักตามนี้
 
 ## Documentation
 
+- `docs/projectmap.md` - แผนที่โครงสร้าง repo และไฟล์ source truth สำหรับหาบั๊กหรือให้ AI อ่านต่อ
+- `docs/prd.md` - Product Requirements Document และ acceptance criteria
+- `docs/agent.md` - System/agent architecture และ workflow สำหรับ AI/agent
+- `docs/er.md` - ER/logical relationship ของ MongoDB collections
+- `docs/data.md` - Data dictionary, schema, indexes, seed และ backup
 - `docs/HANDBOOK.md` - คู่มือการใช้งานระบบสำหรับ user, admin และผู้ดูแลระบบ
 - `docs/HANDOVER.md` - checklist สำหรับเตรียมส่งมอบระบบ
 - `docs/DOCKER.md` - คู่มือรันระบบด้วย Docker
+- `docs/AI-WORKFLOW.md` - กติกาการให้ AI/agent ทำงานกับ repo นี้

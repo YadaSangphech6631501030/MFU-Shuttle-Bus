@@ -720,7 +720,9 @@ class _HomepagesState extends State<Homepages> {
         queryWords.every((word) => searchableText.contains(word));
   }
 
-  static const List<String> _outboundStationOrder = [
+  static const List<String> _forwardCampusStationOrder = [
+    "station11",
+    "station12",
     "station13",
     "station14",
     "station15",
@@ -759,12 +761,12 @@ class _HomepagesState extends State<Homepages> {
         name.contains("โรงพยาบาลแม่ฟ้าหลวง");
   }
 
-  bool _isOutboundRouteStation(Map<String, dynamic>? station) {
+  bool _isForwardCampusRouteStation(Map<String, dynamic>? station) {
     final stationId = station?["id"]?.toString();
-    return stationId != null && _outboundStationOrder.contains(stationId);
+    return stationId != null && _forwardCampusStationOrder.contains(stationId);
   }
 
-  bool _isAllowedOutboundDestination({
+  bool _isAllowedForwardCampusDestination({
     required Map<String, dynamic> fromStation,
     required Map<String, dynamic> toStation,
   }) {
@@ -772,8 +774,8 @@ class _HomepagesState extends State<Homepages> {
     if (toId == null) return false;
 
     final fromId = fromStation["id"]?.toString();
-    final fromIndex = _outboundStationOrder.indexOf(fromId ?? "");
-    final toIndex = _outboundStationOrder.indexOf(toId);
+    final fromIndex = _forwardCampusStationOrder.indexOf(fromId ?? "");
+    final toIndex = _forwardCampusStationOrder.indexOf(toId);
 
     if (fromIndex >= 0) {
       return toIndex > fromIndex;
@@ -788,13 +790,13 @@ class _HomepagesState extends State<Homepages> {
   }) {
     if (fromStation == null || toStation == null) return true;
     if (!_mustTravelOutboundFrom(fromStation)) return true;
-    if (_isOutboundRouteStation(fromStation)) {
-      return _isAllowedOutboundDestination(
+    if (_isForwardCampusRouteStation(fromStation)) {
+      return _isAllowedForwardCampusDestination(
         fromStation: fromStation,
         toStation: toStation,
       );
     }
-    return _isAllowedOutboundDestination(
+    return _isAllowedForwardCampusDestination(
       fromStation: fromStation,
       toStation: toStation,
     );
