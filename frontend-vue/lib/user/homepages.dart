@@ -194,14 +194,18 @@ class _HomepagesState extends State<Homepages> {
       final sortedLine1 =
           lines[0].map((station) => Map<String, dynamic>.from(station)).toList()
             ..sort(
-              (a, b) =>
-                  _stationNumber(a["id"]).compareTo(_stationNumber(b["id"])),
+              (a, b) => _stationOrderForLine(
+                "line1",
+                a["id"],
+              ).compareTo(_stationOrderForLine("line1", b["id"])),
             );
       final sortedLine2 =
           lines[1].map((station) => Map<String, dynamic>.from(station)).toList()
             ..sort(
-              (a, b) =>
-                  _stationNumber(a["id"]).compareTo(_stationNumber(b["id"])),
+              (a, b) => _stationOrderForLine(
+                "line2",
+                a["id"],
+              ).compareTo(_stationOrderForLine("line2", b["id"])),
             );
 
       setState(() {
@@ -626,6 +630,15 @@ class _HomepagesState extends State<Homepages> {
   int _stationNumber(dynamic id) {
     final number = RegExp(r'\d+').firstMatch(id?.toString() ?? "")?.group(0);
     return int.tryParse(number ?? "") ?? 9999;
+  }
+
+  int _stationOrderForLine(String line, dynamic id) {
+    final stationNumber = _stationNumber(id);
+
+    // Line 2 visits the medical center after station 10, then returns to
+    // station 13. Its numeric id (22) does not represent its route position.
+    if (line == "line2" && stationNumber == 22) return 11;
+    return stationNumber;
   }
 
   String stationDisplayName(dynamic station) {
@@ -1233,12 +1246,16 @@ class _HomepagesState extends State<Homepages> {
     if (fromIndex < 0 || toIndex < 0) return [];
     if (fromIndex == toIndex) return [line[fromIndex]];
 
-    final start = fromIndex < toIndex ? fromIndex : toIndex;
-    final end = fromIndex < toIndex ? toIndex : fromIndex;
-    final directStations = line.sublist(start, end + 1);
-    return fromIndex < toIndex
-        ? directStations
-        : directStations.reversed.toList();
+    final orderedStations = <Map<String, dynamic>>[];
+    var currentIndex = fromIndex;
+
+    while (orderedStations.length <= line.length) {
+      orderedStations.add(line[currentIndex]);
+      if (currentIndex == toIndex) return orderedStations;
+      currentIndex = (currentIndex + 1) % line.length;
+    }
+
+    return [];
   }
 
   List<LatLng> _routeSegmentBetween(
@@ -1257,14 +1274,13 @@ class _HomepagesState extends State<Homepages> {
       for (final toIndex in toIndexes) {
         if (fromIndex == toIndex) continue;
 
-        final start = fromIndex < toIndex ? fromIndex : toIndex;
-        final end = fromIndex < toIndex ? toIndex : fromIndex;
-        final routeSlice = routePoints.sublist(start, end + 1);
-        final segment = [
-          from,
-          ...(fromIndex < toIndex ? routeSlice : routeSlice.reversed),
-          to,
-        ];
+        final routeSlice = fromIndex < toIndex
+            ? routePoints.sublist(fromIndex, toIndex + 1)
+            : [
+                ...routePoints.sublist(fromIndex),
+                ...routePoints.sublist(0, toIndex + 1),
+              ];
+        final segment = [from, ...routeSlice, to];
         final distance = _pointsDistanceMeters(segment);
 
         if (distance < bestDistance) {
