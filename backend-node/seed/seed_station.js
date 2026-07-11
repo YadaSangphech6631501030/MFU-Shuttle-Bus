@@ -95,10 +95,10 @@ const stationSeeds = [
     lat: 20.047265,
     lng: 99.893146,
     lines: ["line1", "line2"],
-    waiting: 2,
+    waiting: 0,
     status: "LOW",
     cameraUrl:
-      "rtsp://mfustream:mediamfu2025@172.30.36.122:554/LiveMedia/ch1/Media1/trackID=1",
+      "",
     detectionRoi: [],
   },
   {
@@ -111,7 +111,7 @@ const stationSeeds = [
     waiting: 0,
     status: "LOW",
     cameraUrl:
-      "rtsp://mfustream:mediamfu2025@172.30.36.32:554/LiveMedia/ch1/Media1/trackID=1",
+      "",
     detectionRoi: [
       [0.0964, 0.1577],
       [0.3196, 0.1577],
