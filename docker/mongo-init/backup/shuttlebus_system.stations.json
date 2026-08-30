@@ -138,7 +138,7 @@
   ],
   "waiting": 0,
   "status": "LOW",
-  "cameraUrl": "rtsp://mfustream:mediamfu2025@172.30.36.122:554/LiveMedia/ch1/Media1/trackID=1",
+  "cameraUrl": "",
   "detectionRoi": []
 },
 {
